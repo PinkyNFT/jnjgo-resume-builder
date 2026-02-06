@@ -1,316 +1,249 @@
-import { GoogleGenAI, Chat, Type } from "@google/genai";
+/**
+ * Client-side Gemini Service
+ * 
+ * This service provides a secure interface to the Gemini API by routing
+ * all requests through Next.js API routes. The API key is never exposed
+ * to the client browser.
+ * 
+ * Security benefits:
+ * - API key stays server-side only
+ * - No client-side exposure of credentials
+ * - Request validation on server
+ * - Rate limiting can be added at API route level
+ */
+
 import { Message, ResumeData, RoleType, ImportData, EvaluationResult } from "../types";
 
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
+/**
+ * Client-side chat session wrapper
+ * Maintains compatibility with existing code while routing through API
+ * Prevents duplicate requests and provides request cancellation
+ */
+export class ChatSession {
+    private history: Message[];
+    private roleType: RoleType;
+    private importData?: ImportData;
+    private initialData?: ResumeData;
+    private currentRequest: AbortController | null = null;
+    private isProcessing: boolean = false;
 
-// --- 1. System Instruction Generator ---
+    constructor(
+        roleType: RoleType,
+        importData?: ImportData,
+        history?: Message[],
+        initialData?: ResumeData
+    ) {
+        this.history = history || [];
+        this.roleType = roleType;
+        this.importData = importData;
+        this.initialData = initialData;
+    }
 
-const getSystemInstruction = (roleType: RoleType, importData?: ImportData, initialData?: ResumeData) => {
-    const roleContext = roleType === 'consultant'
-        ? "Strategy Consultant (Focus on: Problem Solving, Stakeholder Management, Revenue Impact, As-Is/To-Be)"
-        : roleType === 'senior_engineer'
-            ? "Senior Software Engineer (Focus on: System Architecture, Scalability, Reliability, Tech Choices, Trade-offs)"
-            : "General Professional";
-
-    const personalInfoContext = initialData?.fullName
-        ? `
-      KNOWN PERSONAL INFO:
-      Name: ${initialData.fullName}
-      Email: ${initialData.contactInfo.email}
-      DO NOT ASK FOR THESE.
-    `
-        : "";
-
-    const importContext = importData
-        ? `
-      CONTEXT: The user has already provided a resume. 
-      IMPORTED SUMMARY: "${importData.parsedSummary.substring(0, 500)}..."
-      
-      INSTRUCTION: 
-      1. Confirm the timeline first. Are there ANY gaps? Even 1 month must be explained.
-      2. Identify 2-3 "Representative Projects" that show high-level decision making.
-      3. Deep dive into those projects.
-    `
-        : "CONTEXT: The user is starting from scratch. Guide them through Timeline construction first, then Project Selection.";
-
-    return `
-    You're a friendly career coach helping ${roleContext === 'Strategy Consultant (Focus on: Problem Solving, Stakeholder Management, Revenue Impact, As-Is/To-Be)' ? 'a consultant' : roleContext === 'Senior Software Engineer (Focus on: System Architecture, Scalability, Reliability, Tech Choices, Trade-offs)' ? 'an engineer' : 'a professional'} build a strong resume.
-    
-    ${personalInfoContext}
-    ${importContext}
-    
-    STYLE:
-    - Keep messages short (1-2 sentences max)
-    - One question at a time
-    - Be warm: "Nice!", "Great start!", "Perfect!"
-    - Ask for specifics: "How many?", "What impact?", "Team size?"
-    - When moving on: "Got it! Next..."
-    
-    FOCUS: numbers, team size, impact, results
-    SKIP: name/email/phone (already have them)
-  `;
-};
-
-// --- 2. Chat Creation ---
-
-export const createChat = (roleType: RoleType, importData?: ImportData, history?: Message[], initialData?: ResumeData): Chat => {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
-    const model = 'gemini-3-flash-preview';
-
-    const chat = ai.chats.create({
-        model,
-        config: {
-            systemInstruction: getSystemInstruction(roleType, importData, initialData),
-            temperature: 0.7,
-        },
-        history: history ? history.map(h => ({
-            role: h.role,
-            parts: [{ text: h.text }]
-        })) : []
-    });
-
-    return chat;
-};
-
-// --- 3. Hint Generation ---
-
-export const generateHint = async (chat: Chat): Promise<string> => {
-    const prompt = "User needs help. Give a friendly example with specific numbers or details.";
-    const response = await chat.sendMessage({ message: prompt });
-    return response.text || "For example: 'Led a team of 5 engineers' or 'Increased revenue by 30%'";
-};
-
-// --- 4. Resume Parsing & Generation ---
-
-export const parseResumeFromChat = async (history: Message[], importData?: ImportData): Promise<ResumeData> => {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
-    const model = 'gemini-3-flash-preview';
-
-    const conversationText = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
-    const importedText = importData ? `IMPORTED RESUME CONTENT:\n${importData.sourceText}\n\n` : '';
-
-    const prompt = `
-    Create a structured resume from this conversation.
-    
-    ${importedText}
-    
-    CONVERSATION:
-    ${conversationText}
-    
-    REQUIREMENTS:
-    1. Timeline: Newest first, include work & education
-    2. Career Overview: Calculate stats from the data
-    3. Projects: Pick 2-3 best projects with details, summarize others
-    4. Use English only
-    
-    Output as JSON matching the schema.
-  `;
-
-    const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    fullName: { type: Type.STRING },
-                    currentRole: { type: Type.STRING },
-                    careerSummary: { type: Type.STRING },
-                    contactInfo: {
-                        type: Type.OBJECT,
-                        properties: {
-                            email: { type: Type.STRING },
-                            phone: { type: Type.STRING },
-                            location: { type: Type.STRING },
-                            linkedin: { type: Type.STRING }
-                        }
-                    },
-                    timeline: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                id: { type: Type.STRING },
-                                period: { type: Type.STRING },
-                                organization: { type: Type.STRING },
-                                role: { type: Type.STRING },
-                                type: { type: Type.STRING, enum: ['work', 'education'] },
-                                notes: { type: Type.STRING },
-                                duration: { type: Type.STRING }
-                            }
-                        }
-                    },
-                    careerOverview: {
-                        type: Type.OBJECT,
-                        properties: {
-                            totalExperience: { type: Type.STRING },
-                            numberOfEmployers: { type: Type.NUMBER },
-                            averageTenure: { type: Type.STRING },
-                            areasOfExpertise: { type: Type.ARRAY, items: { type: Type.STRING } },
-                            projectCount: { type: Type.STRING },
-                            typicalDuration: { type: Type.STRING }
-                        }
-                    },
-                    projectPortfolio: {
-                        type: Type.OBJECT,
-                        properties: {
-                            summary: { type: Type.ARRAY, items: { type: Type.STRING } },
-                            representativeProjects: {
-                                type: Type.ARRAY,
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: {
-                                        id: { type: Type.STRING },
-                                        title: { type: Type.STRING },
-                                        period: { type: Type.STRING },
-                                        clientType: { type: Type.STRING },
-                                        theme: { type: Type.STRING },
-                                        teamStructure: { type: Type.STRING },
-                                        role: { type: Type.STRING },
-                                        context: { type: Type.STRING },
-                                        contribution: { type: Type.STRING },
-                                        challenges: { type: Type.STRING }
-                                    }
-                                }
-                            },
-                            additionalEngagements: { type: Type.STRING }
-                        }
-                    },
-                    careerGaps: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                period: { type: Type.STRING },
-                                reason: { type: Type.STRING },
-                                isExplained: { type: Type.BOOLEAN }
-                            }
-                        }
-                    }
-                }
-            }
+    async sendMessage(message: string): Promise<{ text: string }> {
+        // Prevent concurrent requests to save tokens
+        if (this.isProcessing) {
+            throw new Error('A request is already in progress. Please wait.');
         }
-    });
 
-    if (response.text) {
+        this.isProcessing = true;
+        this.currentRequest = new AbortController();
+
         try {
-            const data = JSON.parse(response.text) as ResumeData;
-            // Ensure IDs
-            data.timeline = data.timeline.map((e, i) => ({ ...e, id: e.id || `time_${i}` }));
-            data.projectPortfolio.representativeProjects = data.projectPortfolio.representativeProjects.map((e, i) => ({ ...e, id: e.id || `proj_${i}` }));
-            return data;
-        } catch (e) {
-            console.error("Failed to parse JSON", e);
-            throw new Error("Failed to parse resume data");
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'sendMessage',
+                    message,
+                    history: this.history,
+                    roleType: this.roleType,
+                    importData: this.importData,
+                    initialData: this.initialData,
+                }),
+                signal: this.currentRequest.signal,
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to send message');
+            }
+
+            const data = await response.json();
+
+            // Update local history
+            this.history.push({ role: 'user', text: message });
+            this.history.push({ role: 'model', text: data.text });
+
+            return { text: data.text };
+        } finally {
+            this.isProcessing = false;
+            this.currentRequest = null;
         }
     }
-    throw new Error("No data generated");
+
+    async generateHint(): Promise<string> {
+        // Prevent concurrent requests to save tokens
+        if (this.isProcessing) {
+            throw new Error('A request is already in progress. Please wait.');
+        }
+
+        this.isProcessing = true;
+        this.currentRequest = new AbortController();
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'generateHint',
+                    history: this.history,
+                    roleType: this.roleType,
+                    importData: this.importData,
+                    initialData: this.initialData,
+                }),
+                signal: this.currentRequest.signal,
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to generate hint');
+            }
+
+            const data = await response.json();
+            return data.hint;
+        } finally {
+            this.isProcessing = false;
+            this.currentRequest = null;
+        }
+    }
+
+    /**
+     * Cancel the current in-flight request
+     */
+    cancelCurrentRequest(): void {
+        if (this.currentRequest) {
+            this.currentRequest.abort();
+            this.currentRequest = null;
+            this.isProcessing = false;
+        }
+    }
+
+    /**
+     * Check if a request is currently in progress
+     */
+    isRequestInProgress(): boolean {
+        return this.isProcessing;
+    }
+}
+
+/**
+ * Create a new chat session
+ * @param roleType - The role type for the resume (consultant, senior_engineer, general)
+ * @param importData - Optional imported resume data
+ * @param history - Optional conversation history
+ * @param initialData - Optional initial resume data
+ */
+export const createChat = (
+    roleType: RoleType,
+    importData?: ImportData,
+    history?: Message[],
+    initialData?: ResumeData
+): ChatSession => {
+    return new ChatSession(roleType, importData, history, initialData);
 };
 
-// --- 5. Import Analyzer ---
+/**
+ * Generate a helpful hint for the user
+ * @param chat - The active chat session
+ */
+export const generateHint = async (chat: ChatSession): Promise<string> => {
+    return await chat.generateHint();
+};
 
+/**
+ * Parse resume data from conversation history
+ * @param history - Array of conversation messages
+ * @param importData - Optional imported resume data
+ */
+export const parseResumeFromChat = async (
+    history: Message[],
+    importData?: ImportData
+): Promise<ResumeData> => {
+    const response = await fetch('/api/parse', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            history,
+            importData,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to parse resume');
+    }
+
+    const result = await response.json();
+    return result.data;
+};
+
+/**
+ * Analyze imported resume text
+ * @param text - The raw text from imported resume
+ */
 export const analyzeImportedText = async (text: string): Promise<ImportData> => {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
-    const model = 'gemini-3-flash-preview';
-
-    const prompt = `
-    Quick analysis of this resume text:
-    1. What's the summary?
-    2. Any numbers/achievements?
-    3. Main timeline?
-    
-    TEXT: ${text.substring(0, 10000)}
-  `;
-
-    const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    summary: { type: Type.STRING },
-                }
-            }
-        }
+    const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            action: 'analyzeImport',
+            text,
+        }),
     });
 
-    const parsed = JSON.parse(response.text || "{}");
-    return {
-        sourceText: text,
-        parsedSummary: parsed.summary || "Imported Resume",
-        extractionDate: Date.now()
-    };
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to analyze imported text');
+    }
+
+    const result = await response.json();
+    return result.data;
 };
 
-// --- 6. Resume Evaluator ---
-
-export const evaluateResume = async (data: ResumeData, roleType: RoleType): Promise<EvaluationResult> => {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
-    const model = 'gemini-3-flash-preview';
-
-    const prompt = `
-    Evaluate this resume for ${roleType}.
-    
-    DATA: ${JSON.stringify(data)}
-    
-    SCORING (100 points total):
-    
-    Structure (50pts):
-       - Profile complete: 5pts
-       - Timeline chronological: 10pts
-       - Clear roles & durations: 10pts
-       - Has numbers/metrics: 15pts
-       - Easy to read: 10pts
-       
-    Clarity (25pts):
-       - Shows decisions made: 10pts
-       - Clear problem→action→result: 10pts
-       - Individual contribution clear: 5pts
-       
-    Role Match (15pts):
-       - ${roleType === 'consultant'
-            ? 'Shows consulting skills: problem solving, stakeholder work, impact'
-            : 'Shows engineering skills: design, scale, reliability, tech choices'}: 15pts
-            
-    Completeness (10pts):
-       - No unexplained gaps >3 months: 10pts
-    
-    PASS if: Score >= 80 AND Structure >= 40 AND has numbers
-    
-    Output JSON with score, breakdown, and 2-3 specific suggestions.
-  `;
-
-    const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    totalScore: { type: Type.NUMBER },
-                    breakdown: {
-                        type: Type.OBJECT,
-                        properties: {
-                            structure: { type: Type.NUMBER },
-                            reproducibility: { type: Type.NUMBER },
-                            roleFit: { type: Type.NUMBER },
-                            riskHandling: { type: Type.NUMBER },
-                        }
-                    },
-                    missingItems: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    suggestions: { type: Type.ARRAY, items: { type: Type.STRING } },
-                }
-            }
-        }
+/**
+ * Evaluate resume quality and provide feedback
+ * @param data - The resume data to evaluate
+ * @param roleType - The target role type
+ */
+export const evaluateResume = async (
+    data: ResumeData,
+    roleType: RoleType
+): Promise<EvaluationResult> => {
+    const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            action: 'evaluateResume',
+            data,
+            roleType,
+        }),
     });
 
-    const result = JSON.parse(response.text || "{}");
-    return {
-        ...result,
-        isPassing: (result.totalScore || 0) >= 80
-    };
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to evaluate resume');
+    }
+
+    const result = await response.json();
+    return result.data;
 };

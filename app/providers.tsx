@@ -1,0 +1,44 @@
+'use client';
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactNode, useState } from 'react';
+
+/**
+ * React Query Provider for the application
+ * Configures intelligent request management, caching, and deduplication
+ */
+export function Providers({ children }: { children: ReactNode }) {
+    const [queryClient] = useState(
+        () =>
+            new QueryClient({
+                defaultOptions: {
+                    queries: {
+                        // Prevents automatic refetching on window focus
+                        refetchOnWindowFocus: false,
+                        // Prevents automatic refetching on reconnect
+                        refetchOnReconnect: false,
+                        // Don't retry by default (we have custom retry logic)
+                        retry: false,
+                        // Keep data fresh for 5 minutes
+                        staleTime: 5 * 60 * 1000,
+                        // Cache data for 10 minutes
+                        gcTime: 10 * 60 * 1000,
+                    },
+                    mutations: {
+                        // Mutations (chat messages) get 2 retries with exponential backoff
+                        retry: (failureCount, error: any) => {
+                            // Don't retry on client errors (4xx)
+                            if (error?.status >= 400 && error?.status < 500) {
+                                return false;
+                            }
+                            // Retry up to 2 times for server errors
+                            return failureCount < 2;
+                        },
+                        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+                    },
+                },
+            })
+    );
+
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}

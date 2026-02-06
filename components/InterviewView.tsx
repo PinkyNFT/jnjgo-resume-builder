@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Message, RoleType, ImportData, ResumeData } from '../types';
-import { createChat, generateHint } from '../services/geminiService';
-import { Chat } from "@google/genai";
+import { useSendMessage, useGenerateHint } from '../hooks/useGemini';
 import { ArrowUp, HelpCircle, Loader2, Save, User, Bot, Home, CheckCircle2 } from 'lucide-react';
 
 // Simple markdown formatter for basic formatting
@@ -46,64 +45,71 @@ interface InterviewViewProps {
 export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, onFinish, onSave, onExit, roleType, importData, initialData }) => {
     const [messages, setMessages] = useState<Message[]>(initialHistory || []);
     const [inputValue, setInputValue] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [chatSession, setChatSession] = useState<Chat | null>(null);
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [retryCount, setRetryCount] = useState(0);
+    const [isInitializing, setIsInitializing] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const mountedRef = useRef(true);
+    const initializingRef = useRef(false);
+
+    // React Query mutations with automatic deduplication and retry
+    const sendMessageMutation = useSendMessage();
+    const generateHintMutation = useGenerateHint();
+
+    // Derived loading and error states from mutations
+    const isLoading = isInitializing || sendMessageMutation.isPending || generateHintMutation.isPending;
+    const error = sendMessageMutation.error?.message || generateHintMutation.error?.message || null;
 
     const userMessageCount = messages.filter(m => m.role === 'user').length;
-    // If imported, require fewer turns as we already have data
     const isReadyToGenerate = importData ? userMessageCount >= 3 : userMessageCount >= 7;
 
+    // Initialize chat on mount
     useEffect(() => {
-        if (!process.env.NEXT_PUBLIC_API_KEY) {
-            alert("Please set your NEXT_PUBLIC_API_KEY in the environment.");
-            return;
-        }
+        mountedRef.current = true;
 
-        const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+        const initChat = async () => {
+            // Prevent double initialization
+            if (initializingRef.current) return;
+            initializingRef.current = true;
 
-        const initChat = async (attempt = 0) => {
-            setIsLoading(true);
-            setError(null);
+            // Send initial greeting if no history
+            if (!initialHistory || initialHistory.length === 0) {
+                setIsInitializing(true);
+                const initialMessage = importData
+                    ? "Please analyze my imported resume and start the deep dive."
+                    : "Hello! Please start the interview.";
 
-            try {
-                const chat = createChat(roleType, importData, initialHistory, initialData);
-                setChatSession(chat);
-
-                if (!initialHistory || initialHistory.length === 0) {
-                    const response = await chat.sendMessage({
-                        message: importData ? "Please analyze my imported resume and start the deep dive." : "Hello! Please start the interview."
+                try {
+                    const response = await sendMessageMutation.mutateAsync({
+                        message: initialMessage,
+                        history: [],
+                        roleType,
+                        importData,
+                        initialData,
                     });
-                    if (response.text) {
-                        setMessages([{ role: 'model', text: response.text || '' }]);
+
+                    if (mountedRef.current && response.text) {
+                        setMessages([{ role: 'model', text: response.text }]);
+                    }
+                } catch (err) {
+                    console.error('Failed to initialize chat:', err);
+                } finally {
+                    if (mountedRef.current) {
+                        setIsInitializing(false);
+                        initializingRef.current = false;
                     }
                 }
-                setRetryCount(0);
-            } catch (error: any) {
-                console.error("Error initializing chat", error);
-
-                const is503 = error?.message?.includes('503') || error?.message?.includes('overloaded') || error?.status === 'UNAVAILABLE';
-
-                if (is503 && attempt < 3) {
-                    const waitTime = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
-                    setError(`API is busy. Retrying in ${waitTime / 1000} seconds... (${attempt + 1}/3)`);
-                    setRetryCount(attempt + 1);
-                    await delay(waitTime);
-                    return initChat(attempt + 1);
-                } else if (is503) {
-                    setError('The AI service is currently overloaded. Please try again in a few minutes.');
-                } else {
-                    setError('Failed to initialize chat. Please check your API key and try again.');
-                }
-            } finally {
-                setIsLoading(false);
+            } else {
+                // If we have initial history, just mark initialization as complete
+                initializingRef.current = false;
             }
         };
 
         initChat();
+
+        return () => {
+            mountedRef.current = false;
+            initializingRef.current = false;
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -111,61 +117,56 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const handleSend = async (retryAttempt = 0) => {
-        if (!inputValue.trim() || !chatSession) return;
+    // Handle sending messages
+    const handleSend = async () => {
+        if (!inputValue.trim() || isLoading) return;
 
         const userMsg: Message = { role: 'user', text: inputValue };
-        setMessages(prev => [...prev, userMsg]);
+        const newMessages = [...messages, userMsg];
+        setMessages(newMessages);
         setInputValue('');
-        setIsLoading(true);
-        setError(null);
 
         try {
-            const response = await chatSession.sendMessage({ message: userMsg.text });
-            if (response.text) {
-                setMessages(prev => [...prev, { role: 'model', text: response.text || '' }]);
-            }
-        } catch (error: any) {
-            console.error("Error sending message", error);
+            const response = await sendMessageMutation.mutateAsync({
+                message: userMsg.text,
+                history: messages, // Use previous messages, not including this one
+                roleType,
+                importData,
+                initialData,
+            });
 
-            const is503 = error?.message?.includes('503') || error?.message?.includes('overloaded') || error?.status === 'UNAVAILABLE';
-
-            if (is503 && retryAttempt < 2) {
-                const waitTime = Math.pow(2, retryAttempt) * 1000;
-                setError(`API busy. Retrying in ${waitTime / 1000}s...`);
-                await new Promise(resolve => setTimeout(resolve, waitTime));
-                // Restore input and retry
-                setInputValue(userMsg.text);
-                setMessages(prev => prev.slice(0, -1)); // Remove the user message
-                return handleSend(retryAttempt + 1);
-            } else if (is503) {
-                setError('The AI is overloaded. Please wait a moment and try again.');
-                // Remove the user message that failed
-                setMessages(prev => prev.slice(0, -1));
-                // Restore the input
-                setInputValue(userMsg.text);
-            } else {
-                setError('Failed to send message. Please try again.');
+            if (mountedRef.current && response.text) {
+                setMessages([...newMessages, { role: 'model', text: response.text }]);
             }
-        } finally {
-            setIsLoading(false);
+        } catch (err) {
+            // React Query handles retries automatically
+            // Error state is managed by the mutation
+            console.error('Failed to send message:', err);
+            // Restore the message so user can retry
+            if (mountedRef.current) {
+                setMessages(messages); // Revert to previous state
+                setInputValue(userMsg.text); // Restore input
+            }
         }
     };
 
+    // Handle hint generation
     const handleHint = async () => {
-        if (!chatSession || isLoading) return;
-        setIsLoading(true);
-        setError(null);
+        if (isLoading) return;
 
         try {
-            const hintText = await generateHint(chatSession);
-            setMessages(prev => [...prev, { role: 'model', text: hintText, isHint: true }]);
-        } catch (error: any) {
-            console.error("Error getting hint", error);
-            const is503 = error?.message?.includes('503') || error?.message?.includes('overloaded') || error?.status === 'UNAVAILABLE';
-            setError(is503 ? 'AI is busy. Please try again in a moment.' : 'Failed to get hint.');
-        } finally {
-            setIsLoading(false);
+            const hintText = await generateHintMutation.mutateAsync({
+                history: messages,
+                roleType,
+                importData,
+                initialData,
+            });
+
+            if (mountedRef.current && hintText) {
+                setMessages([...messages, { role: 'model', text: hintText, isHint: true }]);
+            }
+        } catch (err) {
+            console.error('Failed to generate hint:', err);
         }
     };
 
@@ -183,12 +184,12 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSend(0);
+            handleSend();
         }
     };
 
     const onSendClick = () => {
-        handleSend(0);
+        handleSend();
     };
 
     return (

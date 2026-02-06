@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { InterviewView } from '../components/InterviewView';
 import { ResumeEditor } from '../components/ResumeEditor';
 import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from '../types';
-import { parseResumeFromChat, analyzeImportedText } from '../services/geminiService';
+import { useParseResume, useAnalyzeImport } from '../hooks/useGemini';
 import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile } from '../services/storageService';
 import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin } from 'lucide-react';
 
@@ -100,12 +100,13 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
   const [role, setRole] = useState<RoleType>('consultant');
   const [importText, setImportText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const analyzeImportMutation = useAnalyzeImport();
 
   const handleStart = async () => {
     if (importText.trim().length > 20) {
       setIsAnalyzing(true);
       try {
-        const data = await analyzeImportedText(importText);
+        const data = await analyzeImportMutation.mutateAsync(importText);
         onComplete(role, data);
       } catch (e) {
         alert("Import failed, starting blank.");
@@ -341,7 +342,11 @@ export default function Page() {
     setStep('generating');
 
     try {
-      const data = await parseResumeFromChat(history, currentProject?.importData);
+      const parseResumeMutation = useParseResume();
+      const data = await parseResumeMutation.mutateAsync({
+        history,
+        importData: currentProject?.importData,
+      });
 
       // Merge known personal info back if somehow lost (though AI prompt should keep it, safety first)
       if (currentProject?.data?.fullName) {
