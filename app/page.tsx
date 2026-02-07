@@ -287,6 +287,9 @@ export default function Page() {
   // Temp storage for setup data before project creation
   const [setupData, setSetupData] = useState<{ role: RoleType, importData?: ImportData } | null>(null);
 
+  // Initialize the parse resume mutation at the component level
+  const parseResumeMutation = useParseResume();
+
   useEffect(() => {
     setProjects(getProjects().sort((a, b) => b.updatedAt - a.updatedAt));
   }, [step]);
@@ -342,7 +345,6 @@ export default function Page() {
     setStep('generating');
 
     try {
-      const parseResumeMutation = useParseResume();
       const data = await parseResumeMutation.mutateAsync({
         history,
         importData: currentProject?.importData,
