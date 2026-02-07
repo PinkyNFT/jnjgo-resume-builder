@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ResumeData, Project, EvaluationResult } from '../types';
+import { ResumeData, Project, EvaluationResult, WorkExperience, Education } from '../types';
 import { evaluateResume } from '../services/geminiService';
 import { saveProject } from '../services/storageService';
 import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2 } from 'lucide-react';
@@ -282,193 +282,378 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                         </div>
                     </div>
 
-                    {/* Career Summary */}
+                    {/* Professional Summary */}
+                    <div className="mb-7">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">Professional Summary</h2>
+                        <div className="text-[9.5pt] text-slate-800 leading-relaxed">
+                            {renderEditableText(data.careerSummary, val => setData({ ...data, careerSummary: val }), true, "", "Professional summary goes here...")}
+                        </div>
+                    </div>
+
+                    {/* Career Summary Timeline */}
                     <div className="mb-7">
                         <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">Career Summary</h2>
-                        <div className="space-y-2 text-[9.5pt]">
-                            {data.timeline.filter(t => t.type === 'work').map((item, i) => (
-                                <div key={i} className="flex gap-2.5 leading-snug">
-                                    <span className="text-slate-900 font-bold">•</span>
-                                    <div className="flex-1">
-                                        <span className="font-medium text-slate-900">
-                                            {item.period ? renderEditableText(item.period, val => {
-                                                const newT = [...data.timeline];
-                                                newT.find(t => t.id === item.id)!.period = val;
-                                                setData({ ...data, timeline: newT });
-                                            }, false, "inline-block", "") : <span className="text-slate-400 italic text-[9pt]">Current</span>}
-                                        </span>
-                                        <span className="mx-1.5 text-slate-500">:</span>
-                                        <span className="text-slate-900 font-semibold">
-                                            {item.organization ? renderEditableText(item.organization, val => {
-                                                const newT = [...data.timeline];
-                                                newT.find(t => t.id === item.id)!.organization = val;
-                                                setData({ ...data, timeline: newT });
-                                            }, false, "inline-block", "") : <span className="text-slate-400 italic text-[9pt]">Previous</span>}
-                                        </span>
-                                        {item.role && (
-                                            <span className="text-slate-700">
-                                                {' '}{renderEditableText(item.role, val => {
+                        <div className="space-y-2 text-[9.5pt] mb-4">
+                            {data.timeline && data.timeline.length > 0 ? (
+                                data.timeline.filter(t => t.type === 'work').map((item, i) => (
+                                    <div key={i} className="flex gap-2 leading-snug">
+                                        <span className="text-slate-900 font-bold">•</span>
+                                        <div className="flex-1">
+                                            <span className="font-medium text-slate-900">
+                                                {item.period ? renderEditableText(item.period, val => {
                                                     const newT = [...data.timeline];
-                                                    newT.find(t => t.id === item.id)!.role = val;
+                                                    newT.find(t => t.id === item.id)!.period = val;
                                                     setData({ ...data, timeline: newT });
-                                                }, false, "inline-block", "")}
+                                                }, false, "inline-block", "") : <span className="text-slate-400 italic text-[9pt]">Current</span>}
                                             </span>
-                                        )}
-                                        {item.duration && (
-                                            <span className="text-slate-600 ml-1">
-                                                {renderEditableText(item.duration, val => {
+                                            <span className="mx-1.5 text-slate-500">:</span>
+                                            <span className="text-slate-900 font-semibold">
+                                                {item.organization ? renderEditableText(item.organization, val => {
                                                     const newT = [...data.timeline];
-                                                    newT.find(t => t.id === item.id)!.duration = val;
+                                                    newT.find(t => t.id === item.id)!.organization = val;
                                                     setData({ ...data, timeline: newT });
-                                                }, false, "inline-block", "")}
+                                                }, false, "inline-block", "") : <span className="text-slate-400 italic text-[9pt]">Previous</span>}
                                             </span>
-                                        )}
+                                            {item.role && (
+                                                <span className="text-slate-700">
+                                                    {' '}{renderEditableText(item.role, val => {
+                                                        const newT = [...data.timeline];
+                                                        newT.find(t => t.id === item.id)!.role = val;
+                                                        setData({ ...data, timeline: newT });
+                                                    }, false, "inline-block", "")}
+                                                </span>
+                                            )}
+                                            {item.duration && (
+                                                <span className="text-slate-600 ml-1">
+                                                    {renderEditableText(item.duration, val => {
+                                                        const newT = [...data.timeline];
+                                                        newT.find(t => t.id === item.id)!.duration = val;
+                                                        setData({ ...data, timeline: newT });
+                                                    }, false, "inline-block", "")}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))
+                            ) : (
+                                <div className="text-slate-400 italic text-[9pt]">No career timeline available</div>
+                            )}
                         </div>
 
                         {/* Career Overview Stats */}
-                        <div className="mt-4 pt-3 border-t border-slate-200 text-[9pt] text-slate-700">
+                        <div className="pt-3 border-t border-slate-200 text-[9pt] text-slate-700">
                             <div className="flex gap-5 flex-wrap">
                                 {data.careerOverview.totalExperience && <span>Total Career: <strong className="text-slate-900">{data.careerOverview.totalExperience}</strong></span>}
-                                {data.careerOverview.numberOfEmployers > 0 && <span>Total Employers: <strong className="text-slate-900">{data.careerOverview.numberOfEmployers}</strong></span>}
+                                {data.careerOverview.numberOfEmployers > 0 && <span>Number of Employers: <strong className="text-slate-900">{data.careerOverview.numberOfEmployers}</strong></span>}
                                 {data.careerOverview.averageTenure && <span>Average Tenure: <strong className="text-slate-900">{data.careerOverview.averageTenure}</strong></span>}
-                                {data.careerOverview.projectCount && <span>Current Tenure: <strong className="text-slate-900">{data.careerOverview.projectCount}</strong></span>}
+                                {data.careerOverview.projectCount && <span>Current Position Duration: <strong className="text-slate-900">{data.careerOverview.projectCount}</strong></span>}
                             </div>
+                        </div>
+                    </div>
 
-                            {/* Work Experience */}
-                            <div className="mb-8">
-                                <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">Work Experience</h2>
+                    {/* Work Experience */}
+                    <div className="mb-8">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">Work Experience</h2>
 
-                                <div className="space-y-6">
-                                    {data.projectPortfolio.representativeProjects.map((proj, i) => (
-                                        <div key={i} className="break-inside-avoid">
-                                            {/* Company Header */}
-                                            <div className="mb-3">
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <h3 className="font-bold text-[11pt] text-slate-900 flex-1">
-                                                        {proj.title ? renderEditableText(proj.title, val => {
-                                                            const newProjs = [...data.projectPortfolio.representativeProjects];
-                                                            newProjs[i].title = val;
-                                                            setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
-                                                        }, false, "", "") : <span className="text-slate-400 italic text-[10pt]">Company & Position</span>}
-                                                    </h3>
-                                                    {proj.period && (
-                                                        <span className="text-[9pt] font-medium text-slate-700 ml-4">
-                                                            {renderEditableText(proj.period, val => {
-                                                                const newProjs = [...data.projectPortfolio.representativeProjects];
-                                                                newProjs[i].period = val;
-                                                                setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
-                                                            }, false, "", "")}
-                                                        </span>
+                        <div className="space-y-8">
+                            {data.workExperience && data.workExperience.length > 0 ? (
+                                data.workExperience.map((work, i) => (
+                                    <div key={work.id} className="break-inside-avoid">
+                                        {/* Company & Position Header */}
+                                        <div className="mb-3">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <h3 className="font-bold text-[10.5pt] text-slate-900 flex-1">
+                                                    {activeTab === 'preview' ? (
+                                                        <>
+                                                            {work.company || <span className="text-slate-400 italic">Company Name</span>}
+                                                            {' | '}
+                                                            {work.position || <span className="text-slate-400 italic">Position</span>}
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                className="flex-1 border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
+                                                                value={work.company}
+                                                                onChange={(e) => {
+                                                                    const newWork = [...(data.workExperience || [])];
+                                                                    newWork[i].company = e.target.value;
+                                                                    setData({ ...data, workExperience: newWork });
+                                                                }}
+                                                                placeholder="Company Name"
+                                                            />
+                                                            <span className="text-slate-500">|</span>
+                                                            <input
+                                                                className="flex-1 border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
+                                                                value={work.position}
+                                                                onChange={(e) => {
+                                                                    const newWork = [...(data.workExperience || [])];
+                                                                    newWork[i].position = e.target.value;
+                                                                    setData({ ...data, workExperience: newWork });
+                                                                }}
+                                                                placeholder="Position"
+                                                            />
+                                                        </div>
                                                     )}
-                                                </div>
-                                                {proj.context && (
-                                                    <div className="text-[9.5pt] text-slate-800 leading-relaxed">
-                                                        {renderEditableText(proj.context, val => {
+                                                </h3>
+                                                {work.period && (
+                                                    <span className="text-[9pt] italic text-slate-600 ml-4 whitespace-nowrap">
+                                                        {renderEditableText(work.period, val => {
+                                                            const newWork = [...(data.workExperience || [])];
+                                                            newWork[i].period = val;
+                                                            setData({ ...data, workExperience: newWork });
+                                                        }, false, "", "Period")}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Responsibilities Section */}
+                                        {work.responsibilities && work.responsibilities.length > 0 && (
+                                            <div className="mb-3">
+                                                <div className="font-bold text-[9pt] text-slate-900 mb-2">■ Responsibilities:</div>
+                                                <ul className="space-y-1.5">
+                                                    {work.responsibilities.map((resp, j) => (
+                                                        <li key={j} className="flex gap-2 text-[9.5pt] text-slate-800 leading-relaxed ml-4">
+                                                            <span className="text-slate-900 font-bold mt-0.5">•</span>
+                                                            <div className="flex-1">
+                                                                {renderEditableText(resp, val => {
+                                                                    const newWork = [...(data.workExperience || [])];
+                                                                    newWork[i].responsibilities[j] = val;
+                                                                    setData({ ...data, workExperience: newWork });
+                                                                }, true, "", "Responsibility")}
+                                                            </div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                data.projectPortfolio.representativeProjects.map((proj, i) => (
+                                    <div key={i} className="break-inside-avoid">
+                                        {/* Company Header */}
+                                        <div className="mb-3">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <h3 className="font-bold text-[11pt] text-slate-900 flex-1">
+                                                    {proj.title ? renderEditableText(proj.title, val => {
+                                                        const newProjs = [...data.projectPortfolio.representativeProjects];
+                                                        newProjs[i].title = val;
+                                                        setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
+                                                    }, false, "", "") : <span className="text-slate-400 italic text-[10pt]">Company & Position</span>}
+                                                </h3>
+                                                {proj.period && (
+                                                    <span className="text-[9pt] font-medium text-slate-700 ml-4">
+                                                        {renderEditableText(proj.period, val => {
                                                             const newProjs = [...data.projectPortfolio.representativeProjects];
-                                                            newProjs[i].context = val;
+                                                            newProjs[i].period = val;
+                                                            setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
+                                                        }, false, "", "")}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {proj.context && (
+                                                <div className="text-[9.5pt] text-slate-800 leading-relaxed">
+                                                    {renderEditableText(proj.context, val => {
+                                                        const newProjs = [...data.projectPortfolio.representativeProjects];
+                                                        newProjs[i].context = val;
+                                                        setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
+                                                    }, true, "", "")}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Responsibilities Section */}
+                                        {(proj.role || proj.teamStructure) && (
+                                            <div className="mb-3">
+                                                <div className="font-bold text-[9pt] text-slate-900 mb-1.5">■ Responsibilities:</div>
+                                                {proj.role && (
+                                                    <div className="text-[9.5pt] text-slate-800 mb-1 ml-4">
+                                                        {renderEditableText(proj.role, val => {
+                                                            const newProjs = [...data.projectPortfolio.representativeProjects];
+                                                            newProjs[i].role = val;
+                                                            setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
+                                                        }, true, "", "")}
+                                                    </div>
+                                                )}
+                                                {proj.teamStructure && (
+                                                    <div className="text-[9.5pt] text-slate-800 ml-4">
+                                                        {renderEditableText(proj.teamStructure || "", val => {
+                                                            const newProjs = [...data.projectPortfolio.representativeProjects];
+                                                            newProjs[i].teamStructure = val;
                                                             setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
                                                         }, true, "", "")}
                                                     </div>
                                                 )}
                                             </div>
+                                        )}
 
-                                            {/* Responsibilities Section */}
-                                            {(proj.role || proj.teamStructure) && (
-                                                <div className="mb-3">
-                                                    <div className="font-bold text-[9pt] text-slate-900 mb-1.5">■ Responsibilities:</div>
-                                                    {proj.role && (
-                                                        <div className="text-[9.5pt] text-slate-800 mb-1 ml-4">
-                                                            {renderEditableText(proj.role, val => {
-                                                                const newProjs = [...data.projectPortfolio.representativeProjects];
-                                                                newProjs[i].role = val;
-                                                                setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
-                                                            }, true, "", "")}
-                                                        </div>
-                                                    )}
-                                                    {proj.teamStructure && (
-                                                        <div className="text-[9.5pt] text-slate-800 ml-4">
-                                                            {renderEditableText(proj.teamStructure || "", val => {
-                                                                const newProjs = [...data.projectPortfolio.representativeProjects];
-                                                                newProjs[i].teamStructure = val;
-                                                                setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
-                                                            }, true, "", "")}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
+                                        {/* Main Achievements Section */}
+                                        {(proj.contribution || proj.challenges) && (
+                                            <div className="mb-3">
+                                                <div className="font-bold text-[9pt] text-slate-900 mb-1.5">■ Main Achievements:</div>
+                                                {proj.contribution && (
+                                                    <div className="text-[9.5pt] text-slate-800 mb-1 ml-4">
+                                                        {renderEditableText(proj.contribution, val => {
+                                                            const newProjs = [...data.projectPortfolio.representativeProjects];
+                                                            newProjs[i].contribution = val;
+                                                            setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
+                                                        }, true, "", "")}
+                                                    </div>
+                                                )}
+                                                {proj.challenges && (
+                                                    <div className="text-[9.5pt] text-slate-800 ml-4">
+                                                        {renderEditableText(proj.challenges || "", val => {
+                                                            const newProjs = [...data.projectPortfolio.representativeProjects];
+                                                            newProjs[i].challenges = val;
+                                                            setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
+                                                        }, true, "", "")}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
-                                            {/* Main Achievements Section */}
-                                            {(proj.contribution || proj.challenges) && (
-                                                <div className="mb-3">
-                                                    <div className="font-bold text-[9pt] text-slate-900 mb-1.5">■ Main Achievements:</div>
-                                                    {proj.contribution && (
-                                                        <div className="text-[9.5pt] text-slate-800 mb-1 ml-4">
-                                                            {renderEditableText(proj.contribution, val => {
+                                        {/* Detailed Box: Challenge/Approach/Results */}
+                                        {(proj.clientType || proj.theme || data.projectPortfolio.additionalEngagements) && (
+                                            <div className="bg-slate-100 border border-slate-200 px-4 py-3 text-[9pt] leading-relaxed space-y-2">
+                                                {proj.clientType && (
+                                                    <div className="flex gap-2">
+                                                        <span className="font-bold text-slate-900 min-w-20">Challenge:</span>
+                                                        <span className="text-slate-800 flex-1">
+                                                            {renderEditableText(proj.clientType || "", val => {
                                                                 const newProjs = [...data.projectPortfolio.representativeProjects];
-                                                                newProjs[i].contribution = val;
+                                                                newProjs[i].clientType = val;
                                                                 setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
-                                                            }, true, "", "")}
-                                                        </div>
-                                                    )}
-                                                    {proj.challenges && (
-                                                        <div className="text-[9.5pt] text-slate-800 ml-4">
-                                                            {renderEditableText(proj.challenges || "", val => {
+                                                            }, false, "inline-block", "")}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {proj.theme && (
+                                                    <div className="flex gap-2">
+                                                        <span className="font-bold text-slate-900 min-w-20">Approach:</span>
+                                                        <span className="text-slate-800 flex-1">
+                                                            {renderEditableText(proj.theme || "", val => {
                                                                 const newProjs = [...data.projectPortfolio.representativeProjects];
-                                                                newProjs[i].challenges = val;
+                                                                newProjs[i].theme = val;
                                                                 setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
-                                                            }, true, "", "")}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Detailed Box: Challenge/Approach/Results */}
-                                            {(proj.clientType || proj.theme || data.projectPortfolio.additionalEngagements) && (
-                                                <div className="bg-slate-100 border border-slate-200 px-4 py-3 text-[9pt] leading-relaxed space-y-2">
-                                                    {proj.clientType && (
-                                                        <div className="flex gap-2">
-                                                            <span className="font-bold text-slate-900 min-w-20">Challenge:</span>
-                                                            <span className="text-slate-800 flex-1">
-                                                                {renderEditableText(proj.clientType || "", val => {
-                                                                    const newProjs = [...data.projectPortfolio.representativeProjects];
-                                                                    newProjs[i].clientType = val;
-                                                                    setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
-                                                                }, false, "inline-block", "")}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {proj.theme && (
-                                                        <div className="flex gap-2">
-                                                            <span className="font-bold text-slate-900 min-w-20">Approach:</span>
-                                                            <span className="text-slate-800 flex-1">
-                                                                {renderEditableText(proj.theme || "", val => {
-                                                                    const newProjs = [...data.projectPortfolio.representativeProjects];
-                                                                    newProjs[i].theme = val;
-                                                                    setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
-                                                                }, false, "inline-block", "")}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {data.projectPortfolio.additionalEngagements && (
-                                                        <div className="flex gap-2">
-                                                            <span className="font-bold text-slate-900 min-w-20">Results:</span>
-                                                            <span className="text-slate-800 flex-1">
-                                                                {renderEditableText(data.projectPortfolio.additionalEngagements, val => setData({ ...data, projectPortfolio: { ...data.projectPortfolio, additionalEngagements: val } }), false, "inline-block", "")}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
+                                                            }, false, "inline-block", "")}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {data.projectPortfolio.additionalEngagements && (
+                                                    <div className="flex gap-2">
+                                                        <span className="font-bold text-slate-900 min-w-20">Results:</span>
+                                                        <span className="text-slate-800 flex-1">
+                                                            {renderEditableText(data.projectPortfolio.additionalEngagements, val => setData({ ...data, projectPortfolio: { ...data.projectPortfolio, additionalEngagements: val } }), false, "inline-block", "")}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
+
+                    {/* Education Section */}
+                    {data.education && data.education.length > 0 && (
+                        <div className="mb-8">
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">Education</h2>
+                            <div className="space-y-4">
+                                {data.education.map((edu, i) => (
+                                    <div key={edu.id} className="break-inside-avoid">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <h3 className="font-bold text-[10pt] text-slate-900">
+                                                    {edu.degree ? renderEditableText(edu.degree, val => {
+                                                        const newEdu = [...(data.education || [])];
+                                                        newEdu[i].degree = val;
+                                                        setData({ ...data, education: newEdu });
+                                                    }, false, "", "Degree") : <span className="text-slate-400 italic">Degree</span>}
+                                                </h3>
+                                                <div className="text-[9.5pt] text-slate-700">
+                                                    {edu.institution ? renderEditableText(edu.institution, val => {
+                                                        const newEdu = [...(data.education || [])];
+                                                        newEdu[i].institution = val;
+                                                        setData({ ...data, education: newEdu });
+                                                    }, false, "", "Institution") : <span className="text-slate-400 italic">Institution</span>}
+                                                </div>
+                                            </div>
+                                            {edu.period && (
+                                                <span className="text-[9pt] italic text-slate-600 ml-4">
+                                                    {renderEditableText(edu.period, val => {
+                                                        const newEdu = [...(data.education || [])];
+                                                        newEdu[i].period = val;
+                                                        setData({ ...data, education: newEdu });
+                                                    }, false, "", "Period")}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {edu.notes && (
+                                            <div className="text-[9pt] text-slate-600 mt-1 ml-2">
+                                                {renderEditableText(edu.notes, val => {
+                                                    const newEdu = [...(data.education || [])];
+                                                    newEdu[i].notes = val;
+                                                    setData({ ...data, education: newEdu });
+                                                }, false, "", "Notes")}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Skills Section */}
+                    {data.skills && data.skills.length > 0 && (
+                        <div className="mb-8">
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">Skills</h2>
+                            <div className="flex flex-wrap gap-2">
+                                {data.skills.map((skill, i) => (
+                                    <div key={i} className="inline-flex items-center">
+                                        {activeTab === 'preview' ? (
+                                            <span className="px-3 py-1 bg-slate-100 text-slate-800 text-[9pt] rounded-md border border-slate-200">
+                                                {skill}
+                                            </span>
+                                        ) : (
+                                            <input
+                                                className="px-3 py-1 border border-indigo-200 bg-indigo-50/50 rounded-md text-[9pt] focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
+                                                value={skill}
+                                                onChange={(e) => {
+                                                    const newSkills = [...(data.skills || [])];
+                                                    newSkills[i] = e.target.value;
+                                                    setData({ ...data, skills: newSkills });
+                                                }}
+                                                placeholder="Skill"
+                                            />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Certifications Section */}
+                    {data.certifications && data.certifications.length > 0 && (
+                        <div className="mb-8">
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">Certifications</h2>
+                            <div className="space-y-2">
+                                {data.certifications.map((cert, i) => (
+                                    <div key={i} className="flex gap-2 text-[9.5pt] text-slate-800">
+                                        <span className="text-slate-900 font-bold">•</span>
+                                        <div className="flex-1">
+                                            {renderEditableText(cert, val => {
+                                                const newCerts = [...(data.certifications || [])];
+                                                newCerts[i] = val;
+                                                setData({ ...data, certifications: newCerts });
+                                            }, false, "", "Certification")}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

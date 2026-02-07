@@ -55,6 +55,22 @@ export interface RepresentativeProject {
     challenges?: string; // "Key Challenges"
 }
 
+export interface WorkExperience {
+    id: string;
+    company: string; // "Kerofit Pte Ltd"
+    position: string; // "Frontend Web Developer"
+    period: string; // "2021 - Present"
+    responsibilities: string[]; // Array of bullet points
+}
+
+export interface Education {
+    id: string;
+    degree: string; // "Bachelor of Science in Computer Science (BSCS)"
+    institution: string; // "Air University Islamabad"
+    period: string; // "Currently Enrolled (1st Year)"
+    notes?: string;
+}
+
 export interface ProjectPortfolio {
     summary: string[]; // High level bullets of types of projects
     representativeProjects: RepresentativeProject[];
@@ -83,6 +99,10 @@ export interface ResumeData {
     careerOverview: CareerOverview; // The quantitative box
     projectPortfolio: ProjectPortfolio;
     careerGaps: GapItem[];
+    workExperience?: WorkExperience[]; // Traditional work experience section
+    education?: Education[]; // Education section
+    skills?: string[]; // Skills array
+    certifications?: string[]; // Certifications array
 }
 
 export interface EvaluationResult {
@@ -129,5 +149,9 @@ export const INITIAL_RESUME_DATA: ResumeData = {
         representativeProjects: [],
         additionalEngagements: ''
     },
-    careerGaps: []
+    careerGaps: [],
+    workExperience: [],
+    education: [],
+    skills: [],
+    certifications: []
 };
