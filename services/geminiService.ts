@@ -39,7 +39,7 @@ export class ChatSession {
         this.initialData = initialData;
     }
 
-    async sendMessage(message: string): Promise<{ text: string }> {
+    async sendMessage(message: string): Promise<{ text: string; phase?: 'overview' | 'confirmation' | 'detail' | 'general' }> {
         // Prevent concurrent requests to save tokens
         if (this.isProcessing) {
             throw new Error('A request is already in progress. Please wait.');
@@ -74,9 +74,9 @@ export class ChatSession {
 
             // Update local history
             this.history.push({ role: 'user', text: message });
-            this.history.push({ role: 'model', text: data.text });
+            this.history.push({ role: 'model', text: data.text, phase: data.phase });
 
-            return { text: data.text };
+            return { text: data.text, phase: data.phase };
         } finally {
             this.isProcessing = false;
             this.currentRequest = null;

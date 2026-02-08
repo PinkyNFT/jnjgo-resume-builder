@@ -5,6 +5,7 @@ export interface Message {
     role: 'user' | 'model';
     text: string;
     isHint?: boolean;
+    phase?: 'overview' | 'confirmation' | 'detail' | 'general';
 }
 
 export interface ImportData {
@@ -114,8 +115,33 @@ export interface EvaluationResult {
         roleFit: number; // 15pts
         riskHandling: number; // 10pts
     };
+    detailedBreakdown?: {
+        structure?: {
+            total: number;
+            basicProfile: number;
+            chronological: number;
+            roleInfo: number;
+            quantifiedAchievements: number;
+            readability: number;
+        };
+        reproducibility?: {
+            total: number;
+            decisionMaking: number;
+            problemActionResult: number;
+            individualContribution: number;
+        };
+        roleFit?: {
+            total: number;
+            details: string;
+        };
+        riskHandling?: {
+            total: number;
+            gapExplanation: number;
+        };
+    };
     missingItems: string[];
     suggestions: string[];
+    validationMessages?: string[];
 }
 
 export interface Project {

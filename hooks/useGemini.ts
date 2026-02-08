@@ -13,6 +13,7 @@ interface SendMessageParams {
     roleType: RoleType;
     importData?: ImportData;
     initialData?: ResumeData;
+    signal?: AbortSignal;
 }
 
 interface GenerateHintParams {
@@ -20,6 +21,7 @@ interface GenerateHintParams {
     roleType: RoleType;
     importData?: ImportData;
     initialData?: ResumeData;
+    signal?: AbortSignal;
 }
 
 /**
@@ -40,6 +42,7 @@ export function useSendMessage() {
                     importData: params.importData,
                     initialData: params.initialData,
                 }),
+                signal: params.signal,
             });
 
             if (!response.ok) {
@@ -48,7 +51,7 @@ export function useSendMessage() {
             }
 
             const data = await response.json();
-            return { text: data.text };
+            return { text: data.text, phase: data.phase };
         },
         // Retry configuration
         retry: (failureCount, error: any) => {
@@ -80,6 +83,7 @@ export function useGenerateHint() {
                     importData: params.importData,
                     initialData: params.initialData,
                 }),
+                signal: params.signal,
             });
 
             if (!response.ok) {

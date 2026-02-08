@@ -82,9 +82,9 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             return (
                 <textarea
                     className={`w-full border border-indigo-200 bg-indigo-50/50 rounded p-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800 ${className}`}
-                    value={value}
+                    value={value || ""}
                     onChange={(e) => onChange(e.target.value)}
-                    rows={Math.max(2, value.split('\n').length)}
+                    rows={Math.max(2, (value || "").split('\n').length)}
                     placeholder={placeholder}
                 />
             );
@@ -92,7 +92,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
         return (
             <input
                 className={`w-full border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800 ${className}`}
-                value={value}
+                value={value || ""}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
             />
@@ -172,6 +172,38 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                         colorClass="bg-blue-500"
                                         description="Chronological, no gaps, quantified achievements, bullet style."
                                     />
+
+                                    {/* Detailed Structure Breakdown if available */}
+                                    {evaluation.detailedBreakdown?.structure && (
+                                        <div className="ml-4 p-3 bg-slate-50 rounded-lg space-y-2 border border-slate-100">
+                                            <div className="text-[9px] font-bold text-slate-500 uppercase mb-2">Structure Details</div>
+                                            <div className="grid grid-cols-2 gap-2 text-[9px]">
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-600">Basic Profile:</span>
+                                                    <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.structure.basicProfile}/5</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-600">Chronological:</span>
+                                                    <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.structure.chronological}/10</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-600">Role Info:</span>
+                                                    <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.structure.roleInfo}/10</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-600">Achievements:</span>
+                                                    <span className={`font-semibold ${evaluation.detailedBreakdown.structure.quantifiedAchievements === 0 ? 'text-red-600' : 'text-slate-800'}`}>
+                                                        {evaluation.detailedBreakdown.structure.quantifiedAchievements}/15
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between col-span-2">
+                                                    <span className="text-slate-600">Readability:</span>
+                                                    <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.structure.readability}/10</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <ScoreBar
                                         label="Reproducibility"
                                         score={evaluation.breakdown.reproducibility}
@@ -179,6 +211,28 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                         colorClass="bg-indigo-500"
                                         description="Decision making rationale, process clarity, individual contribution."
                                     />
+
+                                    {/* Detailed Reproducibility Breakdown if available */}
+                                    {evaluation.detailedBreakdown?.reproducibility && (
+                                        <div className="ml-4 p-3 bg-slate-50 rounded-lg space-y-2 border border-slate-100">
+                                            <div className="text-[9px] font-bold text-slate-500 uppercase mb-2">Reproducibility Details</div>
+                                            <div className="grid grid-cols-2 gap-2 text-[9px]">
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-600">Decision Making:</span>
+                                                    <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.reproducibility.decisionMaking}/10</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-600">PAR Flow:</span>
+                                                    <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.reproducibility.problemActionResult}/10</span>
+                                                </div>
+                                                <div className="flex justify-between col-span-2">
+                                                    <span className="text-slate-600">Individual Contribution:</span>
+                                                    <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.reproducibility.individualContribution}/5</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <ScoreBar
                                         label="Role Fit"
                                         score={evaluation.breakdown.roleFit}
@@ -186,6 +240,14 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                         colorClass="bg-violet-500"
                                         description="Alignment with the specific expectations of the target role."
                                     />
+
+                                    {/* Role Fit Details if available */}
+                                    {evaluation.detailedBreakdown?.roleFit?.details && (
+                                        <div className="ml-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                            <div className="text-[9px] text-slate-600 leading-relaxed">{evaluation.detailedBreakdown.roleFit.details}</div>
+                                        </div>
+                                    )}
+
                                     <ScoreBar
                                         label="Risk"
                                         score={evaluation.breakdown.riskHandling}
@@ -194,6 +256,23 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                         description="Handling of career gaps (>90 days) and red flags."
                                     />
                                 </div>
+
+                                {/* Validation Messages (if not passing) */}
+                                {evaluation.validationMessages && evaluation.validationMessages.length > 0 && (
+                                    <div className="bg-red-50 p-4 border-t border-red-100">
+                                        <p className="text-[10px] font-bold text-red-600 uppercase mb-2 flex items-center gap-1.5">
+                                            <AlertTriangle className="w-3 h-3" /> Failing Criteria
+                                        </p>
+                                        <ul className="space-y-1.5">
+                                            {evaluation.validationMessages.map((msg, i) => (
+                                                <li key={i} className="flex gap-2 text-[10px] text-red-700 leading-snug font-medium">
+                                                    <span className="text-red-400 mt-0.5">✗</span>
+                                                    {msg}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
 
                                 {/* Action Items */}
                                 {evaluation.missingItems.length > 0 && (
@@ -228,17 +307,43 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     </div>
                 </div>
 
-                {data.careerGaps.some(g => !g.isExplained) && (
-                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 shadow-sm">
-                        <div className="p-1.5 bg-amber-100 rounded-full text-amber-600 shrink-0">
-                            <AlertTriangle className="w-4 h-4" />
+                {(() => {
+                    // Filter out gaps that overlap with education periods
+                    const unexplainedGaps = data.careerGaps.filter(gap => {
+                        if (gap.isExplained) return false;
+
+                        // Check if this gap overlaps with any education period
+                        const gapOverlapsEducation = data.timeline?.some(item => {
+                            if (item.type !== 'education') return false;
+                            // Simple check - if gap reason mentions the education org, consider it explained
+                            return gap.period.toLowerCase().includes(item.organization.toLowerCase()) ||
+                                gap.period.toLowerCase().includes(item.role.toLowerCase());
+                        });
+
+                        return !gapOverlapsEducation;
+                    });
+
+                    if (unexplainedGaps.length === 0) return null;
+
+                    return (
+                        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 shadow-sm">
+                            <div className="p-1.5 bg-amber-100 rounded-full text-amber-600 shrink-0">
+                                <AlertTriangle className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="font-bold text-amber-900 text-sm">Timeline Gap Detected</h4>
+                                <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                                    A master resume must have a continuous timeline. Please explain the gap.
+                                </p>
+                                {unexplainedGaps.length > 0 && (
+                                    <div className="mt-2 text-xs text-amber-800">
+                                        <span className="font-semibold">Gaps found:</span> {unexplainedGaps.map(g => g.period).join(', ')}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <div>
-                            <h4 className="font-bold text-amber-900 text-sm">Timeline Gap Detected</h4>
-                            <p className="text-xs text-amber-700 mt-1 leading-relaxed">A master resume must have a continuous timeline. Please explain the gap.</p>
-                        </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
 
             {/* RIGHT COLUMN: Master Resume (Japanese Style Layout) */}
@@ -349,6 +454,51 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                 {data.careerOverview.projectCount && <span>Current Position Duration: <strong className="text-slate-900">{data.careerOverview.projectCount}</strong></span>}
                             </div>
                         </div>
+
+                        {/* Career Gaps Section - Only show if gaps exist and are explained */}
+                        {data.careerGaps && data.careerGaps.length > 0 && data.careerGaps.some(g => g.isExplained) && (
+                            <div className="mt-4 pt-3 border-t border-slate-200">
+                                <div className="text-[9pt] font-semibold text-slate-700 mb-2">Career Notes:</div>
+                                <div className="space-y-1.5">
+                                    {data.careerGaps.filter(g => g.isExplained).map((gap, i) => (
+                                        <div key={i} className="flex gap-2 text-[9pt] text-slate-700">
+                                            <span className="text-slate-900 font-bold">•</span>
+                                            <div className="flex-1">
+                                                <span className="font-medium text-slate-900">
+                                                    {activeTab === 'preview' ? gap.period : (
+                                                        <input
+                                                            className="border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
+                                                            value={gap.period}
+                                                            onChange={(e) => {
+                                                                const newGaps = [...data.careerGaps];
+                                                                newGaps[i].period = e.target.value;
+                                                                setData({ ...data, careerGaps: newGaps });
+                                                            }}
+                                                            placeholder="Period"
+                                                        />
+                                                    )}
+                                                </span>
+                                                <span className="mx-1.5 text-slate-500">:</span>
+                                                <span className="text-slate-700">
+                                                    {activeTab === 'preview' ? gap.reason : (
+                                                        <input
+                                                            className="border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
+                                                            value={gap.reason}
+                                                            onChange={(e) => {
+                                                                const newGaps = [...data.careerGaps];
+                                                                newGaps[i].reason = e.target.value;
+                                                                setData({ ...data, careerGaps: newGaps });
+                                                            }}
+                                                            placeholder="Reason"
+                                                        />
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Work Experience */}

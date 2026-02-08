@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { InterviewView } from '../components/InterviewView';
 import { ResumeEditor } from '../components/ResumeEditor';
-import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from '../types';
+import { Message, ResumeData, Project, RoleType, ImportData, UserProfile, EvaluationResult } from '../types';
 import { useParseResume, useAnalyzeImport } from '../hooks/useGemini';
 import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile } from '../services/storageService';
 import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin } from 'lucide-react';
@@ -461,6 +461,7 @@ export default function Page() {
       {step === 'interview' && currentProject && (
         <div className="h-screen py-4 md:py-8 px-4 bg-linear-to-b from-slate-50 to-slate-100">
           <InterviewView
+            key={currentProject.id}
             initialHistory={currentProject.history}
             onFinish={handleFinishInterview}
             onSave={handleSaveInterview}
@@ -473,9 +474,22 @@ export default function Page() {
       )}
 
       {step === 'generating' && (
-        <div className="h-screen flex flex-col justify-center items-center bg-white">
-          <Loader2 className="w-16 h-16 text-indigo-600 animate-spin mb-6" />
-          <h2 className="text-2xl font-bold text-slate-800">Structuring Master Resume...</h2>
+        <div className="h-screen flex flex-col justify-center items-center bg-linear-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 px-6">
+          <div className="max-w-md text-center space-y-6">
+            <div className="relative inline-block">
+              <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-purple-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
+              <Loader2 className="w-20 h-20 text-indigo-600 animate-spin relative z-10" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-bold text-slate-900">Generating Your Master Resume</h2>
+              <p className="text-slate-600 text-lg">AI is analyzing your experience and structuring your professional story...</p>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+              <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+          </div>
         </div>
       )}
 
