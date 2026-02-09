@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Message, ResumeData, ImportData } from '@/types';
 import { GEMINI_MODEL } from '@/config/models';
+import { getParseResumePrompt } from '@/lib/prompts';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { history, importData }: { history: Message[], importData?: ImportData } = body;
+        const { history, importData, locale }: { history: Message[], importData?: ImportData, locale?: string } = body;
 
         const ai = new GoogleGenAI({ apiKey: API_KEY });
         const model = GEMINI_MODEL;
@@ -27,83 +28,7 @@ export async function POST(request: NextRequest) {
         const conversationText = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
         const importedText = importData ? `IMPORTED RESUME CONTENT:\n${importData.sourceText}\n\n` : '';
 
-        const prompt = `
-    Create a structured, professional resume from this conversation following best practices.
-    
-    ${importedText}
-    
-    CONVERSATION:
-    ${conversationText}
-    
-    CRITICAL REQUIREMENTS FOR DATA EXTRACTION:
-    
-    1. WORK EXPERIENCE - Extract with precision:
-       - Use EXACT company names as provided (e.g., "Kerofit Pte Ltd", "Mount Packt")
-       - Extract complete job titles/positions
-       - Parse date ranges accurately (e.g., "2021 - Present", "2020 - 2021")
-       - Convert all responsibilities into concise, action-oriented bullet points
-       - Each responsibility should start with a strong action verb
-       - Include metrics and results where mentioned
-    
-    2. CAREER TIMELINE - Create chronological summary:
-       - List all positions in reverse chronological order (newest first)
-       - Format: "Period: Company Position (Duration)"
-       - Include calculated durations in parentheses
-    
-    3. EDUCATION - MANDATORY - Always extract if mentioned:
-       - Extract degree name exactly as provided (e.g., "Bachelor of Science in Computer Science", "MBA", "High School Diploma")
-       - Extract institution name exactly as provided (e.g., "Massachusetts Institute of Technology", "Stanford University")
-       - Include enrollment period or graduation date (e.g., "2016-2020", "Graduated 2020")
-       - Add any relevant notes (e.g., "Currently Enrolled", "GPA: 3.8", "Summa Cum Laude")
-       - If user mentions bootcamps or online courses, include those as well
-       - If user says "no formal degree", still create an entry noting their learning path (e.g., "Self-taught Developer", "Online Courses - Coursera/Udacity")
-    
-    4. SKILLS - MANDATORY - Extract all technical and professional skills:
-       - Include programming languages (e.g., Python, JavaScript, Java, C++, TypeScript)
-       - Include frameworks and libraries (e.g., React, Angular, Django, Spring Boot)
-       - Include tools and platforms (e.g., Git, Docker, Kubernetes, AWS, Azure)
-       - Include methodologies (e.g., Agile, Scrum, TDD, CI/CD)
-       - Include soft skills if mentioned (e.g., Leadership, Communication, Problem Solving)
-       - Organize by category if appropriate, but always output as flat array
-       - MINIMUM: Extract at least 3-5 skills if any are mentioned
-    
-    5. CERTIFICATIONS - MANDATORY - Always check if mentioned:
-       - Extract certification names exactly (e.g., "AWS Certified Solutions Architect", "PMP", "CPA")
-       - Include issuing organization if mentioned (e.g., "Amazon Web Services", "PMI")
-       - Include year obtained if mentioned
-       - If user explicitly says "no certifications" or they don't mention any, output empty array []
-       - Common certifications: AWS/Azure/GCP certifications, PMI certifications, Professional licenses, Industry-specific certs
-    
-    6. CAREER GAPS - Detect and explain gaps of 90+ days:
-       - Analyze timeline for gaps between positions longer than 90 days (3 months)
-       - For each gap detected:
-         * Extract the period (e.g., "March 2019 - November 2019")
-         * Extract the reason if explained in conversation (e.g., "Freelancing", "Career break", "Job search", "Further education", "Personal reasons", "Sabbatical")
-         * Set isExplained to true if reason was mentioned, false otherwise
-       - If no explanation found in conversation, set reason to empty string and isExplained to false
-       - Only include gaps of 90+ days (3+ months)
-    
-    7. CAREER OVERVIEW - Calculate statistics:
-       - Total experience in years
-       - Number of different employers
-       - Average tenure per position
-       - Current position duration
-    
-    8. PROFESSIONAL SUMMARY:
-       - Create a concise 2-3 sentence summary highlighting key experience and expertise
-       - Focus on years of experience, specialization, and key achievements
-       - Mention education level if significant (e.g., "MBA graduate", "Computer Science degree holder")
-       - Mention key skills or certifications if they stand out
-    
-    FORMATTING GUIDELINES:
-    - Use clear, precise, professional language
-    - Maintain consistency in date formats
-    - Quantify achievements with specific numbers where possible
-    - Keep bullet points focused and results-oriented
-    - Use proper grammar and punctuation
-    
-    Output as JSON matching the schema exactly.
-  `;
+        const prompt = getParseResumePrompt(conversationText, importedText, locale || 'en');
 
         const response = await ai.models.generateContent({
             model,

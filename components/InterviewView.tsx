@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { Message, RoleType, ImportData, ResumeData } from '../types';
 import { useSendMessage, useGenerateHint } from '../hooks/useGemini';
-import { ArrowUp, HelpCircle, Loader2, Save, User, Bot, Home, CheckCircle2, ClipboardCheck, ArrowRight, AlertTriangle, Square } from 'lucide-react';
+import { Send, Loader2, Sparkles, AlertCircle, ArrowUp, HelpCircle, Save, User, Bot, Home, CheckCircle2, ClipboardCheck, AlertTriangle, Square } from 'lucide-react';
 
 // Check if there are any unresolved gap questions in the conversation
 const hasUnresolvedGapQuestions = (messages: Message[]): boolean => {
@@ -172,6 +173,11 @@ interface InterviewViewProps {
 }
 
 export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, onFinish, onSave, onExit, roleType, importData, initialData }) => {
+    const t = useTranslations('Interview');
+    const tCommon = useTranslations('Common');
+    const tPersonal = useTranslations('PersonalInfo');
+    const locale = useLocale();
+
     const [messages, setMessages] = useState<Message[]>(initialHistory || []);
     const [inputValue, setInputValue] = useState('');
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
@@ -188,7 +194,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
 
     // Derived loading and error states from mutations
     const isLoading = isInitializing || sendMessageMutation.isPending || generateHintMutation.isPending;
-    const error = sendMessageMutation.error?.message || generateHintMutation.error?.message || null;
+    const error = (sendMessageMutation.error as any)?.message || (generateHintMutation.error as any)?.message || null;
 
     const userMessageCount = messages.filter(m => m.role === 'user').length;
     const { score: dataCompleteness, details: completenessDetails } = calculateDataCompleteness(messages, importData);
@@ -221,6 +227,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                         roleType,
                         importData,
                         initialData,
+                        locale,
                     });
 
                     if (mountedRef.current && response.text) {
@@ -295,6 +302,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                 importData,
                 initialData,
                 signal: controller.signal,
+                locale,
             });
 
             if (mountedRef.current && response.text) {
@@ -340,6 +348,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                 importData,
                 initialData,
                 signal: controller.signal,
+                locale,
             });
 
             if (mountedRef.current && hintText) {
@@ -390,22 +399,22 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                     </button>
                     <div className="h-6 w-px bg-slate-200 mx-1"></div>
                     <div>
-                        <h2 className="font-bold text-slate-800 text-sm md:text-base">JNJGO Agent</h2>
+                        <h2 className="font-bold text-slate-800 text-sm md:text-base">{t('agentName')}</h2>
                         <div className="flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                            <p className="text-[10px] text-slate-500 font-medium uppercase">{roleType} Expert</p>
+                            <p className="text-[10px] text-slate-500 font-medium uppercase">{t('roleExpert', { role: roleType })}</p>
                         </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 md:gap-3">
                     {importData && (
                         <div className="hidden md:flex items-center gap-1 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-[10px] font-bold">
-                            <CheckCircle2 className="w-3 h-3" /> IMPORTED
+                            <CheckCircle2 className="w-3 h-3" /> {t('imported')}
                         </div>
                     )}
                     <button onClick={handleSave} className="flex items-center gap-2 text-xs md:text-sm px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">
                         <Save className="w-4 h-4" />
-                        <span className="hidden md:inline">{showSaveConfirm ? "Saved!" : "Save Draft"}</span>
+                        <span className="hidden md:inline">{showSaveConfirm ? t('saved') : t('saveDraft')}</span>
                     </button>
 
                     {/* Data Completeness Indicator */}
@@ -442,13 +451,13 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                             {/* Tooltip on hover */}
                             <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900 text-white text-xs rounded-xl p-4 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 shadow-2xl border border-slate-700">
                                 <div className="space-y-3">
-                                    <p className="font-bold text-sm mb-2 text-slate-100">Data Collection Status</p>
+                                    <p className="font-bold text-sm mb-2 text-slate-100">{t('dataQuality')}</p>
 
                                     {/* High Priority Items */}
                                     {completenessDetails.filter(d => d.priority === 'high').length > 0 && (
                                         <div className="mb-3">
                                             <p className="text-[9px] text-amber-400 font-bold uppercase tracking-wider mb-2 flex items-center gap-1">
-                                                <AlertTriangle className="w-3 h-3" /> Critical Information
+                                                <AlertTriangle className="w-3 h-3" /> {t('criticalInfo')}
                                             </p>
                                             {completenessDetails.filter(d => d.priority === 'high').map((detail, idx) => (
                                                 <div key={idx} className="flex items-center gap-2.5 mb-2">
@@ -479,11 +488,11 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
 
                                     <div className="border-t border-slate-700 my-3 pt-3">
                                         <div className="flex justify-between items-center mb-1">
-                                            <span className="text-slate-400 text-[10px]">Responses</span>
+                                            <span className="text-slate-400 text-[10px]">{t('responses')}</span>
                                             <span className="text-white text-[10px] font-bold">{userMessageCount} / {importData ? '12+' : '16+'}</span>
                                         </div>
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-400 text-[10px]">Quality Score</span>
+                                            <span className="text-slate-400 text-[10px]">{t('qualityScore')}</span>
                                             <span className={`text-[10px] font-bold ${dataCompleteness >= 85 ? 'text-green-400' :
                                                 dataCompleteness >= 60 ? 'text-amber-400' :
                                                     'text-slate-400'
@@ -492,15 +501,15 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                     </div>
                                     {dataCompleteness >= 85 && allCriticalComplete ? (
                                         <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2.5">
-                                            <p className="text-green-300 text-[10px] font-medium leading-relaxed">✓ Excellent! All sections complete - Ready to generate</p>
+                                            <p className="text-green-300 text-[10px] font-medium leading-relaxed">{t('excellent')}</p>
                                         </div>
                                     ) : dataCompleteness >= 60 ? (
                                         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5">
-                                            <p className="text-amber-300 text-[10px] leading-relaxed">⚠️ Missing critical sections - Continue to complete all required information</p>
+                                            <p className="text-amber-300 text-[10px] leading-relaxed">{t('missingCritical')}</p>
                                         </div>
                                     ) : (
                                         <div className="bg-slate-500/10 border border-slate-500/30 rounded-lg p-2.5">
-                                            <p className="text-slate-300 text-[10px] leading-relaxed">💡 Keep answering - need more information for a complete resume</p>
+                                            <p className="text-slate-300 text-[10px] leading-relaxed">{t('keepAnswering')}</p>
                                         </div>
                                     )}
                                 </div>
@@ -515,10 +524,10 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                     ? 'bg-green-600 text-white hover:bg-green-700'
                                     : 'bg-orange-500 text-white hover:bg-orange-600'
                                     }`}
-                                title={isReadyToGenerate ? 'Generate your resume' : 'Generate with incomplete data - missing critical sections'}
+                                title={isReadyToGenerate ? t('generateResume') : 'Generate with incomplete data - missing critical sections'}
                             >
                                 <ClipboardCheck className="w-4 h-4" />
-                                <span className="hidden sm:inline">{isReadyToGenerate ? 'Generate Resume' : 'Force Generate'}</span>
+                                <span className="hidden sm:inline">{isReadyToGenerate ? t('generateResume') : t('forceGenerate')}</span>
                                 <span className="sm:hidden">{isReadyToGenerate ? 'Generate' : 'Force'}</span>
                             </button>
                         )}
@@ -536,38 +545,38 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                     <CheckCircle2 className="w-5 h-5 text-indigo-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-lg text-slate-900 mb-1">Generate Your Resume?</h3>
-                                    <p className="text-sm text-slate-600">Please review the data collected from our conversation.</p>
+                                    <h3 className="font-bold text-lg text-slate-900 mb-1">{t('generateConfirmTitle')}</h3>
+                                    <p className="text-sm text-slate-600">{t('generateConfirmDesc')}</p>
                                 </div>
                             </div>
 
                             {/* Data Preview */}
                             <div className="bg-slate-50 border border-slate-200 rounded-lg p-5 mb-5 space-y-4">
                                 <div>
-                                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Personal Information</h4>
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">{tPersonal('title')}</h4>
                                     <div className="bg-white rounded-lg p-3 text-sm">
-                                        <p className="font-semibold text-slate-900">{initialData?.fullName || 'Not provided'}</p>
-                                        <p className="text-slate-600 text-xs">{initialData?.contactInfo?.email || 'Email not provided'}</p>
-                                        <p className="text-slate-600 text-xs">{initialData?.contactInfo?.phone || 'Phone not provided'}</p>
+                                        <p className="font-semibold text-slate-900">{initialData?.fullName || t('notProvided')}</p>
+                                        <p className="text-slate-600 text-xs">{initialData?.contactInfo?.email || t('notProvided')}</p>
+                                        <p className="text-slate-600 text-xs">{initialData?.contactInfo?.phone || t('notProvided')}</p>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Conversation Summary</h4>
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">{t('conversationSummary')}</h4>
                                     <div className="bg-white rounded-lg p-3 space-y-2">
                                         <div className="flex justify-between items-center text-sm">
-                                            <span className="text-slate-600">Total responses:</span>
+                                            <span className="text-slate-600">{t('totalResponses')}</span>
                                             <span className="font-bold text-slate-900">{userMessageCount}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-sm">
-                                            <span className="text-slate-600">Data completeness:</span>
+                                            <span className="text-slate-600">{t('dataCompleteness')}</span>
                                             <span className={`font-bold ${dataCompleteness >= 75 ? 'text-green-600' :
                                                 dataCompleteness >= 50 ? 'text-amber-600' :
                                                     'text-orange-600'
                                                 }`}>{dataCompleteness}%</span>
                                         </div>
                                         <div className="mt-3 pt-3 border-t border-slate-200">
-                                            <p className="text-xs text-slate-500 mb-2">Collection status:</p>
+                                            <p className="text-xs text-slate-500 mb-2">{t('collectionStatus')}</p>
                                             <div className="space-y-1">
                                                 {completenessDetails.map((detail, idx) => (
                                                     <div key={idx} className="flex items-center gap-2 text-xs">
@@ -591,8 +600,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                         <div className="flex items-start gap-2">
                                             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                             <div>
-                                                <p className="text-xs font-semibold text-amber-900 mb-1">Data Quality Below Recommended</p>
-                                                <p className="text-xs text-amber-800">Your resume may have limited detail. Consider continuing the interview for better results.</p>
+                                                <p className="text-xs font-semibold text-amber-900 mb-1">{t('qualityBelowRecommended')}</p>
+                                                <p className="text-xs text-amber-800">{t('qualityBelowDesc')}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -607,14 +616,14 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                                 <div className="flex items-start gap-2">
                                                     <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                                                     <div className="flex-1">
-                                                        <p className="text-xs font-semibold text-red-900 mb-1">⚠️ Missing Critical Sections</p>
-                                                        <p className="text-xs text-red-800 mb-2">Professional resumes require these sections:</p>
+                                                        <p className="text-xs font-semibold text-red-900 mb-1">{t('missingCriticalTitle')}</p>
+                                                        <p className="text-xs text-red-800 mb-2">{t('missingCriticalDesc')}</p>
                                                         <ul className="text-xs text-red-800 list-disc list-inside space-y-0.5">
                                                             {missingCritical.map((section, idx) => (
                                                                 <li key={idx}>{section.category}</li>
                                                             ))}
                                                         </ul>
-                                                        <p className="text-xs text-red-800 mt-2 font-medium">Continue the interview to provide this essential information.</p>
+                                                        <p className="text-xs text-red-800 mt-2 font-medium">{t('continueToProvide')}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -635,8 +644,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                                 <div className="flex items-start gap-2">
                                                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                                     <div className="flex-1">
-                                                        <p className="text-xs font-semibold text-amber-900 mb-1">Timeline Gaps Not Fully Addressed</p>
-                                                        <p className="text-xs text-amber-800">It looks like some gap-related questions weren't fully answered. Click "Continue Interview" to provide those details naturally in the conversation.</p>
+                                                        <p className="text-xs font-semibold text-amber-900 mb-1">{t('timelineGapsTitle')}</p>
+                                                        <p className="text-xs text-amber-800">{t('timelineGapsDesc')}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -654,7 +663,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                     }}
                                     className="flex-1 px-4 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all"
                                 >
-                                    Continue Interview
+                                    {t('continueInterview')}
                                 </button>
                                 <button
                                     onClick={() => {
@@ -663,7 +672,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                     }}
                                     className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg hover:shadow-xl"
                                 >
-                                    ✓ Confirm & Generate
+                                    {t('confirmGenerate')}
                                 </button>
                             </div>
                         </div>
@@ -674,10 +683,10 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
                         <span className="font-semibold">⚠️</span>
                         <div>
-                            <p className="font-semibold">Error</p>
+                            <p className="font-semibold">{tCommon('error')}</p>
                             <p>{error}</p>
                             {error.includes('overloaded') && (
-                                <button onClick={() => window.location.reload()} className="mt-2 text-xs underline hover:no-underline">Reload page</button>
+                                <button onClick={() => window.location.reload()} className="mt-2 text-xs underline hover:no-underline">{tCommon('reload')}</button>
                             )}
                         </div>
                     </div>
@@ -690,7 +699,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                             </div>
                         )}
                         <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-6 py-4 text-sm leading-relaxed shadow-sm relative group whitespace-pre-wrap ${msg.role === 'user' ? 'bg-slate-900 text-white rounded-br-none' : 'bg-white text-slate-700 border border-slate-200/60 rounded-bl-none'}`}>
-                            {msg.isHint && <div className="flex items-center gap-1.5 mb-2 text-amber-600 font-bold text-xs uppercase"><HelpCircle className="w-3 h-3" /> Hint</div>}
+                            {msg.isHint && <div className="flex items-center gap-1.5 mb-2 text-amber-600 font-bold text-xs uppercase"><HelpCircle className="w-3 h-3" /> {t('hint')}</div>}
                             <span>{formatMarkdown(msg.text)}</span>
                         </div>
                         {msg.role === 'user' && (
@@ -717,12 +726,12 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                             onClick={handleHint}
                             disabled={isLoading}
                             className="p-2.5 bg-amber-50 text-amber-600 hover:bg-amber-100 hover:text-amber-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-amber-200"
-                            title="Get a helpful hint"
+                            title={t('getHint')}
                         >
                             <HelpCircle className="w-5 h-5" />
                         </button>
                         <div className="absolute bottom-full left-0 mb-2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                            Get hint
+                            {t('getHint')}
                         </div>
                     </div>
 
@@ -732,7 +741,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="Type your answer here..."
+                            placeholder={t('placeholder')}
                             disabled={isLoading}
                             className="flex-1 bg-transparent border-none focus:ring-0 resize-none h-10 py-2.5 text-sm outline-none text-slate-800 placeholder:text-slate-400 disabled:opacity-50"
                             rows={1}
@@ -749,7 +758,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                 }
                             }}
                             className="p-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
-                            title="Stop generating"
+                            title={t('stopGenerating')}
                         >
                             <Square className="w-5 h-5 fill-current" />
                         </button>
@@ -761,7 +770,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                 ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
                                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                                 }`}
-                            title="Send message"
+                            title={t('sendMessage')}
                         >
                             <ArrowUp className="w-5 h-5" />
                         </button>
@@ -771,7 +780,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                 {/* Helper text */}
                 <div className="max-w-4xl mx-auto mt-1.5">
                     <p className="text-center text-xs text-slate-400">
-                        {isLoading ? 'Agent is thinking...' : 'Press Enter to send • Shift + Enter for new line'}
+                        {isLoading ? t('agentThinking') : t('pressEnter')}
                     </p>
                 </div>
             </div>

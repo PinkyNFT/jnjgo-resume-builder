@@ -1,4 +1,4 @@
-import { Project, Message, ResumeData, RoleType, ImportData, UserProfile, INITIAL_RESUME_DATA } from '../types';
+import { Project, ResumeData, RoleType, ImportData, UserProfile, INITIAL_RESUME_DATA } from '../types';
 
 const STORAGE_KEY = 'jnjgo_projects_v2';
 const PROFILE_KEY = 'jnjgo_user_profile';
@@ -10,7 +10,7 @@ export const getUserProfile = (): UserProfile | null => {
     try {
         const data = localStorage.getItem(PROFILE_KEY);
         return data ? JSON.parse(data) : null;
-    } catch (e) {
+    } catch {
         return null;
     }
 };
@@ -27,7 +27,7 @@ export const getProjects = (): Project[] => {
     try {
         const data = localStorage.getItem(STORAGE_KEY);
         return data ? JSON.parse(data) : [];
-    } catch (e) {
+    } catch {
         return [];
     }
 };

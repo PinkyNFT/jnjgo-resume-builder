@@ -4,7 +4,7 @@
  * caching, and retry logic
  */
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Message, ResumeData, RoleType, ImportData, EvaluationResult } from '../types';
 
 interface SendMessageParams {
@@ -14,6 +14,7 @@ interface SendMessageParams {
     importData?: ImportData;
     initialData?: ResumeData;
     signal?: AbortSignal;
+    locale?: string;
 }
 
 interface GenerateHintParams {
@@ -22,6 +23,7 @@ interface GenerateHintParams {
     importData?: ImportData;
     initialData?: ResumeData;
     signal?: AbortSignal;
+    locale?: string;
 }
 
 /**
@@ -41,6 +43,7 @@ export function useSendMessage() {
                     roleType: params.roleType,
                     importData: params.importData,
                     initialData: params.initialData,
+                    locale: params.locale,
                 }),
                 signal: params.signal,
             });
@@ -54,13 +57,14 @@ export function useSendMessage() {
             return { text: data.text, phase: data.phase };
         },
         // Retry configuration
-        retry: (failureCount, error: any) => {
+        retry: (failureCount, error: unknown) => {
+            const err = error as any;
             // Don't retry on 4xx errors
-            if (error?.message?.includes('400') || error?.message?.includes('401')) {
+            if (err?.message?.includes('400') || err?.message?.includes('401')) {
                 return false;
             }
             // Retry up to 2 times for 503/overloaded errors
-            const is503 = error?.message?.includes('503') || error?.message?.includes('overloaded');
+            const is503 = err?.message?.includes('503') || err?.message?.includes('overloaded');
             return is503 && failureCount < 2;
         },
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 4000),
@@ -82,6 +86,7 @@ export function useGenerateHint() {
                     roleType: params.roleType,
                     importData: params.importData,
                     initialData: params.initialData,
+                    locale: params.locale,
                 }),
                 signal: params.signal,
             });
@@ -107,14 +112,16 @@ export function useParseResume() {
         mutationFn: async ({
             history,
             importData,
+            locale,
         }: {
             history: Message[];
             importData?: ImportData;
+            locale?: string;
         }) => {
             const response = await fetch('/api/parse', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ history, importData }),
+                body: JSON.stringify({ history, importData, locale }),
             });
 
             if (!response.ok) {
@@ -135,13 +142,20 @@ export function useParseResume() {
  */
 export function useAnalyzeImport() {
     return useMutation({
-        mutationFn: async (text: string) => {
+        mutationFn: async ({
+            text,
+            locale
+        }: {
+            text: string;
+            locale?: string;
+        }) => {
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'analyzeImport',
                     text,
+                    locale,
                 }),
             });
 
@@ -166,9 +180,11 @@ export function useEvaluateResume() {
         mutationFn: async ({
             data,
             roleType,
+            locale,
         }: {
             data: ResumeData;
             roleType: RoleType;
+            locale?: string;
         }) => {
             const response = await fetch('/api/analyze', {
                 method: 'POST',
@@ -177,6 +193,7 @@ export function useEvaluateResume() {
                     action: 'evaluateResume',
                     data,
                     roleType,
+                    locale,
                 }),
             });
 

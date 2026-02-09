@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ResumeData, Project, EvaluationResult, WorkExperience, Education } from '../types';
+import { useTranslations } from 'next-intl';
+import { ResumeData, Project, EvaluationResult } from '../types';
 import { evaluateResume } from '../services/geminiService';
 import { saveProject } from '../services/storageService';
 import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2 } from 'lucide-react';
@@ -35,6 +36,7 @@ const ScoreBar = ({ label, score, max, colorClass, description }: { label: strin
 );
 
 export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, onBack }) => {
+    const t = useTranslations('Editor');
     const [data, setData] = useState<ResumeData>(project.data!);
     const [evaluation, setEvaluation] = useState<EvaluationResult | undefined>(project.evaluation);
     const [isEvaluating, setIsEvaluating] = useState(false);
@@ -64,7 +66,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             updatedAt: Date.now()
         };
         saveProject(updatedProject);
-        alert("Saved!");
+        alert(t('saved') || "Saved!");
         onBack();
     };
 
@@ -132,19 +134,19 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             {/* LEFT COLUMN: Controls */}
             <div className="w-80 shrink-0 space-y-6 print:hidden h-fit sticky top-6">
                 <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium text-sm mb-2 transition-colors">
-                    <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+                    <ArrowLeft className="w-4 h-4" /> {t('backToDashboard')}
                 </button>
 
                 <div className="bg-white p-5 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100">
                     <div className="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-xl">
-                        <button onClick={() => setActiveTab('preview')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'preview' ? 'bg-white shadow-sm text-slate-900 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}>Preview</button>
-                        <button onClick={() => setActiveTab('edit')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'edit' ? 'bg-white shadow-sm text-slate-900 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}>Edit Data</button>
+                        <button onClick={() => setActiveTab('preview')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'preview' ? 'bg-white shadow-sm text-slate-900 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}>{t('preview')}</button>
+                        <button onClick={() => setActiveTab('edit')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'edit' ? 'bg-white shadow-sm text-slate-900 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}>{t('editData')}</button>
                     </div>
 
                     <div className="space-y-3">
                         <button onClick={handleRunEvaluation} disabled={isEvaluating} className="w-full py-3 bg-indigo-50 text-indigo-700 font-bold text-sm rounded-xl hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 group border border-indigo-100 shadow-sm">
                             {isEvaluating ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4 group-hover:scale-110 transition-transform" />}
-                            Run Score Analysis
+                            {t('runScoreAnalysis')}
                         </button>
 
                         {evaluation && (
@@ -152,52 +154,52 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                 {/* Score Header */}
                                 <div className={`p-4 border-b border-slate-100 flex justify-between items-center ${evaluation.isPassing ? 'bg-green-50/50' : 'bg-amber-50/50'}`}>
                                     <div>
-                                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Quality Score</div>
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t('qualityScore')}</div>
                                         <div className={`text-3xl font-black flex items-baseline ${evaluation.isPassing ? 'text-green-600' : 'text-amber-600'}`}>
                                             {evaluation.totalScore}<span className="text-sm text-slate-400 font-medium ml-1">/100</span>
                                         </div>
                                     </div>
                                     <div className={`px-3 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1 ${evaluation.isPassing ? 'bg-green-100 text-green-700 border-green-200' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
                                         {evaluation.isPassing ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                                        {evaluation.isPassing ? 'PASSING' : 'NEEDS WORK'}
+                                        {evaluation.isPassing ? t('passing') : t('needsWork')}
                                     </div>
                                 </div>
 
                                 {/* Detailed Breakdown */}
                                 <div className="p-4 space-y-4 bg-white">
                                     <ScoreBar
-                                        label="Structure"
+                                        label={t('structure')}
                                         score={evaluation.breakdown.structure}
                                         max={50}
                                         colorClass="bg-blue-500"
-                                        description="Chronological, no gaps, quantified achievements, bullet style."
+                                        description={t('structureDesc')}
                                     />
 
                                     {/* Detailed Structure Breakdown if available */}
                                     {evaluation.detailedBreakdown?.structure && (
                                         <div className="ml-4 p-3 bg-slate-50 rounded-lg space-y-2 border border-slate-100">
-                                            <div className="text-[9px] font-bold text-slate-500 uppercase mb-2">Structure Details</div>
+                                            <div className="text-[9px] font-bold text-slate-500 uppercase mb-2">{t('structureDetails')}</div>
                                             <div className="grid grid-cols-2 gap-2 text-[9px]">
                                                 <div className="flex justify-between">
-                                                    <span className="text-slate-600">Basic Profile:</span>
+                                                    <span className="text-slate-600">{t('basicProfile')}</span>
                                                     <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.structure.basicProfile}/5</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-slate-600">Chronological:</span>
+                                                    <span className="text-slate-600">{t('chronological')}</span>
                                                     <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.structure.chronological}/10</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-slate-600">Role Info:</span>
+                                                    <span className="text-slate-600">{t('roleInfo')}</span>
                                                     <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.structure.roleInfo}/10</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-slate-600">Achievements:</span>
+                                                    <span className="text-slate-600">{t('quantifiedAchievements')}</span>
                                                     <span className={`font-semibold ${evaluation.detailedBreakdown.structure.quantifiedAchievements === 0 ? 'text-red-600' : 'text-slate-800'}`}>
                                                         {evaluation.detailedBreakdown.structure.quantifiedAchievements}/15
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between col-span-2">
-                                                    <span className="text-slate-600">Readability:</span>
+                                                    <span className="text-slate-600">{t('readability')}</span>
                                                     <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.structure.readability}/10</span>
                                                 </div>
                                             </div>
@@ -205,28 +207,28 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                     )}
 
                                     <ScoreBar
-                                        label="Reproducibility"
+                                        label={t('reproducibility')}
                                         score={evaluation.breakdown.reproducibility}
                                         max={25}
                                         colorClass="bg-indigo-500"
-                                        description="Decision making rationale, process clarity, individual contribution."
+                                        description={t('reproducibilityDesc')}
                                     />
 
                                     {/* Detailed Reproducibility Breakdown if available */}
                                     {evaluation.detailedBreakdown?.reproducibility && (
                                         <div className="ml-4 p-3 bg-slate-50 rounded-lg space-y-2 border border-slate-100">
-                                            <div className="text-[9px] font-bold text-slate-500 uppercase mb-2">Reproducibility Details</div>
+                                            <div className="text-[9px] font-bold text-slate-500 uppercase mb-2">{t('reproducibilityDetails')}</div>
                                             <div className="grid grid-cols-2 gap-2 text-[9px]">
                                                 <div className="flex justify-between">
-                                                    <span className="text-slate-600">Decision Making:</span>
+                                                    <span className="text-slate-600">{t('decisionMaking')}</span>
                                                     <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.reproducibility.decisionMaking}/10</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-slate-600">PAR Flow:</span>
+                                                    <span className="text-slate-600">{t('parFlow')}</span>
                                                     <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.reproducibility.problemActionResult}/10</span>
                                                 </div>
                                                 <div className="flex justify-between col-span-2">
-                                                    <span className="text-slate-600">Individual Contribution:</span>
+                                                    <span className="text-slate-600">{t('individualContribution')}</span>
                                                     <span className="font-semibold text-slate-800">{evaluation.detailedBreakdown.reproducibility.individualContribution}/5</span>
                                                 </div>
                                             </div>
@@ -234,11 +236,11 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                     )}
 
                                     <ScoreBar
-                                        label="Role Fit"
+                                        label={t('roleFit')}
                                         score={evaluation.breakdown.roleFit}
                                         max={15}
                                         colorClass="bg-violet-500"
-                                        description="Alignment with the specific expectations of the target role."
+                                        description={t('roleFitDesc')}
                                     />
 
                                     {/* Role Fit Details if available */}
@@ -249,11 +251,11 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                     )}
 
                                     <ScoreBar
-                                        label="Risk"
+                                        label={t('risk')}
                                         score={evaluation.breakdown.riskHandling}
                                         max={10}
                                         colorClass="bg-rose-500"
-                                        description="Handling of career gaps (>90 days) and red flags."
+                                        description={t('riskDesc')}
                                     />
                                 </div>
 
@@ -261,7 +263,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                 {evaluation.validationMessages && evaluation.validationMessages.length > 0 && (
                                     <div className="bg-red-50 p-4 border-t border-red-100">
                                         <p className="text-[10px] font-bold text-red-600 uppercase mb-2 flex items-center gap-1.5">
-                                            <AlertTriangle className="w-3 h-3" /> Failing Criteria
+                                            <AlertTriangle className="w-3 h-3" /> {t('failingCriteria')}
                                         </p>
                                         <ul className="space-y-1.5">
                                             {evaluation.validationMessages.map((msg, i) => (
@@ -278,7 +280,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                 {evaluation.missingItems.length > 0 && (
                                     <div className="bg-slate-50 p-4 border-t border-slate-100">
                                         <p className="text-[10px] font-bold text-slate-500 uppercase mb-2 flex items-center gap-1.5">
-                                            <AlertTriangle className="w-3 h-3 text-amber-500" /> Improvements Needed
+                                            <AlertTriangle className="w-3 h-3 text-amber-500" /> {t('improvementsNeeded')}
                                         </p>
                                         <ul className="space-y-2">
                                             {evaluation.missingItems.map((item, i) => (
@@ -298,11 +300,11 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                             disabled={!evaluation?.isPassing}
                             className={`w-full py-3 font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg hover:-translate-y-0.5 ${evaluation?.isPassing ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
                         >
-                            <Save className="w-4 h-4" /> Save as Complete
+                            <Save className="w-4 h-4" /> {t('saveAsComplete')}
                         </button>
 
                         <button onClick={handlePrint} className="w-full py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2">
-                            <Printer className="w-4 h-4" /> Export PDF
+                            <Printer className="w-4 h-4" /> {t('exportPDF')}
                         </button>
                     </div>
                 </div>
@@ -331,13 +333,13 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                 <AlertTriangle className="w-4 h-4" />
                             </div>
                             <div className="flex-1">
-                                <h4 className="font-bold text-amber-900 text-sm">Timeline Gap Detected</h4>
+                                <h4 className="font-bold text-amber-900 text-sm">{t('timelineGap')}</h4>
                                 <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-                                    A master resume must have a continuous timeline. Please explain the gap.
+                                    {t('gapMessage')}
                                 </p>
                                 {unexplainedGaps.length > 0 && (
                                     <div className="mt-2 text-xs text-amber-800">
-                                        <span className="font-semibold">Gaps found:</span> {unexplainedGaps.map(g => g.period).join(', ')}
+                                        <span className="font-semibold">{t('gapsFound')}</span> {unexplainedGaps.map(g => g.period).join(', ')}
                                     </div>
                                 )}
                             </div>
@@ -389,15 +391,15 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
                     {/* Professional Summary */}
                     <div className="mb-7">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">Professional Summary</h2>
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">{t('professionalSummary')}</h2>
                         <div className="text-[9.5pt] text-slate-800 leading-relaxed">
-                            {renderEditableText(data.careerSummary, val => setData({ ...data, careerSummary: val }), true, "", "Professional summary goes here...")}
+                            {renderEditableText(data.careerSummary, val => setData({ ...data, careerSummary: val }), true, "", t('professionalSummaryPlaceholder'))}
                         </div>
                     </div>
 
                     {/* Career Summary Timeline */}
                     <div className="mb-7">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">Career Summary</h2>
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">{t('careerSummary')}</h2>
                         <div className="space-y-2 text-[9.5pt] mb-4">
                             {data.timeline && data.timeline.length > 0 ? (
                                 data.timeline.filter(t => t.type === 'work').map((item, i) => (
@@ -409,7 +411,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                     const newT = [...data.timeline];
                                                     newT.find(t => t.id === item.id)!.period = val;
                                                     setData({ ...data, timeline: newT });
-                                                }, false, "inline-block", "") : <span className="text-slate-400 italic text-[9pt]">Current</span>}
+                                                }, false, "inline-block", "") : <span className="text-slate-400 italic text-[9pt]">{t('current')}</span>}
                                             </span>
                                             <span className="mx-1.5 text-slate-500">:</span>
                                             <span className="text-slate-900 font-semibold">
@@ -417,7 +419,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                     const newT = [...data.timeline];
                                                     newT.find(t => t.id === item.id)!.organization = val;
                                                     setData({ ...data, timeline: newT });
-                                                }, false, "inline-block", "") : <span className="text-slate-400 italic text-[9pt]">Previous</span>}
+                                                }, false, "inline-block", "") : <span className="text-slate-400 italic text-[9pt]">{t('previous')}</span>}
                                             </span>
                                             {item.role && (
                                                 <span className="text-slate-700">
@@ -441,24 +443,24 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-slate-400 italic text-[9pt]">No career timeline available</div>
+                                <div className="text-slate-400 italic text-[9pt]">{t('noTimeline')}</div>
                             )}
                         </div>
 
                         {/* Career Overview Stats */}
                         <div className="pt-3 border-t border-slate-200 text-[9pt] text-slate-700">
                             <div className="flex gap-5 flex-wrap">
-                                {data.careerOverview.totalExperience && <span>Total Career: <strong className="text-slate-900">{data.careerOverview.totalExperience}</strong></span>}
-                                {data.careerOverview.numberOfEmployers > 0 && <span>Number of Employers: <strong className="text-slate-900">{data.careerOverview.numberOfEmployers}</strong></span>}
-                                {data.careerOverview.averageTenure && <span>Average Tenure: <strong className="text-slate-900">{data.careerOverview.averageTenure}</strong></span>}
-                                {data.careerOverview.projectCount && <span>Current Position Duration: <strong className="text-slate-900">{data.careerOverview.projectCount}</strong></span>}
+                                {data.careerOverview.totalExperience && <span>{t('totalCareer')} <strong className="text-slate-900">{data.careerOverview.totalExperience}</strong></span>}
+                                {data.careerOverview.numberOfEmployers > 0 && <span>{t('numberOfEmployers')} <strong className="text-slate-900">{data.careerOverview.numberOfEmployers}</strong></span>}
+                                {data.careerOverview.averageTenure && <span>{t('averageTenure')} <strong className="text-slate-900">{data.careerOverview.averageTenure}</strong></span>}
+                                {data.careerOverview.projectCount && <span>{t('currentPositionDuration')} <strong className="text-slate-900">{data.careerOverview.projectCount}</strong></span>}
                             </div>
                         </div>
 
                         {/* Career Gaps Section - Only show if gaps exist and are explained */}
                         {data.careerGaps && data.careerGaps.length > 0 && data.careerGaps.some(g => g.isExplained) && (
                             <div className="mt-4 pt-3 border-t border-slate-200">
-                                <div className="text-[9pt] font-semibold text-slate-700 mb-2">Career Notes:</div>
+                                <div className="text-[9pt] font-semibold text-slate-700 mb-2">{t('careerNotes')}</div>
                                 <div className="space-y-1.5">
                                     {data.careerGaps.filter(g => g.isExplained).map((gap, i) => (
                                         <div key={i} className="flex gap-2 text-[9pt] text-slate-700">
@@ -474,7 +476,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                                 newGaps[i].period = e.target.value;
                                                                 setData({ ...data, careerGaps: newGaps });
                                                             }}
-                                                            placeholder="Period"
+                                                            placeholder={t('period')}
                                                         />
                                                     )}
                                                 </span>
@@ -489,7 +491,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                                 newGaps[i].reason = e.target.value;
                                                                 setData({ ...data, careerGaps: newGaps });
                                                             }}
-                                                            placeholder="Reason"
+                                                            placeholder={t('reason')}
                                                         />
                                                     )}
                                                 </span>
@@ -503,7 +505,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
                     {/* Work Experience */}
                     <div className="mb-8">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">Work Experience</h2>
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('workExperience')}</h2>
 
                         <div className="space-y-8">
                             {data.workExperience && data.workExperience.length > 0 ? (
@@ -515,9 +517,9 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                 <h3 className="font-bold text-[10.5pt] text-slate-900 flex-1">
                                                     {activeTab === 'preview' ? (
                                                         <>
-                                                            {work.company || <span className="text-slate-400 italic">Company Name</span>}
+                                                            {work.company || <span className="text-slate-400 italic">{t('companyName')}</span>}
                                                             {' | '}
-                                                            {work.position || <span className="text-slate-400 italic">Position</span>}
+                                                            {work.position || <span className="text-slate-400 italic">{t('position')}</span>}
                                                         </>
                                                     ) : (
                                                         <div className="flex items-center gap-2">
@@ -529,7 +531,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                                     newWork[i].company = e.target.value;
                                                                     setData({ ...data, workExperience: newWork });
                                                                 }}
-                                                                placeholder="Company Name"
+                                                                placeholder={t('companyName')}
                                                             />
                                                             <span className="text-slate-500">|</span>
                                                             <input
@@ -540,7 +542,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                                     newWork[i].position = e.target.value;
                                                                     setData({ ...data, workExperience: newWork });
                                                                 }}
-                                                                placeholder="Position"
+                                                                placeholder={t('position')}
                                                             />
                                                         </div>
                                                     )}
@@ -551,7 +553,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                             const newWork = [...(data.workExperience || [])];
                                                             newWork[i].period = val;
                                                             setData({ ...data, workExperience: newWork });
-                                                        }, false, "", "Period")}
+                                                        }, false, "", t('period'))}
                                                     </span>
                                                 )}
                                             </div>
@@ -560,7 +562,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                         {/* Responsibilities Section */}
                                         {work.responsibilities && work.responsibilities.length > 0 && (
                                             <div className="mb-3">
-                                                <div className="font-bold text-[9pt] text-slate-900 mb-2">■ Responsibilities:</div>
+                                                <div className="font-bold text-[9pt] text-slate-900 mb-2">■ {t('responsibilities')}</div>
                                                 <ul className="space-y-1.5">
                                                     {work.responsibilities.map((resp, j) => (
                                                         <li key={j} className="flex gap-2 text-[9.5pt] text-slate-800 leading-relaxed ml-4">
@@ -570,7 +572,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                                     const newWork = [...(data.workExperience || [])];
                                                                     newWork[i].responsibilities[j] = val;
                                                                     setData({ ...data, workExperience: newWork });
-                                                                }, true, "", "Responsibility")}
+                                                                }, true, "", t('responsibility'))}
                                                             </div>
                                                         </li>
                                                     ))}
@@ -590,7 +592,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                         const newProjs = [...data.projectPortfolio.representativeProjects];
                                                         newProjs[i].title = val;
                                                         setData({ ...data, projectPortfolio: { ...data.projectPortfolio, representativeProjects: newProjs } });
-                                                    }, false, "", "") : <span className="text-slate-400 italic text-[10pt]">Company & Position</span>}
+                                                    }, false, "", "") : <span className="text-slate-400 italic text-[10pt]">{t('companyAndPosition')}</span>}
                                                 </h3>
                                                 {proj.period && (
                                                     <span className="text-[9pt] font-medium text-slate-700 ml-4">
@@ -616,7 +618,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                         {/* Responsibilities Section */}
                                         {(proj.role || proj.teamStructure) && (
                                             <div className="mb-3">
-                                                <div className="font-bold text-[9pt] text-slate-900 mb-1.5">■ Responsibilities:</div>
+                                                <div className="font-bold text-[9pt] text-slate-900 mb-1.5">■ {t('responsibilities')}</div>
                                                 {proj.role && (
                                                     <div className="text-[9.5pt] text-slate-800 mb-1 ml-4">
                                                         {renderEditableText(proj.role, val => {
@@ -641,7 +643,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                         {/* Main Achievements Section */}
                                         {(proj.contribution || proj.challenges) && (
                                             <div className="mb-3">
-                                                <div className="font-bold text-[9pt] text-slate-900 mb-1.5">■ Main Achievements:</div>
+                                                <div className="font-bold text-[9pt] text-slate-900 mb-1.5">■ {t('mainAchievements')}</div>
                                                 {proj.contribution && (
                                                     <div className="text-[9.5pt] text-slate-800 mb-1 ml-4">
                                                         {renderEditableText(proj.contribution, val => {
@@ -668,7 +670,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                             <div className="bg-slate-100 border border-slate-200 px-4 py-3 text-[9pt] leading-relaxed space-y-2">
                                                 {proj.clientType && (
                                                     <div className="flex gap-2">
-                                                        <span className="font-bold text-slate-900 min-w-20">Challenge:</span>
+                                                        <span className="font-bold text-slate-900 min-w-20">{t('challenge')}</span>
                                                         <span className="text-slate-800 flex-1">
                                                             {renderEditableText(proj.clientType || "", val => {
                                                                 const newProjs = [...data.projectPortfolio.representativeProjects];
@@ -680,7 +682,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                 )}
                                                 {proj.theme && (
                                                     <div className="flex gap-2">
-                                                        <span className="font-bold text-slate-900 min-w-20">Approach:</span>
+                                                        <span className="font-bold text-slate-900 min-w-20">{t('approach')}</span>
                                                         <span className="text-slate-800 flex-1">
                                                             {renderEditableText(proj.theme || "", val => {
                                                                 const newProjs = [...data.projectPortfolio.representativeProjects];
@@ -692,7 +694,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                 )}
                                                 {data.projectPortfolio.additionalEngagements && (
                                                     <div className="flex gap-2">
-                                                        <span className="font-bold text-slate-900 min-w-20">Results:</span>
+                                                        <span className="font-bold text-slate-900 min-w-20">{t('results')}</span>
                                                         <span className="text-slate-800 flex-1">
                                                             {renderEditableText(data.projectPortfolio.additionalEngagements, val => setData({ ...data, projectPortfolio: { ...data.projectPortfolio, additionalEngagements: val } }), false, "inline-block", "")}
                                                         </span>
@@ -709,7 +711,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     {/* Education Section */}
                     {data.education && data.education.length > 0 && (
                         <div className="mb-8">
-                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">Education</h2>
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('education')}</h2>
                             <div className="space-y-4">
                                 {data.education.map((edu, i) => (
                                     <div key={edu.id} className="break-inside-avoid">
@@ -720,14 +722,14 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                         const newEdu = [...(data.education || [])];
                                                         newEdu[i].degree = val;
                                                         setData({ ...data, education: newEdu });
-                                                    }, false, "", "Degree") : <span className="text-slate-400 italic">Degree</span>}
+                                                    }, false, "", t('degree')) : <span className="text-slate-400 italic">{t('degree')}</span>}
                                                 </h3>
                                                 <div className="text-[9.5pt] text-slate-700">
                                                     {edu.institution ? renderEditableText(edu.institution, val => {
                                                         const newEdu = [...(data.education || [])];
                                                         newEdu[i].institution = val;
                                                         setData({ ...data, education: newEdu });
-                                                    }, false, "", "Institution") : <span className="text-slate-400 italic">Institution</span>}
+                                                    }, false, "", t('institution')) : <span className="text-slate-400 italic">{t('institution')}</span>}
                                                 </div>
                                             </div>
                                             {edu.period && (
@@ -736,7 +738,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                         const newEdu = [...(data.education || [])];
                                                         newEdu[i].period = val;
                                                         setData({ ...data, education: newEdu });
-                                                    }, false, "", "Period")}
+                                                    }, false, "", t('period'))}
                                                 </span>
                                             )}
                                         </div>
@@ -746,7 +748,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                     const newEdu = [...(data.education || [])];
                                                     newEdu[i].notes = val;
                                                     setData({ ...data, education: newEdu });
-                                                }, false, "", "Notes")}
+                                                }, false, "", t('notes'))}
                                             </div>
                                         )}
                                     </div>
@@ -758,7 +760,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     {/* Skills Section */}
                     {data.skills && data.skills.length > 0 && (
                         <div className="mb-8">
-                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">Skills</h2>
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('skills')}</h2>
                             <div className="flex flex-wrap gap-2">
                                 {data.skills.map((skill, i) => (
                                     <div key={i} className="inline-flex items-center">
@@ -775,7 +777,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                     newSkills[i] = e.target.value;
                                                     setData({ ...data, skills: newSkills });
                                                 }}
-                                                placeholder="Skill"
+                                                placeholder={t('skillPlaceholder')}
                                             />
                                         )}
                                     </div>
@@ -787,7 +789,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     {/* Certifications Section */}
                     {data.certifications && data.certifications.length > 0 && (
                         <div className="mb-8">
-                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">Certifications</h2>
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('certifications')}</h2>
                             <div className="space-y-2">
                                 {data.certifications.map((cert, i) => (
                                     <div key={i} className="flex gap-2 text-[9.5pt] text-slate-800">
@@ -797,7 +799,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                 const newCerts = [...(data.certifications || [])];
                                                 newCerts[i] = val;
                                                 setData({ ...data, certifications: newCerts });
-                                            }, false, "", "Certification")}
+                                            }, false, "", t('certificationPlaceholder'))}
                                         </div>
                                     </div>
                                 ))}

@@ -1,16 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { InterviewView } from '../components/InterviewView';
-import { ResumeEditor } from '../components/ResumeEditor';
-import { Message, ResumeData, Project, RoleType, ImportData, UserProfile, EvaluationResult } from '../types';
-import { useParseResume, useAnalyzeImport } from '../hooks/useGemini';
-import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile } from '../services/storageService';
+import { useTranslations, useLocale } from 'next-intl';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
+import { InterviewView } from '../../components/InterviewView';
+import { ResumeEditor } from '../../components/ResumeEditor';
+import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from '../../types';
+import { useParseResume, useAnalyzeImport } from '../../hooks/useGemini';
+import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile } from '../../services/storageService';
 import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin } from 'lucide-react';
 
 // --- Sub-Components ---
 
+type Step = 'dashboard' | 'setup' | 'personal_info' | 'interview' | 'generating' | 'editor';
+
 const HeroSection = ({ onStart }: { onStart: () => void }) => {
+  const t = useTranslations('Dashboard');
   return (
     <div className="text-center max-w-4xl mx-auto space-y-8 animate-in fade-in zoom-in duration-700 py-16 md:py-24 px-6">
       <div className="inline-flex items-center justify-center p-5 bg-white rounded-3xl shadow-2xl shadow-indigo-200/50 mb-8 relative group cursor-default hover:scale-105 transition-transform">
@@ -21,10 +26,10 @@ const HeroSection = ({ onStart }: { onStart: () => void }) => {
         JNJGO Resume
       </h1>
       <p className="text-xl md:text-2xl text-slate-600 font-medium max-w-2xl mx-auto leading-relaxed">
-        Build Your Master Resume with AI
+        {t('subtitle')}
       </p>
       <p className="text-slate-500 leading-relaxed max-w-xl mx-auto text-base md:text-lg">
-        JNJGO creates a "Decision-Making Document" for high-end professionals. Stop telling stories; start showing impact.
+        {t('description')}
       </p>
 
       <div className="flex justify-center pt-8">
@@ -32,7 +37,7 @@ const HeroSection = ({ onStart }: { onStart: () => void }) => {
           onClick={onStart}
           className="group relative inline-flex items-center justify-center px-10 py-5 font-bold text-white text-lg transition-all duration-300 bg-slate-900 rounded-2xl hover:bg-indigo-600 hover:shadow-2xl hover:shadow-indigo-500/30 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900"
         >
-          Start New Resume
+          {t('startNew')}
           <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" />
         </button>
       </div>
@@ -41,6 +46,8 @@ const HeroSection = ({ onStart }: { onStart: () => void }) => {
 };
 
 const ProjectCard = ({ project, onOpen, onDelete }: { project: Project, onOpen: () => void, onDelete: () => void }) => {
+  const t = useTranslations('Dashboard');
+  const tCommon = useTranslations('Common');
   const isCompleted = project.status === 'completed';
   const score = project.evaluation?.totalScore || 0;
 
@@ -58,7 +65,7 @@ const ProjectCard = ({ project, onOpen, onDelete }: { project: Project, onOpen: 
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           className="p-2 -mr-2 -mt-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-all"
-          title="Delete"
+          title={tCommon('delete')}
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -67,7 +74,7 @@ const ProjectCard = ({ project, onOpen, onDelete }: { project: Project, onOpen: 
       <h3 className="font-bold text-slate-800 text-xl mb-1.5 line-clamp-1 pr-4">{project.title}</h3>
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <span className="text-[10px] px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 uppercase font-bold tracking-wider border border-slate-200">
-          {project.roleType}
+          {t(`roleType.${project.roleType}` as const)}
         </span>
         {isCompleted && project.evaluation && (
           <span className={`text-[10px] px-2.5 py-1 rounded-md font-bold tracking-wider border ${score >= 80 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
@@ -77,7 +84,7 @@ const ProjectCard = ({ project, onOpen, onDelete }: { project: Project, onOpen: 
       </div>
       <p className="text-xs text-slate-400 flex items-center gap-1.5 mb-6 font-medium">
         <Clock className="w-3.5 h-3.5" />
-        Last updated: {new Date(project.updatedAt).toLocaleDateString()}
+        {t('lastUpdated', { date: new Date(project.updatedAt).toLocaleDateString() })}
       </p>
 
       <div className="mt-auto">
@@ -86,9 +93,9 @@ const ProjectCard = ({ project, onOpen, onDelete }: { project: Project, onOpen: 
           : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg hover:shadow-xl'
           }`}>
           {isCompleted ? (
-            <><Eye className="w-4 h-4" /> Editor</>
+            <><Eye className="w-4 h-4" /> {t('openEditor')}</>
           ) : (
-            <><Edit3 className="w-4 h-4" /> Continue</>
+            <><Edit3 className="w-4 h-4" /> {t('continueEditing')}</>
           )}
         </button>
       </div>
@@ -97,6 +104,9 @@ const ProjectCard = ({ project, onOpen, onDelete }: { project: Project, onOpen: 
 };
 
 const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, importData?: ImportData) => void, onCancel: () => void }) => {
+  const t = useTranslations('Setup');
+  const tCommon = useTranslations('Common');
+  const locale = useLocale();
   const [role, setRole] = useState<RoleType>('consultant');
   const [importText, setImportText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -106,9 +116,9 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
     if (importText.trim().length > 20) {
       setIsAnalyzing(true);
       try {
-        const data = await analyzeImportMutation.mutateAsync(importText);
+        const data = await analyzeImportMutation.mutateAsync({ text: importText, locale });
         onComplete(role, data);
-      } catch (e) {
+      } catch {
         alert("Import failed, starting blank.");
         onComplete(role, undefined);
       } finally {
@@ -121,55 +131,55 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-6">
-      <h2 className="text-3xl font-bold text-slate-900 mb-8">Project Setup</h2>
+      <h2 className="text-3xl font-bold text-slate-900 mb-8">{t('title')}</h2>
 
       <div className="space-y-8 bg-white p-8 md:p-10 rounded-3xl shadow-xl border border-slate-100">
         <div>
-          <label className="block text-sm font-bold text-slate-700 mb-4 uppercase tracking-wide">Select Your Primary Role</label>
+          <label className="block text-sm font-bold text-slate-700 mb-4 uppercase tracking-wide">{t('selectRole')}</label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               onClick={() => setRole('consultant')}
               className={`p-6 rounded-2xl border-2 text-left transition-all ${role === 'consultant' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-4 ring-indigo-500/10' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
             >
-              <div className="font-bold text-lg mb-1">Consultant / PM</div>
-              <div className="text-xs text-indigo-600/80 font-medium">Strategy / Operations / PM</div>
+              <div className="font-bold text-lg mb-1">{t('roleConsultant')}</div>
+              <div className="text-xs text-indigo-600/80 font-medium">{t('roleConsultantDesc')}</div>
             </button>
             <button
               onClick={() => setRole('senior_engineer')}
               className={`p-6 rounded-2xl border-2 text-left transition-all ${role === 'senior_engineer' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-4 ring-indigo-500/10' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
             >
-              <div className="font-bold text-lg mb-1">Senior Engineer / Tech Lead</div>
-              <div className="text-xs text-indigo-600/80 font-medium">SWE / SRE / Tech Lead</div>
+              <div className="font-bold text-lg mb-1">{t('roleEngineer')}</div>
+              <div className="text-xs text-indigo-600/80 font-medium">{t('roleEngineerDesc')}</div>
             </button>
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide items-center gap-2">
-            <Upload className="w-4 h-4" /> Import Existing Resume (Optional)
+            <Upload className="w-4 h-4" /> {t('importTitle')}
           </label>
           <p className="text-sm text-slate-500 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
-            Paste your current resume text here. The AI will extract your timeline and find gaps immediately.
+            {t('importDesc')}
           </p>
           <textarea
             className="w-full h-48 p-4 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-400 bg-slate-50/50 focus:bg-white resize-none"
-            placeholder="Paste text from your PDF/DOCX here..."
+            placeholder={t('importPlaceholder')}
             value={importText}
             onChange={(e) => setImportText(e.target.value)}
           />
         </div>
 
         <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
-          <button onClick={onCancel} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+          <button onClick={onCancel} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">{tCommon('cancel')}</button>
           <button
             onClick={handleStart}
             disabled={isAnalyzing}
             className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2"
           >
             {isAnalyzing ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing text...</>
+              <><Loader2 className="w-4 h-4 animate-spin" /> {t('analyzing')}</>
             ) : (
-              <><ArrowRight className="w-4 h-4" /> Start AI Interview</>
+              <><ArrowRight className="w-4 h-4" /> {t('startInterview')}</>
             )}
           </button>
         </div>
@@ -179,6 +189,8 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
 };
 
 const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfile: UserProfile | null, onComplete: (profile: UserProfile) => void, onBack: () => void }) => {
+  const t = useTranslations('PersonalInfo');
+  const tCommon = useTranslations('Common');
   const [profile, setProfile] = useState<UserProfile>(initialProfile || { fullName: '', email: '', phone: '', location: '', linkedin: '' });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -189,13 +201,13 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
 
   return (
     <div className="max-w-2xl mx-auto py-12 px-6">
-      <h2 className="text-3xl font-bold text-slate-900 mb-2">Personal Information</h2>
-      <p className="text-slate-500 mb-8">We'll save this for your future resumes so you don't have to type it again.</p>
+      <h2 className="text-3xl font-bold text-slate-900 mb-2">{t('title')}</h2>
+      <p className="text-slate-500 mb-8">{t('subtitle')}</p>
 
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="col-span-2">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Full Name</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{t('fullName')}</label>
             <div className="relative">
               <User className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />
               <input
@@ -209,7 +221,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Email</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{t('email')}</label>
             <div className="relative">
               <Mail className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />
               <input
@@ -224,7 +236,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Phone</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{t('phone')}</label>
             <div className="relative">
               <Phone className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />
               <input
@@ -239,7 +251,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
           </div>
 
           <div className="col-span-2">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Address / Location</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{t('address')}</label>
             <div className="relative">
               <MapPin className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />
               <input
@@ -253,7 +265,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
           </div>
 
           <div className="col-span-2">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">LinkedIn (Optional)</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{t('linkedin')}</label>
             <div className="relative">
               <Linkedin className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />
               <input
@@ -267,9 +279,9 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
         </div>
 
         <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
-          <button type="button" onClick={onBack} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">Back</button>
+          <button type="button" onClick={onBack} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">{tCommon('back')}</button>
           <button type="submit" className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 shadow-lg transition-all flex items-center gap-2">
-            Confirm & Start Interview <ArrowRight className="w-4 h-4" />
+            {t('confirmStart')} <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </form>
@@ -280,7 +292,9 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
 // --- Main Page Component ---
 
 export default function Page() {
-  const [step, setStep] = useState<'dashboard' | 'setup' | 'personal_info' | 'interview' | 'generating' | 'editor'>('dashboard');
+  const t = useTranslations('Dashboard');
+  const locale = useLocale();
+  const [step, setStep] = useState<Step>('dashboard');
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
 
@@ -290,9 +304,14 @@ export default function Page() {
   // Initialize the parse resume mutation at the component level
   const parseResumeMutation = useParseResume();
 
+  // Load projects on mount
   useEffect(() => {
+    refreshProjects();
+  }, []);
+
+  const refreshProjects = () => {
     setProjects(getProjects().sort((a, b) => b.updatedAt - a.updatedAt));
-  }, [step]);
+  };
 
   const handleStartSetup = () => {
     setStep('setup');
@@ -309,6 +328,7 @@ export default function Page() {
     const newProject = createNewProject(setupData.role, setupData.importData, profile);
 
     saveProject(newProject);
+    refreshProjects();
     setCurrentProject(newProject);
     setStep('interview');
   };
@@ -368,6 +388,7 @@ export default function Page() {
             : currentProject.title
         };
         saveProject(updatedProject);
+        refreshProjects();
         setCurrentProject(updatedProject);
       }
       setStep('editor');
@@ -400,6 +421,7 @@ export default function Page() {
               <span className="text-2xl drop-shadow-sm">🚀</span>
               <span className="font-black text-slate-800 tracking-tight text-lg">JNJGO Resume</span>
             </div>
+            <LanguageSwitcher />
           </div>
 
           <div className="max-w-7xl mx-auto px-6 pb-20">
@@ -409,14 +431,14 @@ export default function Page() {
               <div className="py-12">
                 <div className="flex flex-col sm:flex-row justify-between items-end mb-10 gap-4 border-b border-slate-200 pb-6">
                   <div>
-                    <h2 className="text-3xl font-bold text-slate-900 mb-1">My Resumes</h2>
-                    <p className="text-slate-500">Manage your master resumes and versions.</p>
+                    <h2 className="text-3xl font-bold text-slate-900 mb-1">{t('myResumes')}</h2>
+                    <p className="text-slate-500">{t('manageResumes')}</p>
                   </div>
                   <button
                     onClick={handleStartSetup}
                     className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all font-bold text-sm shadow-lg shadow-slate-200 hover:shadow-indigo-200 hover:-translate-y-0.5"
                   >
-                    <Plus className="w-4 h-4" /> Create New Project
+                    <Plus className="w-4 h-4" /> {t('createNewProject')}
                   </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -437,7 +459,7 @@ export default function Page() {
                     <div className="w-16 h-16 rounded-full bg-slate-50 group-hover:bg-white flex items-center justify-center mb-4 transition-colors shadow-sm">
                       <Plus className="w-8 h-8 opacity-50 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <span className="font-bold text-sm">Create New Resume</span>
+                    <span className="font-bold text-sm">{t('createNewProject')}</span>
                   </button>
                 </div>
               </div>
@@ -481,8 +503,8 @@ export default function Page() {
               <Loader2 className="w-20 h-20 text-indigo-600 animate-spin relative z-10" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-3xl font-bold text-slate-900">Generating Your Master Resume</h2>
-              <p className="text-slate-600 text-lg">AI is analyzing your experience and structuring your professional story...</p>
+              <h2 className="text-3xl font-bold text-slate-900">{t('generatingTitle')}</h2>
+              <p className="text-slate-600 text-lg">{t('generatingDesc')}</p>
             </div>
             <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
               <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>

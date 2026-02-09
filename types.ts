@@ -144,6 +144,18 @@ export interface EvaluationResult {
     validationMessages?: string[];
 }
 
+export interface ValidationResult {
+    hasBasicProfile: boolean;
+    hasWorkHistory: boolean;
+    hasEducation: boolean;
+    hasSkills: boolean;
+    hasCertifications: boolean;
+    isChronological: boolean;
+    hasQuantifiedAchievement: boolean;
+    hasUnexplainedGap: boolean;
+    gapDetails: string;
+}
+
 export interface Project {
     id: string;
     title: string;
