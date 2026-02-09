@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Message, RoleType, ImportData, ResumeData } from '../types';
 import { useSendMessage, useGenerateHint } from '../hooks/useGemini';
 import { Send, Loader2, Sparkles, AlertCircle, ArrowUp, HelpCircle, Save, User, Bot, Home, CheckCircle2, ClipboardCheck, AlertTriangle, Square } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Check if there are any unresolved gap questions in the conversation
 const hasUnresolvedGapQuestions = (messages: Message[]): boolean => {
@@ -181,6 +182,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     const [messages, setMessages] = useState<Message[]>(initialHistory || []);
     const [inputValue, setInputValue] = useState('');
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+    const [isAutoSaving, setIsAutoSaving] = useState(false);
     const [isInitializing, setIsInitializing] = useState(false);
     const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
     const [abortController, setAbortController] = useState<AbortController | null>(null);
@@ -306,7 +308,13 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
             });
 
             if (mountedRef.current && response.text) {
-                setMessages([...newMessages, { role: 'model', text: response.text, phase: response.phase }]);
+                const modelMessage: Message = { role: 'model', text: response.text, phase: response.phase };
+                const updatedMessages = [...newMessages, modelMessage];
+                setMessages(updatedMessages);
+                // Auto-save after AI response
+                setIsAutoSaving(true);
+                onSave(updatedMessages);
+                setTimeout(() => setIsAutoSaving(false), 2000);
             }
         } catch (err: any) {
             // Check if the error is due to abort
@@ -412,10 +420,59 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                             <CheckCircle2 className="w-3 h-3" /> {t('imported')}
                         </div>
                     )}
-                    <button onClick={handleSave} className="flex items-center gap-2 text-xs md:text-sm px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">
-                        <Save className="w-4 h-4" />
-                        <span className="hidden md:inline">{showSaveConfirm ? t('saved') : t('saveDraft')}</span>
-                    </button>
+                    <motion.button
+                        onClick={handleSave}
+                        animate={{
+                            scale: isAutoSaving ? [1, 1.05, 1] : 1,
+                        }}
+                        transition={{
+                            duration: 0.3,
+                            ease: "easeInOut"
+                        }}
+                        className={`flex items-center gap-2 text-xs md:text-sm px-4 py-2.5 rounded-xl font-medium transition-all ${isAutoSaving
+                            ? 'bg-green-500 text-white'
+                            : showSaveConfirm
+                                ? 'bg-indigo-500 text-white'
+                                : 'bg-slate-600 text-white hover:bg-slate-700'
+                            }`}
+                    >
+                        <AnimatePresence mode="wait">
+                            {isAutoSaving ? (
+                                <motion.div
+                                    key="saving"
+                                    initial={{ scale: 0, rotate: -180 }}
+                                    animate={{ scale: 1, rotate: 0 }}
+                                    exit={{ scale: 0, rotate: 180 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                </motion.div>
+                            ) : showSaveConfirm ? (
+                                <motion.div
+                                    key="confirmed"
+                                    initial={{ scale: 0, rotate: -180 }}
+                                    animate={{ scale: 1, rotate: 0 }}
+                                    exit={{ scale: 0, rotate: 180 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    key="default"
+                                    initial={{ scale: 0, rotate: -180 }}
+                                    animate={{ scale: 1, rotate: 0 }}
+                                    exit={{ scale: 0, rotate: 180 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <Save className="w-4 h-4" />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                        <span className="hidden md:inline font-semibold">
+                            {isAutoSaving ? t('autoSaved') : showSaveConfirm ? t('saved') : t('saveDraft')}
+                        </span>
+                    </motion.button>
 
                     {/* Data Completeness Indicator */}
                     <div className="hidden md:flex items-center gap-2">

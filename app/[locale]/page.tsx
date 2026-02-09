@@ -356,6 +356,7 @@ export default function Page() {
         status: 'interviewing' as const
       };
       saveProject(updatedProject);
+      refreshProjects();
       setCurrentProject(updatedProject);
     }
   };
@@ -407,6 +408,7 @@ export default function Page() {
         updatedAt: Date.now()
       };
       saveProject(updatedProject);
+      refreshProjects();
       setCurrentProject(updatedProject);
     }
   };

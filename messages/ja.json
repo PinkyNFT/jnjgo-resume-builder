@@ -128,6 +128,8 @@
     "roleExpert": "{role} エキスパート",
     "imported": "インポート済み",
     "saveDraft": "下書き保存",
+    "saved": "保存しました！",
+    "autoSaved": "自動保存",
     "dataQuality": "データ収集ステータス",
     "qualityScore": "品質スコア",
     "responses": "回答数",
