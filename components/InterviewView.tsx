@@ -186,6 +186,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     const [isInitializing, setIsInitializing] = useState(false);
     const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
     const [abortController, setAbortController] = useState<AbortController | null>(null);
+    const [isComposing, setIsComposing] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const mountedRef = useRef(true);
     const initializingRef = useRef(false);
@@ -388,10 +389,22 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        // Only submit on Enter if:
+        // 1. Not in IME composition (Japanese/Chinese input)
+        // 2. Not using Shift+Enter (for multiline)
+        if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
             e.preventDefault();
             handleSend();
         }
+    };
+
+    // IME composition handlers for Japanese/Chinese input
+    const handleCompositionStart = () => {
+        setIsComposing(true);
+    };
+
+    const handleCompositionEnd = () => {
+        setIsComposing(false);
     };
 
     const onSendClick = () => {
@@ -798,6 +811,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
+                            onCompositionStart={handleCompositionStart}
+                            onCompositionEnd={handleCompositionEnd}
                             placeholder={t('placeholder')}
                             disabled={isLoading}
                             className="flex-1 bg-transparent border-none focus:ring-0 resize-none h-10 py-2.5 text-sm outline-none text-slate-800 placeholder:text-slate-400 disabled:opacity-50"
