@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { ResumeData, Project, EvaluationResult } from '../types';
 import { evaluateResume } from '../services/geminiService';
 import { saveProject } from '../services/storageService';
 import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { TimelineChart, TimelineChartItem } from './TimelineChart';
+import { parsePeriod } from '../utils/dateParser';
+import { insertGapsInTimeline } from '../utils/timelineGenerator';
 
 interface ResumeEditorProps {
     project: Project;
@@ -42,6 +45,68 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
     const [isEvaluating, setIsEvaluating] = useState(false);
     const [activeTab, setActiveTab] = useState<'preview' | 'edit'>('preview');
 
+    // Generate employer timeline data from work experience
+    const employerTimelineData = useMemo((): TimelineChartItem[] => {
+        if (!data.workExperience || data.workExperience.length === 0) {
+            // Fallback to timeline items if work experience is not available
+            const workItems = data.timeline?.filter(item => item.type === 'work') || [];
+            const items = workItems
+                .map(item => {
+                    const parsed = parsePeriod(item.period);
+                    if (!parsed) return null;
+                    return {
+                        id: item.id,
+                        label: item.organization,
+                        startYear: parsed.startYear,
+                        endYear: parsed.endYear
+                    };
+                })
+                .filter((item): item is TimelineChartItem => item !== null);
+
+            // Insert gaps
+            return insertGapsInTimeline(items);
+        }
+
+        const items = data.workExperience
+            .map(work => {
+                const parsed = parsePeriod(work.period);
+                if (!parsed) return null;
+                return {
+                    id: work.id,
+                    label: work.company,
+                    startYear: parsed.startYear,
+                    endYear: parsed.endYear
+                };
+            })
+            .filter((item): item is TimelineChartItem => item !== null);
+
+        // Insert gaps
+        return insertGapsInTimeline(items);
+    }, [data.workExperience, data.timeline]);
+
+    // Generate skill timeline data
+    const skillTimelineData = useMemo((): TimelineChartItem[] => {
+        if (!data.skillTimelines || data.skillTimelines.length === 0) {
+            return [];
+        }
+
+        const items = data.skillTimelines
+            .map(skill => {
+                const parsed = parsePeriod(skill.period);
+                if (!parsed) return null;
+                return {
+                    id: skill.id,
+                    label: skill.skillName,
+                    startYear: parsed.startYear,
+                    endYear: parsed.endYear
+                };
+            })
+            .filter((item): item is TimelineChartItem => item !== null);
+
+        // Insert gaps
+        return insertGapsInTimeline(items);
+    }, [data.skillTimelines]);
+
     const handleRunEvaluation = async () => {
         setIsEvaluating(true);
         try {
@@ -54,6 +119,40 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             alert("Evaluation failed.");
         } finally {
             setIsEvaluating(false);
+        }
+    };
+
+    // Handle employer timeline label changes
+    const handleEmployerLabelChange = (itemId: string, newLabel: string) => {
+        // Check if it's a gap item
+        if (itemId.startsWith('gap-')) {
+            // For now, gaps are not persisted, so we just update the memo
+            // You could add a separate gaps array if you want to persist custom gap labels
+            return;
+        }
+
+        // Update workExperience company name
+        if (data.workExperience) {
+            const newWorkExperience = data.workExperience.map(work =>
+                work.id === itemId ? { ...work, company: newLabel } : work
+            );
+            setData({ ...data, workExperience: newWorkExperience });
+        }
+    };
+
+    // Handle skill timeline label changes
+    const handleSkillLabelChange = (itemId: string, newLabel: string) => {
+        // Check if it's a gap item
+        if (itemId.startsWith('gap-')) {
+            return;
+        }
+
+        // Update skillTimelines skillName
+        if (data.skillTimelines) {
+            const newSkillTimelines = data.skillTimelines.map(skill =>
+                skill.id === itemId ? { ...skill, skillName: newLabel } : skill
+            );
+            setData({ ...data, skillTimelines: newSkillTimelines });
         }
     };
 
@@ -396,6 +495,36 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                             {renderEditableText(data.careerSummary, val => setData({ ...data, careerSummary: val }), true, "", t('professionalSummaryPlaceholder'))}
                         </div>
                     </div>
+
+                    {/* Employer Timeline Visualization - Positioned at top */}
+                    {employerTimelineData.length > 0 && (
+                        <div className="mb-7 break-inside-avoid">
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">
+                                {t('employerTimeline')}
+                            </h2>
+                            <TimelineChart
+                                items={employerTimelineData}
+                                className="bg-slate-50/30 p-4 rounded-lg"
+                                editable={activeTab === 'edit'}
+                                onItemLabelChange={handleEmployerLabelChange}
+                            />
+                        </div>
+                    )}
+
+                    {/* Skill Timeline Visualization - Positioned at top */}
+                    {skillTimelineData.length > 0 && (
+                        <div className="mb-7 break-inside-avoid">
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">
+                                {t('skillTimeline')}
+                            </h2>
+                            <TimelineChart
+                                items={skillTimelineData}
+                                className="bg-slate-50/30 p-4 rounded-lg"
+                                editable={activeTab === 'edit'}
+                                onItemLabelChange={handleSkillLabelChange}
+                            />
+                        </div>
+                    )}
 
                     {/* Career Summary Timeline */}
                     <div className="mb-7">

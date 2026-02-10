@@ -64,6 +64,13 @@ export interface WorkExperience {
     responsibilities: string[]; // Array of bullet points
 }
 
+export interface SkillTimeline {
+    id: string;
+    skillName: string; // "Professional Sales", "Talent Acquisition", etc.
+    period: string; // Date range when this skill was used/developed
+    context?: string; // Optional context (company, project, etc.)
+}
+
 export interface Education {
     id: string;
     degree: string; // "Bachelor of Science in Computer Science (BSCS)"
@@ -103,6 +110,7 @@ export interface ResumeData {
     workExperience?: WorkExperience[]; // Traditional work experience section
     education?: Education[]; // Education section
     skills?: string[]; // Skills array
+    skillTimelines?: SkillTimeline[]; // Timeline of skill development/usage
     certifications?: string[]; // Certifications array
 }
 
@@ -190,6 +198,7 @@ export const INITIAL_RESUME_DATA: ResumeData = {
     careerGaps: [],
     workExperience: [],
     education: [],
+    skillTimelines: [],
     skills: [],
     certifications: []
 };
