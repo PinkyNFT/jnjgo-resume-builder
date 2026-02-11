@@ -125,6 +125,18 @@ export async function POST(request: NextRequest) {
                                 }
                             }
                         },
+                        skillTimelines: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    id: { type: Type.STRING },
+                                    skillName: { type: Type.STRING },
+                                    period: { type: Type.STRING },
+                                    context: { type: Type.STRING }
+                                }
+                            }
+                        },
                         education: {
                             type: Type.ARRAY,
                             items: {
@@ -179,6 +191,12 @@ export async function POST(request: NextRequest) {
                     data.workExperience = data.workExperience.map((e, i) => ({ ...e, id: e.id || `work_${i}` }));
                 } else {
                     data.workExperience = [];
+                }
+
+                if (data.skillTimelines) {
+                    data.skillTimelines = data.skillTimelines.map((e, i) => ({ ...e, id: e.id || `skill_${i}` }));
+                } else {
+                    data.skillTimelines = [];
                 }
 
                 if (data.education) {

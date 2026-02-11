@@ -334,14 +334,23 @@ export const getParseResumePrompt = (conversationText: string, importedText: str
        - Organize by category if appropriate, but always output as flat array
        - MINIMUM: Extract at least 3-5 skills if any are mentioned
     
-    5. CERTIFICATIONS - MANDATORY - Always check if mentioned:
+    5. SKILL TIMELINES - Extract skill usage periods from work experience:
+       - For each significant skill mentioned in work experiences, create a timeline entry
+       - Match skills to the time periods they were used (based on job dates)
+       - Include the skill name, period (date range), and context (company/project where used)
+       - Example: {"skillName": "React", "period": "2020 - Present", "context": "Used at TechCorp for frontend development"}
+       - If multiple positions used same skill, create separate entries or merge periods
+       - Focus on technical skills and major professional competencies
+       - This helps visualize skill development over time in a Gantt chart format
+    
+    6. CERTIFICATIONS - MANDATORY - Always check if mentioned:
        - Extract certification names exactly (e.g., "AWS Certified Solutions Architect", "PMP", "CPA")
        - Include issuing organization if mentioned (e.g., "Amazon Web Services", "PMI")
        - Include year obtained if mentioned
        - If user explicitly says "no certifications" or they don't mention any, output empty array []
        - Common certifications: AWS/Azure/GCP certifications, PMI certifications, Professional licenses, Industry-specific certs
     
-    6. CAREER GAPS - Detect and explain gaps of 90+ days:
+    7. CAREER GAPS - Detect and explain gaps of 90+ days:
        - Analyze timeline for gaps between positions longer than 90 days (3 months)
        - For each gap detected:
          * Extract the period (e.g., "March 2019 - November 2019")
@@ -350,13 +359,13 @@ export const getParseResumePrompt = (conversationText: string, importedText: str
        - If no explanation found in conversation, set reason to empty string and isExplained to false
        - Only include gaps of 90+ days (3+ months)
     
-    7. CAREER OVERVIEW - Calculate statistics:
+    8. CAREER OVERVIEW - Calculate statistics:
        - Total experience in years
        - Number of different employers
        - Average tenure per position
        - Current position duration
     
-    8. PROFESSIONAL SUMMARY:
+    9. PROFESSIONAL SUMMARY:
        - Create a concise 2-3 sentence summary highlighting key experience and expertise
        - Focus on years of experience, specialization, and key achievements
        - Mention education level if significant (e.g., "MBA graduate", "Computer Science degree holder")
