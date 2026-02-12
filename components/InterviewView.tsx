@@ -587,20 +587,18 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                         </div>
 
                         {/* Generate Resume Button - changes based on data completeness */}
-                        {dataCompleteness >= 40 && (
-                            <button
-                                onClick={() => setShowGenerateConfirm(true)}
-                                className={`flex items-center gap-2 text-xs px-4 py-2 rounded-lg font-semibold transition-colors ${isReadyToGenerate
-                                    ? 'bg-green-600 text-white hover:bg-green-700'
-                                    : 'bg-orange-500 text-white hover:bg-orange-600'
-                                    }`}
-                                title={isReadyToGenerate ? t('generateResume') : 'Generate with incomplete data - missing critical sections'}
-                            >
-                                <ClipboardCheck className="w-4 h-4" />
-                                <span className="hidden sm:inline">{isReadyToGenerate ? t('generateResume') : t('forceGenerate')}</span>
-                                <span className="sm:hidden">{isReadyToGenerate ? 'Generate' : 'Force'}</span>
-                            </button>
-                        )}
+                        <button
+                            onClick={() => setShowGenerateConfirm(true)}
+                            className={`flex items-center gap-2 text-xs px-4 py-2 rounded-lg font-semibold transition-colors ${isReadyToGenerate
+                                ? 'bg-green-600 text-white hover:bg-green-700'
+                                : 'bg-orange-500 text-white hover:bg-orange-600'
+                                }`}
+                            title={isReadyToGenerate ? t('generateResume') : 'Generate with incomplete data - missing critical sections'}
+                        >
+                            <ClipboardCheck className="w-4 h-4" />
+                            <span className="hidden sm:inline">{isReadyToGenerate ? t('generateResume') : t('forceGenerate')}</span>
+                            <span className="sm:hidden">{isReadyToGenerate ? 'Generate' : 'Force'}</span>
+                        </button>
                     </div>
                 </div>
             </div>
