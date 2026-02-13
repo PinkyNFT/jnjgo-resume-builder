@@ -188,8 +188,10 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     const [abortController, setAbortController] = useState<AbortController | null>(null);
     const [isComposing, setIsComposing] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
     const mountedRef = useRef(true);
     const initializingRef = useRef(false);
+    const prevLoadingRef = useRef(false);
 
     // React Query mutations with automatic deduplication and retry
     const sendMessageMutation = useSendMessage();
@@ -262,6 +264,17 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+
+    // Auto-focus input when AI finishes responding
+    useEffect(() => {
+        if (prevLoadingRef.current && !isLoading) {
+            // Small delay to ensure DOM is ready
+            requestAnimationFrame(() => {
+                inputRef.current?.focus();
+            });
+        }
+        prevLoadingRef.current = isLoading;
+    }, [isLoading]);
 
     // Handle sending messages
     const handleSend = async () => {
@@ -412,7 +425,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     };
 
     return (
-        <div className="flex flex-col h-full max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden border border-slate-100">
+        <div className="flex flex-col h-full max-w-4xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200/60">
             <div className="bg-white/95 backdrop-blur-sm border-b border-slate-100 p-4 flex justify-between items-center sticky top-0 z-10">
                 <div className="flex items-center gap-3">
                     <button onClick={handleExit} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors">
@@ -603,7 +616,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 bg-slate-50/50">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 bg-linear-to-b from-slate-50/80 to-white">
                 {/* Resume Generation Confirmation */}
                 {showGenerateConfirm && (
                     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -760,33 +773,69 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                     </div>
                 )}
                 {messages.map((msg, index) => (
-                    <div key={index} className={`flex w-full gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeOut' }}
+                        className={`flex w-full gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
                         {msg.role === 'model' && (
-                            <div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 mt-1 shadow-md">
+                            <motion.div
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
+                                className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 mt-1 shadow-md ring-2 ring-indigo-100"
+                            >
                                 <Bot className="w-5 h-5 text-white" />
-                            </div>
+                            </motion.div>
                         )}
                         <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-6 py-4 text-sm leading-relaxed shadow-sm relative group whitespace-pre-wrap ${msg.role === 'user' ? 'bg-slate-900 text-white rounded-br-none' : 'bg-white text-slate-700 border border-slate-200/60 rounded-bl-none'}`}>
                             {msg.isHint && <div className="flex items-center gap-1.5 mb-2 text-amber-600 font-bold text-xs uppercase"><HelpCircle className="w-3 h-3" /> {t('hint')}</div>}
                             <span>{formatMarkdown(msg.text)}</span>
                         </div>
                         {msg.role === 'user' && (
-                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center shrink-0 mt-1">
+                            <motion.div
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
+                                className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center shrink-0 mt-1"
+                            >
                                 <User className="w-5 h-5 text-slate-500" />
-                            </div>
+                            </motion.div>
                         )}
-                    </div>
+                    </motion.div>
                 ))}
                 {isLoading && (
-                    <div className="flex justify-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 mt-1 opacity-50"><Bot className="w-5 h-5 text-white" /></div>
-                        <div className="bg-white px-5 py-4 rounded-2xl rounded-bl-none border border-slate-100 shadow-sm"><Loader2 className="w-4 h-4 animate-spin text-indigo-500" /></div>
-                    </div>
+                    <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex justify-start gap-3"
+                    >
+                        <motion.div
+                            animate={{
+                                boxShadow: [
+                                    '0 0 0 0 rgba(99,102,241,0.2)',
+                                    '0 0 0 8px rgba(99,102,241,0)',
+                                    '0 0 0 0 rgba(99,102,241,0.2)',
+                                ],
+                            }}
+                            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                            className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 mt-1 ring-2 ring-indigo-200"
+                        >
+                            <Bot className="w-5 h-5 text-white" />
+                        </motion.div>
+                        <div className="bg-white px-5 py-4 rounded-2xl rounded-bl-none border border-slate-100 shadow-sm flex items-center gap-1.5">
+                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: 0 }} className="w-2 h-2 bg-indigo-400 rounded-full inline-block" />
+                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: 0.2 }} className="w-2 h-2 bg-indigo-400 rounded-full inline-block" />
+                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: 0.4 }} className="w-2 h-2 bg-indigo-400 rounded-full inline-block" />
+                        </div>
+                    </motion.div>
                 )}
                 <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-3 md:p-4 bg-white border-t border-slate-200">
+            <div className="p-3 md:p-4 bg-white/95 backdrop-blur-sm border-t border-slate-200/80 shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
                 <div className="flex items-end gap-2 max-w-4xl mx-auto">
                     {/* Hint Button with improved styling */}
                     <div className="group relative">
@@ -804,16 +853,21 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                     </div>
 
                     {/* Input Area with improved styling */}
-                    <div className="flex-1 bg-slate-50 rounded-lg flex items-center px-3 py-1.5 border border-slate-200 focus-within:border-indigo-400 focus-within:bg-white transition-colors">
+                    <div className={`flex-1 rounded-xl flex items-center px-4 py-1.5 border-2 transition-all duration-200 ${
+                        isLoading
+                            ? 'bg-slate-100 border-slate-200'
+                            : 'bg-slate-50 border-slate-200 focus-within:border-indigo-400 focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.1)]'
+                    }`}>
                         <textarea
+                            ref={inputRef}
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
                             onCompositionStart={handleCompositionStart}
                             onCompositionEnd={handleCompositionEnd}
-                            placeholder={t('placeholder')}
+                            placeholder={isLoading ? t('agentThinking') : t('placeholder')}
                             disabled={isLoading}
-                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none h-10 py-2.5 text-sm outline-none text-slate-800 placeholder:text-slate-400 disabled:opacity-50"
+                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none h-10 py-2.5 text-sm outline-none text-slate-800 placeholder:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
                             rows={1}
                         />
                     </div>
@@ -849,8 +903,13 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
 
                 {/* Helper text */}
                 <div className="max-w-4xl mx-auto mt-1.5">
-                    <p className="text-center text-xs text-slate-400">
-                        {isLoading ? t('agentThinking') : t('pressEnter')}
+                    <p className="text-center text-[11px] text-slate-400">
+                        {isLoading ? (
+                            <span className="inline-flex items-center gap-1.5">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                {t('agentThinking')}
+                            </span>
+                        ) : t('pressEnter')}
                     </p>
                 </div>
             </div>
