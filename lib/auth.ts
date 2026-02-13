@@ -31,6 +31,9 @@ export const authOptions: NextAuthOptions = {
         }),
     ],
     secret: process.env.NEXTAUTH_SECRET,
+    pages: {
+        signIn: '/auth/signin',
+    },
     session: {
         strategy: "database",
         maxAge: 30 * 24 * 60 * 60, // 30 days

@@ -89,6 +89,10 @@ export const getProject = async (id: string): Promise<Project | undefined> => {
         const data = await apiFetch<{ project: Project }>(`/projects/${id}`);
         return data.project;
     } catch (error) {
+        // 404 is expected when project doesn't exist, don't log as error
+        if (error instanceof Error && error.message.includes('404')) {
+            return undefined;
+        }
         console.error('Error fetching project:', error);
         return undefined;
     }

@@ -111,7 +111,7 @@ export async function PUT(
                 evaluation: sanitizedProject.evaluation
             },
             {
-                new: true,
+                returnDocument: 'after',
                 runValidators: true
             }
         ).lean();

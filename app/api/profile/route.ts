@@ -74,7 +74,7 @@ export async function PUT(request: NextRequest) {
             },
             {
                 upsert: true,
-                new: true,
+                returnDocument: 'after',
                 runValidators: true
             }
         ).lean();
