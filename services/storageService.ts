@@ -38,7 +38,8 @@ async function apiFetch<T>(
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(error.error || `HTTP ${response.status}: ${response.statusText}`);
+        const msg = error.error || response.statusText;
+        throw new Error(`[${response.status}] ${msg}`);
     }
 
     return response.json();
@@ -90,7 +91,7 @@ export const getProject = async (id: string): Promise<Project | undefined> => {
         return data.project;
     } catch (error) {
         // 404 is expected when project doesn't exist, don't log as error
-        if (error instanceof Error && error.message.includes('404')) {
+        if (error instanceof Error && error.message.startsWith('[404]')) {
             return undefined;
         }
         console.error('Error fetching project:', error);
@@ -101,25 +102,22 @@ export const getProject = async (id: string): Promise<Project | undefined> => {
 export const saveProject = async (project: Project): Promise<void> => {
     if (typeof window === 'undefined') return;
     try {
-        // Check if project exists
-        const existing = await getProject(project.id);
-
-        if (existing) {
-            // Update existing project
-            await apiFetch(`/projects/${project.id}`, {
-                method: 'PUT',
-                body: JSON.stringify(project),
-            });
-        } else {
-            // Create new project
+        // Try updating first (most saves are updates), fall back to create on 404
+        await apiFetch(`/projects/${project.id}`, {
+            method: 'PUT',
+            body: JSON.stringify(project),
+        });
+    } catch (error) {
+        if (error instanceof Error && error.message.startsWith('[404]')) {
+            // Project doesn't exist yet, create it
             await apiFetch('/projects', {
                 method: 'POST',
                 body: JSON.stringify(project),
             });
+        } else {
+            console.error('Error saving project:', error);
+            throw error;
         }
-    } catch (error) {
-        console.error('Error saving project:', error);
-        throw error;
     }
 };
 

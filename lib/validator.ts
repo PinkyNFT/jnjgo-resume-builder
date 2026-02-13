@@ -498,59 +498,59 @@ export function sanitizeProject(project: Project): Project {
     // Filter out invalid skillTimelines (missing required fields)
     if (sanitized.data?.skillTimelines) {
         sanitized.data.skillTimelines = sanitized.data.skillTimelines.filter(st => {
-            return st && 
-                   typeof st.id === 'string' && 
-                   typeof st.skillName === 'string' && 
-                   typeof st.period === 'string' &&
-                   st.id.trim() !== '' &&
-                   st.skillName.trim() !== '' &&
-                   st.period.trim() !== '';
+            return st &&
+                typeof st.id === 'string' &&
+                typeof st.skillName === 'string' &&
+                typeof st.period === 'string' &&
+                st.id.trim() !== '' &&
+                st.skillName.trim() !== '' &&
+                st.period.trim() !== '';
         });
     }
 
     // Filter out invalid work experience entries
     if (sanitized.data?.workExperience) {
         sanitized.data.workExperience = sanitized.data.workExperience.filter(we => {
-            return we && 
-                   typeof we.id === 'string' && 
-                   typeof we.company === 'string' && 
-                   typeof we.position === 'string' &&
-                   typeof we.period === 'string' &&
-                   we.id.trim() !== '' &&
-                   we.company.trim() !== '' &&
-                   we.position.trim() !== '' &&
-                   we.period.trim() !== '';
+            return we &&
+                typeof we.id === 'string' &&
+                typeof we.company === 'string' &&
+                typeof we.position === 'string' &&
+                typeof we.period === 'string' &&
+                we.id.trim() !== '' &&
+                we.company.trim() !== '' &&
+                we.position.trim() !== '' &&
+                we.period.trim() !== '';
         });
     }
 
     // Filter out invalid education entries
     if (sanitized.data?.education) {
         sanitized.data.education = sanitized.data.education.filter(edu => {
-            return edu && 
-                   typeof edu.id === 'string' && 
-                   typeof edu.degree === 'string' && 
-                   typeof edu.institution === 'string' &&
-                   typeof edu.period === 'string' &&
-                   edu.id.trim() !== '' &&
-                   edu.degree.trim() !== '' &&
-                   edu.institution.trim() !== '' &&
-                   edu.period.trim() !== '';
+            return edu &&
+                typeof edu.id === 'string' &&
+                typeof edu.degree === 'string' &&
+                typeof edu.institution === 'string' &&
+                typeof edu.period === 'string' &&
+                edu.id.trim() !== '' &&
+                edu.degree.trim() !== '' &&
+                edu.institution.trim() !== '' &&
+                edu.period.trim() !== '';
         });
     }
 
     // Filter out invalid timeline items
     if (sanitized.data?.timeline) {
         sanitized.data.timeline = sanitized.data.timeline.filter(t => {
-            return t && 
-                   typeof t.id === 'string' && 
-                   typeof t.period === 'string' && 
-                   typeof t.organization === 'string' &&
-                   typeof t.role === 'string' &&
-                   (t.type === 'work' || t.type === 'education') &&
-                   t.id.trim() !== '' &&
-                   t.period.trim() !== '' &&
-                   t.organization.trim() !== '' &&
-                   t.role.trim() !== '';
+            return t &&
+                typeof t.id === 'string' &&
+                typeof t.period === 'string' &&
+                typeof t.organization === 'string' &&
+                typeof t.role === 'string' &&
+                (t.type === 'work' || t.type === 'education') &&
+                t.id.trim() !== '' &&
+                t.period.trim() !== '' &&
+                t.organization.trim() !== '' &&
+                t.role.trim() !== '';
         });
     }
 

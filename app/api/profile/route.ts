@@ -52,9 +52,8 @@ export async function PUT(request: NextRequest) {
     try {
         await connectToDatabase();
 
-        const userId = request.headers.get('x-user-id') || 'default-user';
+        const userId = await getUserId(request);
         const body: UserProfile = await request.json();
-        await getUserId(request)
         // Validate and sanitize input
         const validationErrors = validateUserProfile(body);
         if (validationErrors.length > 0) {
