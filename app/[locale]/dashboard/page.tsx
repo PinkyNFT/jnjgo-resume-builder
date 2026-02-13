@@ -7,6 +7,7 @@ import LanguageSwitcher from '../../../components/LanguageSwitcher';
 import { AuthButton } from '../../../components/AuthButton';
 import { InterviewView } from '../../../components/InterviewView';
 import { ResumeEditor } from '../../../components/ResumeEditor';
+import { ResumeGeneratingView } from '../../../components/ResumeGeneratingView';
 import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from '../../../types';
 import { useParseResume, useAnalyzeImport } from '../../../hooks/useGemini';
 import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile } from '../../../services/storageService';
@@ -476,14 +477,22 @@ export default function Page() {
     }
   };
 
+  // Track generating error state
+  const [generatingError, setGeneratingError] = useState<string | null>(null);
+  // Track the history used for generation so we can retry/cancel
+  const [generatingHistory, setGeneratingHistory] = useState<Message[] | null>(null);
+
   const handleFinishInterview = async (history: Message[]) => {
     await handleSaveInterview(history);
+    setGeneratingError(null);
+    setGeneratingHistory(history);
     setStep('generating');
 
     try {
       const data = await parseResumeMutation.mutateAsync({
         history,
         importData: currentProject?.importData,
+        locale,
       });
 
       // Merge known personal info back if somehow lost (though AI prompt should keep it, safety first)
@@ -508,11 +517,16 @@ export default function Page() {
         setCurrentProject(updatedProject);
       }
       setStep('editor');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Something went wrong generating the resume. Please try again.");
-      setStep('interview');
+      setGeneratingError(error?.message || 'Something went wrong generating the resume. Please try again.');
     }
+  };
+
+  const handleCancelGeneration = () => {
+    setGeneratingError(null);
+    setGeneratingHistory(null);
+    setStep('interview');
   };
 
   const handleUpdateProjectData = async (data: ResumeData) => {
@@ -643,23 +657,11 @@ export default function Page() {
           )}
 
           {step === 'generating' && (
-            <div className="h-screen flex flex-col justify-center items-center bg-linear-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 px-6">
-              <div className="max-w-md text-center space-y-6">
-                <div className="relative inline-block">
-                  <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-purple-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
-                  <Loader2 className="w-20 h-20 text-indigo-600 animate-spin relative z-10" />
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-bold text-slate-900">{t('generatingTitle')}</h2>
-                  <p className="text-slate-600 text-lg">{t('generatingDesc')}</p>
-                </div>
-                <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
-                  <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                </div>
-              </div>
-            </div>
+            <ResumeGeneratingView
+              onCancel={handleCancelGeneration}
+              isGenerating={parseResumeMutation.isPending}
+              error={generatingError}
+            />
           )}
 
           {step === 'editor' && currentProject && currentProject.data && (
