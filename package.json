@@ -12,12 +12,15 @@
 		"test:coverage": "jest --coverage"
 	},
 	"dependencies": {
+		"@auth/mongodb-adapter": "^3.11.1",
 		"@google/genai": "^1.40.0",
 		"@google/generative-ai": "^0.24.1",
 		"@tanstack/react-query": "^5.62.11",
 		"framer-motion": "^12.34.0",
 		"lucide-react": "^0.563.0",
+		"mongoose": "^9.2.1",
 		"next": "16.1.6",
+		"next-auth": "^4.24.13",
 		"next-intl": "^4.8.2",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4"

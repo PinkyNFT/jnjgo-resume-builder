@@ -10,7 +10,7 @@ An AI-powered master resume builder for IT professionals. This application creat
 - **Quality Scoring**: Built-in evaluation system scores your resume on structure, reproducibility, role fit, and risk handling
 - **Timeline Management**: Ensures continuous career timeline with no unexplained gaps
 - **Project Deep Dives**: Focus on decision-making documentation rather than task lists
-- **Local Storage**: All data stored in browser localStorage for privacy
+- **MongoDB Storage**: Secure cloud-based data storage with automatic migration from localStorage
 - **PDF Export**: Print-optimized resume output
 
 ## 🚀 Getting Started
@@ -19,6 +19,7 @@ An AI-powered master resume builder for IT professionals. This application creat
 
 - Node.js 18+ installed
 - A Google Gemini API key (get one at [Google AI Studio](https://aistudio.google.com/app/apikey))
+- A MongoDB database (MongoDB Atlas recommended for free cloud hosting)
 
 ### Installation
 
@@ -31,8 +32,18 @@ An AI-powered master resume builder for IT professionals. This application creat
    
    Create or update the `.env.local` file in the root directory:
    ```env
-   NEXT_PUBLIC_API_KEY=your_gemini_api_key_here
+   # Google Gemini API Key for AI features
+   GEMINI_API_KEY=your_gemini_api_key_here
+   
+   # MongoDB Connection URI
+   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority
    ```
+
+   **Getting a MongoDB URI:**
+   1. Sign up for [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) (free tier available)
+   2. Create a new cluster
+   3. Click "Connect" and select "Connect your application"
+   4. Copy the connection string and replace `<password>` with your database password
 
 3. **Run the development server**
    ```bash
@@ -72,16 +83,39 @@ The resume is evaluated on 100 points:
 ```
 jnjgo-resume-builder/
 ├── app/
-│   ├── layout.tsx          # Root layout with styling
-│   ├── page.tsx            # Main application logic
+│   ├── [locale]/
+│   │   ├── layout.tsx      # Localized layout
+│   │   └── page.tsx        # Main application logic
+│   ├── api/
+│   │   ├── health/         # Health check endpoint
+│   │   ├── profile/        # User profile API
+│   │   ├── projects/       # Projects CRUD API
+│   │   ├── parse/          # Resume parsing API
+│   │   ├── chat/           # AI chat API
+│   │   └── analyze/        # Resume analysis API
+│   ├── providers.tsx       # React Query provider
 │   └── globals.css         # Global styles
 ├── components/
 │   ├── InterviewView.tsx   # AI interview interface
-│   └── ResumeEditor.tsx    # Resume editing and preview
+│   ├── ResumeEditor.tsx    # Resume editing and preview
+│   ├── TimelineChart.tsx   # Timeline visualization
+│   └── LanguageSwitcher.tsx # i18n language switcher
+├── lib/
+│   ├── mongodb.ts          # MongoDB connection with pooling
+│   ├── models.ts           # Mongoose schemas and models
+│   ├── apiClient.ts        # API client utilities
+│   └── prompts.ts          # AI prompt templates
 ├── services/
 │   ├── geminiService.ts    # Google Gemini AI integration
-│   └── storageService.ts   # LocalStorage management
+│   ├── storageService.ts   # API-based storage service
+│   └── semanticAnalysisService.ts  # Semantic analysis
+├── utils/
+│   ├── dataMigration.ts    # localStorage to MongoDB migration
+│   ├── gapDetection.ts     # Career gap detection
+│   ├── dateParser.ts       # Date parsing utilities
+│   └── timelineGenerator.ts # Timeline generation
 ├── types.ts                # TypeScript type definitions
+├── env.d.ts                # Environment variable types
 ├── next.config.ts          # Next.js configuration
 ├── package.json            # Dependencies
 └── .env.local             # Environment variables (not in git)
@@ -94,8 +128,10 @@ jnjgo-resume-builder/
 - **Styling**: Tailwind CSS 4
 - **Icons**: Lucide React
 - **AI**: Google Gemini API (@google/genai)
-- **State Management**: React Hooks
-- **Storage**: Browser LocalStorage
+- **Database**: MongoDB with Mongoose ODM
+- **State Management**: React Hooks + React Query
+- **Internationalization**: next-intl
+- **Storage**: MongoDB Atlas (with automatic localStorage migration)
 
 ## 🌟 Key Features Explained
 
@@ -117,12 +153,13 @@ This is not a traditional resume builder. It creates a **Decision-Making Documen
 - Explains any career gaps
 - Provides reproducible insights into your work methodology
 
-### Data Privacy
+### Data Privacy & Migration
 
-- All data stored locally in your browser
-- No server-side storage
-- No data sent to external services except Google Gemini for AI processing
-- You can export and delete your data anytime
+- **Cloud Storage**: All data securely stored in MongoDB Atlas
+- **Automatic Migration**: Legacy localStorage data is automatically migrated to MongoDB on first load
+- **Connection Pooling**: Optimized database connections for performance
+- **Health Monitoring**: Built-in health check endpoint at `/api/health`
+- **Data Ownership**: You control your own MongoDB database
 
 ## 📝 Development
 
@@ -150,9 +187,14 @@ npm run lint
 ### Common Issues
 
 1. **API Key Error**: Make sure your `.env.local` file contains a valid Gemini API key
-2. **Build Errors**: Try deleting `node_modules` and `.next`, then run `npm install` again
-3. **LocalStorage Issues**: Clear browser cache if you experience data loading problems
-4. **TypeScript Errors**: Ensure all dependencies are installed correctly
+2. **MongoDB Connection Error**: Verify your MONGODB_URI is correct and your IP is whitelisted in MongoDB Atlas
+3. **Build Errors**: Try deleting `node_modules` and `.next`, then run `npm install` again
+4. **Migration Issues**: Check browser console for migration logs if projects aren't loading
+5. **TypeScript Errors**: Ensure all dependencies are installed correctly
+
+### Health Check
+
+Visit `/api/health` to verify your MongoDB connection status and application health.
 
 ### Getting Help
 

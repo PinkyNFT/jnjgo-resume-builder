@@ -28,17 +28,6 @@ export default async function RootLayout({
 
   return (
     <html lang={locale}>
-      <head>
-
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <style dangerouslySetInnerHTML={{
-          __html: `
-          body { font-family: 'Inter', sans-serif; }
-          .scrollbar-hide::-webkit-scrollbar { display: none; }
-          .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        `}} />
-      </head>
       <body className={`${inter.variable} bg-slate-50 text-slate-900 antialiased`}>
         <NextIntlClientProvider messages={messages}>
           <Providers>

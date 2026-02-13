@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
+import { useSession } from 'next-auth/react';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import { AuthButton } from '../../components/AuthButton';
 import { InterviewView } from '../../components/InterviewView';
 import { ResumeEditor } from '../../components/ResumeEditor';
 import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from '../../types';
 import { useParseResume, useAnalyzeImport } from '../../hooks/useGemini';
 import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile } from '../../services/storageService';
+import { migrateFromLocalStorage, isMigrationCompleted } from '../../utils/dataMigration';
 import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin } from 'lucide-react';
 
 // --- Sub-Components ---
@@ -193,10 +196,15 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
   const tCommon = useTranslations('Common');
   const [profile, setProfile] = useState<UserProfile>(initialProfile || { fullName: '', email: '', phone: '', location: '', linkedin: '' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveUserProfile(profile);
-    onComplete(profile);
+    try {
+      await saveUserProfile(profile);
+      onComplete(profile);
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+      alert('Failed to save profile. Please try again.');
+    }
   };
 
   return (
@@ -293,10 +301,13 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
 
 export default function Page() {
   const t = useTranslations('Dashboard');
+  const tCommon = useTranslations('Common');
   const locale = useLocale();
   const [step, setStep] = useState<Step>('dashboard');
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Temp storage for setup data before project creation
   const [setupData, setSetupData] = useState<{ role: RoleType, importData?: ImportData } | null>(null);
@@ -304,13 +315,52 @@ export default function Page() {
   // Initialize the parse resume mutation at the component level
   const parseResumeMutation = useParseResume();
 
-  // Load projects on mount
+  // Load projects and profile on mount
   useEffect(() => {
-    refreshProjects();
+    const initializeData = async () => {
+      setIsLoading(true);
+      try {
+        // Check for and run migration if needed
+        if (!isMigrationCompleted()) {
+          console.log('Detecting legacy data, starting migration...');
+          const migrationResult = await migrateFromLocalStorage();
+          if (migrationResult.success) {
+            console.log(`✅ Migration completed: ${migrationResult.projectsMigrated} projects, profile: ${migrationResult.profileMigrated}`);
+          } else {
+            console.error('Migration encountered errors:', migrationResult.errors);
+          }
+        }
+
+        // Load data from database
+        await Promise.all([
+          refreshProjects(),
+          loadUserProfile()
+        ]);
+      } catch (error) {
+        console.error('Failed to load data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    initializeData();
   }, []);
 
-  const refreshProjects = () => {
-    setProjects(getProjects().sort((a, b) => b.updatedAt - a.updatedAt));
+  const loadUserProfile = async () => {
+    try {
+      const profile = await getUserProfile();
+      setUserProfile(profile);
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+    }
+  };
+
+  const refreshProjects = async () => {
+    try {
+      const loadedProjects = await getProjects();
+      setProjects(loadedProjects.sort((a, b) => b.updatedAt - a.updatedAt));
+    } catch (error) {
+      console.error('Failed to load projects:', error);
+    }
   };
 
   const handleStartSetup = () => {
@@ -322,15 +372,19 @@ export default function Page() {
     setStep('personal_info');
   };
 
-  const handlePersonalInfoComplete = (profile: UserProfile) => {
+  const handlePersonalInfoComplete = async (profile: UserProfile) => {
     if (!setupData) return;
 
-    const newProject = createNewProject(setupData.role, setupData.importData, profile);
-
-    saveProject(newProject);
-    refreshProjects();
-    setCurrentProject(newProject);
-    setStep('interview');
+    try {
+      const newProject = createNewProject(setupData.role, setupData.importData, profile);
+      await saveProject(newProject);
+      await refreshProjects();
+      setCurrentProject(newProject);
+      setStep('interview');
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      alert('Failed to create project. Please try again.');
+    }
   };
 
   const handleOpenProject = (project: Project) => {
@@ -342,27 +396,39 @@ export default function Page() {
     }
   };
 
-  const handleDeleteProject = (id: string) => {
-    deleteProject(id);
-    setProjects(prev => prev.filter(p => p.id !== id));
+  const handleDeleteProject = async (id: string) => {
+    if (!confirm(tCommon('confirmDelete'))) {
+      return;
+    }
+    try {
+      await deleteProject(id);
+      setProjects(prev => prev.filter(p => p.id !== id));
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      alert('Failed to delete project. Please try again.');
+    }
   };
 
-  const handleSaveInterview = (history: Message[]) => {
+  const handleSaveInterview = async (history: Message[]) => {
     if (currentProject) {
-      const updatedProject = {
-        ...currentProject,
-        history: history,
-        updatedAt: Date.now(),
-        status: 'interviewing' as const
-      };
-      saveProject(updatedProject);
-      refreshProjects();
-      setCurrentProject(updatedProject);
+      try {
+        const updatedProject = {
+          ...currentProject,
+          history: history,
+          updatedAt: Date.now(),
+          status: 'interviewing' as const
+        };
+        await saveProject(updatedProject);
+        await refreshProjects();
+        setCurrentProject(updatedProject);
+      } catch (error) {
+        console.error('Failed to save interview:', error);
+      }
     }
   };
 
   const handleFinishInterview = async (history: Message[]) => {
-    handleSaveInterview(history);
+    await handleSaveInterview(history);
     setStep('generating');
 
     try {
@@ -388,8 +454,8 @@ export default function Page() {
             ? `${data.currentRole} Resume`
             : currentProject.title
         };
-        saveProject(updatedProject);
-        refreshProjects();
+        await saveProject(updatedProject);
+        await refreshProjects();
         setCurrentProject(updatedProject);
       }
       setStep('editor');
@@ -400,131 +466,150 @@ export default function Page() {
     }
   };
 
-  const handleUpdateProjectData = (data: ResumeData) => {
+  const handleUpdateProjectData = async (data: ResumeData) => {
     if (currentProject) {
-      const updatedProject = {
-        ...currentProject,
-        data,
-        updatedAt: Date.now()
-      };
-      saveProject(updatedProject);
-      refreshProjects();
-      setCurrentProject(updatedProject);
+      try {
+        const updatedProject = {
+          ...currentProject,
+          data,
+          updatedAt: Date.now()
+        };
+        await saveProject(updatedProject);
+        await refreshProjects();
+        setCurrentProject(updatedProject);
+      } catch (error) {
+        console.error('Failed to update project:', error);
+        alert('Failed to save changes. Please try again.');
+      }
     }
   };
 
   return (
     <div className="font-sans text-slate-900 bg-slate-50 min-h-screen">
-      {step === 'dashboard' && (
-        <div className="animate-in fade-in duration-500">
-          {/* Dashboard Header */}
-          <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-6 py-4 flex justify-between items-center transition-all">
-            <div className="flex items-center gap-2.5">
-              <span className="text-2xl drop-shadow-sm">🚀</span>
-              <span className="font-black text-slate-800 tracking-tight text-lg">JNJGO Resume</span>
-            </div>
-            <LanguageSwitcher />
+      {isLoading ? (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center space-y-4">
+            <Loader2 className="w-12 h-12 animate-spin mx-auto text-indigo-600" />
+            <p className="text-slate-600 font-medium">Loading...</p>
           </div>
-
-          <div className="max-w-7xl mx-auto px-6 pb-20">
-            {projects.length === 0 ? (
-              <HeroSection onStart={handleStartSetup} />
-            ) : (
-              <div className="py-12">
-                <div className="flex flex-col sm:flex-row justify-between items-end mb-10 gap-4 border-b border-slate-200 pb-6">
-                  <div>
-                    <h2 className="text-3xl font-bold text-slate-900 mb-1">{t('myResumes')}</h2>
-                    <p className="text-slate-500">{t('manageResumes')}</p>
-                  </div>
-                  <button
-                    onClick={handleStartSetup}
-                    className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all font-bold text-sm shadow-lg shadow-slate-200 hover:shadow-indigo-200 hover:-translate-y-0.5"
-                  >
-                    <Plus className="w-4 h-4" /> {t('createNewProject')}
-                  </button>
+        </div>
+      ) : (
+        <>
+          {step === 'dashboard' && (
+            <div className="animate-in fade-in duration-500">
+              {/* Dashboard Header */}
+              <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-6 py-4 flex justify-between items-center transition-all">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl drop-shadow-sm">🚀</span>
+                  <span className="font-black text-slate-800 tracking-tight text-lg">JNJGO Resume</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {projects.map(project => (
-                    <ProjectCard
-                      key={project.id}
-                      project={project}
-                      onOpen={() => handleOpenProject(project)}
-                      onDelete={() => handleDeleteProject(project.id)}
-                    />
-                  ))}
-
-                  {/* Create New Card (Ghost) */}
-                  <button
-                    onClick={handleStartSetup}
-                    className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group min-h-70"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-slate-50 group-hover:bg-white flex items-center justify-center mb-4 transition-colors shadow-sm">
-                      <Plus className="w-8 h-8 opacity-50 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                    <span className="font-bold text-sm">{t('createNewProject')}</span>
-                  </button>
+                <div className="flex items-center gap-4">
+                  <AuthButton />
+                  <LanguageSwitcher />
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
 
-      {step === 'setup' && (
-        <SetupView onComplete={handleSetupComplete} onCancel={() => setStep('dashboard')} />
-      )}
+              <div className="max-w-7xl mx-auto px-6 pb-20">
+                {projects.length === 0 ? (
+                  <HeroSection onStart={handleStartSetup} />
+                ) : (
+                  <div className="py-12">
+                    <div className="flex flex-col sm:flex-row justify-between items-end mb-10 gap-4 border-b border-slate-200 pb-6">
+                      <div>
+                        <h2 className="text-3xl font-bold text-slate-900 mb-1">{t('myResumes')}</h2>
+                        <p className="text-slate-500">{t('manageResumes')}</p>
+                      </div>
+                      <button
+                        onClick={handleStartSetup}
+                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all font-bold text-sm shadow-lg shadow-slate-200 hover:shadow-indigo-200 hover:-translate-y-0.5"
+                      >
+                        <Plus className="w-4 h-4" /> {t('createNewProject')}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {projects.map(project => (
+                        <ProjectCard
+                          key={project.id}
+                          project={project}
+                          onOpen={() => handleOpenProject(project)}
+                          onDelete={() => handleDeleteProject(project.id)}
+                        />
+                      ))}
 
-      {step === 'personal_info' && (
-        <PersonalInfoView
-          initialProfile={getUserProfile()}
-          onComplete={handlePersonalInfoComplete}
-          onBack={() => setStep('setup')}
-        />
-      )}
-
-      {step === 'interview' && currentProject && (
-        <div className="h-screen py-4 md:py-8 px-4 bg-linear-to-b from-slate-50 to-slate-100">
-          <InterviewView
-            key={currentProject.id}
-            initialHistory={currentProject.history}
-            onFinish={handleFinishInterview}
-            onSave={handleSaveInterview}
-            onExit={() => setStep('dashboard')}
-            roleType={currentProject.roleType}
-            importData={currentProject.importData}
-            initialData={currentProject.data}
-          />
-        </div>
-      )}
-
-      {step === 'generating' && (
-        <div className="h-screen flex flex-col justify-center items-center bg-linear-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 px-6">
-          <div className="max-w-md text-center space-y-6">
-            <div className="relative inline-block">
-              <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-purple-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
-              <Loader2 className="w-20 h-20 text-indigo-600 animate-spin relative z-10" />
+                      {/* Create New Card (Ghost) */}
+                      <button
+                        onClick={handleStartSetup}
+                        className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group min-h-70"
+                      >
+                        <div className="w-16 h-16 rounded-full bg-slate-50 group-hover:bg-white flex items-center justify-center mb-4 transition-colors shadow-sm">
+                          <Plus className="w-8 h-8 opacity-50 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <span className="font-bold text-sm">{t('createNewProject')}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="space-y-2">
-              <h2 className="text-3xl font-bold text-slate-900">{t('generatingTitle')}</h2>
-              <p className="text-slate-600 text-lg">{t('generatingDesc')}</p>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
-              <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {step === 'editor' && currentProject && currentProject.data && (
-        <div className="min-h-screen py-8 px-4 bg-slate-100">
-          <ResumeEditor
-            project={currentProject}
-            onUpdate={handleUpdateProjectData}
-            onBack={() => setStep('dashboard')}
-          />
-        </div>
+          {step === 'setup' && (
+            <SetupView onComplete={handleSetupComplete} onCancel={() => setStep('dashboard')} />
+          )}
+
+          {step === 'personal_info' && (
+            <PersonalInfoView
+              initialProfile={userProfile}
+              onComplete={handlePersonalInfoComplete}
+              onBack={() => setStep('setup')}
+            />
+          )}
+
+          {step === 'interview' && currentProject && (
+            <div className="h-screen py-4 md:py-8 px-4 bg-linear-to-b from-slate-50 to-slate-100">
+              <InterviewView
+                key={currentProject.id}
+                initialHistory={currentProject.history}
+                onFinish={handleFinishInterview}
+                onSave={handleSaveInterview}
+                onExit={() => setStep('dashboard')}
+                roleType={currentProject.roleType}
+                importData={currentProject.importData}
+                initialData={currentProject.data}
+              />
+            </div>
+          )}
+
+          {step === 'generating' && (
+            <div className="h-screen flex flex-col justify-center items-center bg-linear-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 px-6">
+              <div className="max-w-md text-center space-y-6">
+                <div className="relative inline-block">
+                  <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-purple-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
+                  <Loader2 className="w-20 h-20 text-indigo-600 animate-spin relative z-10" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-bold text-slate-900">{t('generatingTitle')}</h2>
+                  <p className="text-slate-600 text-lg">{t('generatingDesc')}</p>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                  <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 'editor' && currentProject && currentProject.data && (
+            <div className="min-h-screen py-8 px-4 bg-slate-100">
+              <ResumeEditor
+                project={currentProject}
+                onUpdate={handleUpdateProjectData}
+                onBack={() => setStep('dashboard')}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

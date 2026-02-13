@@ -7,7 +7,8 @@
 		"close": "閉じる",
 		"saved": "保存しました！",
 		"error": "エラー",
-		"reload": "ページを再読み込み"
+		"reload": "ページを再読み込み",
+		"confirmDelete": "このプロジェクトを削除してもよろしいですか？"
 	},
 	"Dashboard": {
 		"subtitle": "AIでマスターレジュメを作成",

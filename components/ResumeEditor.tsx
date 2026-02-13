@@ -113,7 +113,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             const result = await evaluateResume(data, project.roleType);
             setEvaluation(result);
             const updatedProject = { ...project, evaluation: result, data: data };
-            saveProject(updatedProject);
+            await saveProject(updatedProject);
         } catch (e) {
             console.error(e);
             alert("Evaluation failed.");
@@ -156,17 +156,22 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
         }
     };
 
-    const handleSaveComplete = () => {
-        const updatedProject = {
-            ...project,
-            data,
-            evaluation,
-            status: 'completed' as const,
-            updatedAt: Date.now()
-        };
-        saveProject(updatedProject);
-        alert(t('saved') || "Saved!");
-        onBack();
+    const handleSaveComplete = async () => {
+        try {
+            const updatedProject = {
+                ...project,
+                data,
+                evaluation,
+                status: 'completed' as const,
+                updatedAt: Date.now()
+            };
+            await saveProject(updatedProject);
+            alert(t('saved') || "Saved!");
+            onBack();
+        } catch (error) {
+            console.error('Failed to save project:', error);
+            alert('Failed to save project. Please try again.');
+        }
     };
 
     const handlePrint = () => {

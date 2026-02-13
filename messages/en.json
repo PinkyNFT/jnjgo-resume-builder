@@ -7,7 +7,8 @@
 		"close": "Close",
 		"saved": "Saved!",
 		"error": "Error",
-		"reload": "Reload page"
+		"reload": "Reload page",
+		"confirmDelete": "Are you sure you want to delete this project?"
 	},
 	"Dashboard": {
 		"subtitle": "Build Your Master Resume with AI",
