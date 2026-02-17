@@ -2,11 +2,11 @@
 
 import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { ResumeData, Project, EvaluationResult } from '../types';
+import { ResumeData, ResumeVersion, Project, EvaluationResult } from '../types';
 import { evaluateResume } from '../services/geminiService';
 import { saveProject, createVersion } from '../services/storageService';
 import { VersionHistory } from './VersionHistory';
-import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2, History, MessageSquare } from 'lucide-react';
+import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2, History, MessageSquare, Eye, X, RotateCcw } from 'lucide-react';
 import { TimelineChart, TimelineChartItem } from './TimelineChart';
 import { parsePeriod } from '../utils/dateParser';
 import { insertGapsInTimeline } from '../utils/timelineGenerator';
@@ -47,12 +47,17 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
     const [isEvaluating, setIsEvaluating] = useState(false);
     const [activeTab, setActiveTab] = useState<'preview' | 'edit'>('preview');
     const [showResumeInterviewConfirm, setShowResumeInterviewConfirm] = useState(false);
+    const [previewVersion, setPreviewVersion] = useState<ResumeVersion | null>(null);
+
+    // When previewing a version, show its data read-only; otherwise show the live data
+    const displayData = previewVersion ? previewVersion.data : data;
+    const isPreviewMode = previewVersion !== null;
 
     // Generate employer timeline data from work experience
     const employerTimelineData = useMemo((): TimelineChartItem[] => {
-        if (!data.workExperience || data.workExperience.length === 0) {
+        if (!displayData.workExperience || displayData.workExperience.length === 0) {
             // Fallback to timeline items if work experience is not available
-            const workItems = data.timeline?.filter(item => item.type === 'work') || [];
+            const workItems = displayData.timeline?.filter(item => item.type === 'work') || [];
             const items = workItems
                 .map(item => {
                     const parsed = parsePeriod(item.period);
@@ -70,7 +75,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             return insertGapsInTimeline(items);
         }
 
-        const items = data.workExperience
+        const items = displayData.workExperience
             .map(work => {
                 const parsed = parsePeriod(work.period);
                 if (!parsed) return null;
@@ -85,15 +90,15 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
         // Insert gaps
         return insertGapsInTimeline(items);
-    }, [data.workExperience, data.timeline]);
+    }, [displayData.workExperience, displayData.timeline]);
 
     // Generate skill timeline data
     const skillTimelineData = useMemo((): TimelineChartItem[] => {
-        if (!data.skillTimelines || data.skillTimelines.length === 0) {
+        if (!displayData.skillTimelines || displayData.skillTimelines.length === 0) {
             return [];
         }
 
-        const items = data.skillTimelines
+        const items = displayData.skillTimelines
             .map(skill => {
                 const parsed = parsePeriod(skill.period);
                 if (!parsed) return null;
@@ -108,7 +113,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
         // Insert gaps
         return insertGapsInTimeline(items);
-    }, [data.skillTimelines]);
+    }, [displayData.skillTimelines]);
 
     const handleRunEvaluation = async () => {
         setIsEvaluating(true);
@@ -198,6 +203,33 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
         if (restoredEvaluation) {
             setEvaluation(restoredEvaluation);
         }
+        // Exit preview mode after restoring
+        setPreviewVersion(null);
+    };
+
+    const handlePreviewVersion = (version: ResumeVersion | null) => {
+        setPreviewVersion(version);
+        if (version) setActiveTab('preview');
+    };
+
+    const handleRestoreFromPreview = async () => {
+        if (previewVersion) {
+            // Create a safety snapshot of current state before restoring
+            try {
+                const now = new Date();
+                const formatted = now.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+                await createVersion(
+                    project.id,
+                    `${t('preRestoreBackup')} — ${formatted}`,
+                    'auto_pre_restore',
+                    data,
+                    evaluation
+                );
+            } catch {
+                // Non-blocking: proceed with restore even if backup fails
+            }
+            handleRestoreVersion(previewVersion.data, previewVersion.evaluation);
+        }
     };
 
     const handlePrint = () => {
@@ -207,7 +239,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
     // --- Render Helpers ---
 
     const renderEditableText = (value: string, onChange: (val: string) => void, multiline = false, className = "", placeholder = "") => {
-        if (activeTab === 'preview') {
+        if (activeTab === 'preview' || isPreviewMode) {
             return <div className={`whitespace-pre-wrap ${className}`}>{value || <span className="text-slate-300 italic">{placeholder}</span>}</div>;
         }
         if (multiline) {
@@ -270,7 +302,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                 <div className="bg-white p-5 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100">
                     <div className="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-xl">
                         <button onClick={() => setActiveTab('preview')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'preview' ? 'bg-white shadow-sm text-slate-900 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}>{t('preview')}</button>
-                        <button onClick={() => setActiveTab('edit')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'edit' ? 'bg-white shadow-sm text-slate-900 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}>{t('editData')}</button>
+                        <button onClick={() => !isPreviewMode && setActiveTab('edit')} disabled={isPreviewMode} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${isPreviewMode ? 'opacity-40 cursor-not-allowed text-slate-400' : activeTab === 'edit' ? 'bg-white shadow-sm text-slate-900 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}>{t('editData')}</button>
                     </div>
 
                     <div className="space-y-3">
@@ -497,46 +529,80 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     currentData={data}
                     currentEvaluation={evaluation}
                     onRestore={handleRestoreVersion}
+                    onPreview={handlePreviewVersion}
+                    previewingVersionId={previewVersion?.id}
                 />
             </div>
 
             {/* RIGHT COLUMN: Master Resume (Japanese Style Layout) */}
             <div className="flex-1 overflow-x-auto pb-10">
+                {/* Preview Version Banner */}
+                {isPreviewMode && (
+                    <div className="sticky top-0 z-20 mb-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="w-[210mm] mx-auto bg-indigo-600 text-white rounded-xl px-5 py-3 flex items-center justify-between shadow-lg shadow-indigo-600/20">
+                            <div className="flex items-center gap-3">
+                                <div className="p-1.5 bg-white/20 rounded-lg">
+                                    <Eye className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <div className="text-xs font-bold">{t('previewingVersion')}</div>
+                                    <div className="text-[10px] text-indigo-200 truncate max-w-xs">{previewVersion?.label}</div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleRestoreFromPreview}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-white text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors shadow-sm"
+                                >
+                                    <RotateCcw className="w-3 h-3" />
+                                    {t('restoreThis')}
+                                </button>
+                                <button
+                                    onClick={() => setPreviewVersion(null)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-white/15 text-white rounded-lg hover:bg-white/25 transition-colors"
+                                >
+                                    <X className="w-3 h-3" />
+                                    {t('exitPreview')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <div
                     id="resume-preview"
-                    className={`bg-white shadow-2xl min-h-[297mm] w-[210mm] mx-auto p-[15mm] text-slate-900 font-sans text-[9.5pt] leading-relaxed transition-all duration-300 ${activeTab === 'edit' ? 'ring-4 ring-indigo-500/10' : ''}`}
+                    className={`bg-white shadow-2xl min-h-[297mm] w-[210mm] mx-auto p-[15mm] text-slate-900 font-sans text-[9.5pt] leading-relaxed transition-all duration-300 ${isPreviewMode ? 'ring-4 ring-indigo-400/30' : activeTab === 'edit' ? 'ring-4 ring-indigo-500/10' : ''}`}
                 >
 
                     {/* Header - Professional Layout */}
                     <div className="border-b-2 border-slate-900 pb-4 mb-6">
                         <div className="mb-3">
                             <h1 className="text-[28pt] font-bold tracking-tight text-slate-900 mb-2 leading-none">
-                                {renderEditableText(data.fullName, val => setData({ ...data, fullName: val }), false, "font-sans", "")}
+                                {renderEditableText(displayData.fullName, val => setData({ ...data, fullName: val }), false, "font-sans", "")}
                             </h1>
                             <div className="text-[11pt] text-slate-700 leading-tight mb-1">
-                                {renderEditableText(data.currentRole, val => setData({ ...data, currentRole: val }), false, "", "")}
+                                {renderEditableText(displayData.currentRole, val => setData({ ...data, currentRole: val }), false, "", "")}
                             </div>
-                            {data.contactInfo.department && (
+                            {displayData.contactInfo.department && (
                                 <div className="text-[10pt] italic text-slate-600">
-                                    {renderEditableText(data.contactInfo.department || "", val => setData({ ...data, contactInfo: { ...data.contactInfo, department: val } }), false, "", "")}
+                                    {renderEditableText(displayData.contactInfo.department || "", val => setData({ ...data, contactInfo: { ...data.contactInfo, department: val } }), false, "", "")}
                                 </div>
                             )}
                         </div>
                         <div className="text-[9pt] text-slate-700 leading-tight flex gap-2 flex-wrap items-center">
-                            {data.contactInfo.email && (
+                            {displayData.contactInfo.email && (
                                 <>
-                                    <span className="flex items-center gap-1">Email: {renderEditableText(data.contactInfo.email, val => setData({ ...data, contactInfo: { ...data.contactInfo, email: val } }), false, "inline-block", "")}</span>
+                                    <span className="flex items-center gap-1">Email: {renderEditableText(displayData.contactInfo.email, val => setData({ ...data, contactInfo: { ...data.contactInfo, email: val } }), false, "inline-block", "")}</span>
                                     <span className="text-slate-400">|</span>
                                 </>
                             )}
-                            {data.contactInfo.phone && (
+                            {displayData.contactInfo.phone && (
                                 <>
-                                    <span className="flex items-center gap-1">Phone: {renderEditableText(data.contactInfo.phone, val => setData({ ...data, contactInfo: { ...data.contactInfo, phone: val } }), false, "inline-block", "")}</span>
+                                    <span className="flex items-center gap-1">Phone: {renderEditableText(displayData.contactInfo.phone, val => setData({ ...data, contactInfo: { ...data.contactInfo, phone: val } }), false, "inline-block", "")}</span>
                                     <span className="text-slate-400">|</span>
                                 </>
                             )}
-                            {data.contactInfo.location && (
-                                <span>{renderEditableText(data.contactInfo.location, val => setData({ ...data, contactInfo: { ...data.contactInfo, location: val } }), false, "inline-block", "")}</span>
+                            {displayData.contactInfo.location && (
+                                <span>{renderEditableText(displayData.contactInfo.location, val => setData({ ...data, contactInfo: { ...data.contactInfo, location: val } }), false, "inline-block", "")}</span>
                             )}
                         </div>
                     </div>
@@ -545,7 +611,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     <div className="mb-7">
                         <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">{t('professionalSummary')}</h2>
                         <div className="text-[9.5pt] text-slate-800 leading-relaxed">
-                            {renderEditableText(data.careerSummary, val => setData({ ...data, careerSummary: val }), true, "", t('professionalSummaryPlaceholder'))}
+                            {renderEditableText(displayData.careerSummary, val => setData({ ...data, careerSummary: val }), true, "", t('professionalSummaryPlaceholder'))}
                         </div>
                     </div>
 
@@ -558,7 +624,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                             <TimelineChart
                                 items={employerTimelineData}
                                 className="bg-slate-50/30 p-4 rounded-lg"
-                                editable={activeTab === 'edit'}
+                                editable={activeTab === 'edit' && !isPreviewMode}
                                 onItemLabelChange={handleEmployerLabelChange}
                             />
                         </div>
@@ -573,7 +639,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                             <TimelineChart
                                 items={skillTimelineData}
                                 className="bg-slate-50/30 p-4 rounded-lg"
-                                editable={activeTab === 'edit'}
+                                editable={activeTab === 'edit' && !isPreviewMode}
                                 onItemLabelChange={handleSkillLabelChange}
                             />
                         </div>
@@ -583,8 +649,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     <div className="mb-7">
                         <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">{t('careerSummary')}</h2>
                         <div className="space-y-2 text-[9.5pt] mb-4">
-                            {data.timeline && data.timeline.length > 0 ? (
-                                data.timeline.filter(t => t.type === 'work').map((item, i) => (
+                            {displayData.timeline && displayData.timeline.length > 0 ? (
+                                displayData.timeline.filter(t => t.type === 'work').map((item, i) => (
                                     <div key={i} className="flex gap-2 leading-snug">
                                         <span className="text-slate-900 font-bold">•</span>
                                         <div className="flex-1">
@@ -632,24 +698,24 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                         {/* Career Overview Stats */}
                         <div className="pt-3 border-t border-slate-200 text-[9pt] text-slate-700">
                             <div className="flex gap-5 flex-wrap">
-                                {data.careerOverview.totalExperience && <span>{t('totalCareer')} <strong className="text-slate-900">{data.careerOverview.totalExperience}</strong></span>}
-                                {data.careerOverview.numberOfEmployers > 0 && <span>{t('numberOfEmployers')} <strong className="text-slate-900">{data.careerOverview.numberOfEmployers}</strong></span>}
-                                {data.careerOverview.averageTenure && <span>{t('averageTenure')} <strong className="text-slate-900">{data.careerOverview.averageTenure}</strong></span>}
-                                {data.careerOverview.projectCount && <span>{t('currentPositionDuration')} <strong className="text-slate-900">{data.careerOverview.projectCount}</strong></span>}
+                                {displayData.careerOverview.totalExperience && <span>{t('totalCareer')} <strong className="text-slate-900">{displayData.careerOverview.totalExperience}</strong></span>}
+                                {displayData.careerOverview.numberOfEmployers > 0 && <span>{t('numberOfEmployers')} <strong className="text-slate-900">{displayData.careerOverview.numberOfEmployers}</strong></span>}
+                                {displayData.careerOverview.averageTenure && <span>{t('averageTenure')} <strong className="text-slate-900">{displayData.careerOverview.averageTenure}</strong></span>}
+                                {displayData.careerOverview.projectCount && <span>{t('currentPositionDuration')} <strong className="text-slate-900">{displayData.careerOverview.projectCount}</strong></span>}
                             </div>
                         </div>
 
                         {/* Career Gaps Section - Only show if gaps exist and are explained */}
-                        {data.careerGaps && data.careerGaps.length > 0 && data.careerGaps.some(g => g.isExplained) && (
+                        {displayData.careerGaps && displayData.careerGaps.length > 0 && displayData.careerGaps.some(g => g.isExplained) && (
                             <div className="mt-4 pt-3 border-t border-slate-200">
                                 <div className="text-[9pt] font-semibold text-slate-700 mb-2">{t('careerNotes')}</div>
                                 <div className="space-y-1.5">
-                                    {data.careerGaps.filter(g => g.isExplained).map((gap, i) => (
+                                    {displayData.careerGaps.filter(g => g.isExplained).map((gap, i) => (
                                         <div key={i} className="flex gap-2 text-[9pt] text-slate-700">
                                             <span className="text-slate-900 font-bold">•</span>
                                             <div className="flex-1">
                                                 <span className="font-medium text-slate-900">
-                                                    {activeTab === 'preview' ? gap.period : (
+                                                    {(activeTab === 'preview' || isPreviewMode) ? gap.period : (
                                                         <input
                                                             className="border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
                                                             value={gap.period}
@@ -664,7 +730,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                 </span>
                                                 <span className="mx-1.5 text-slate-500">:</span>
                                                 <span className="text-slate-700">
-                                                    {activeTab === 'preview' ? gap.reason : (
+                                                    {(activeTab === 'preview' || isPreviewMode) ? gap.reason : (
                                                         <input
                                                             className="border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
                                                             value={gap.reason}
@@ -690,14 +756,14 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                         <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('workExperience')}</h2>
 
                         <div className="space-y-8">
-                            {data.workExperience && data.workExperience.length > 0 ? (
-                                data.workExperience.map((work, i) => (
+                            {displayData.workExperience && displayData.workExperience.length > 0 ? (
+                                displayData.workExperience.map((work, i) => (
                                     <div key={work.id} className="break-inside-avoid">
                                         {/* Company & Position Header */}
                                         <div className="mb-3">
                                             <div className="flex justify-between items-start mb-1">
                                                 <h3 className="font-bold text-[10.5pt] text-slate-900 flex-1">
-                                                    {activeTab === 'preview' ? (
+                                                    {(activeTab === 'preview' || isPreviewMode) ? (
                                                         <>
                                                             {work.company || <span className="text-slate-400 italic">{t('companyName')}</span>}
                                                             {' | '}
@@ -764,7 +830,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                     </div>
                                 ))
                             ) : (
-                                data.projectPortfolio.representativeProjects.map((proj, i) => (
+                                displayData.projectPortfolio.representativeProjects.map((proj, i) => (
                                     <div key={i} className="break-inside-avoid">
                                         {/* Company Header */}
                                         <div className="mb-3">
@@ -848,7 +914,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                         )}
 
                                         {/* Detailed Box: Challenge/Approach/Results */}
-                                        {(proj.clientType || proj.theme || data.projectPortfolio.additionalEngagements) && (
+                                        {(proj.clientType || proj.theme || displayData.projectPortfolio.additionalEngagements) && (
                                             <div className="bg-slate-100 border border-slate-200 px-4 py-3 text-[9pt] leading-relaxed space-y-2">
                                                 {proj.clientType && (
                                                     <div className="flex gap-2">
@@ -874,11 +940,11 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                         </span>
                                                     </div>
                                                 )}
-                                                {data.projectPortfolio.additionalEngagements && (
+                                                {displayData.projectPortfolio.additionalEngagements && (
                                                     <div className="flex gap-2">
                                                         <span className="font-bold text-slate-900 min-w-20">{t('results')}</span>
                                                         <span className="text-slate-800 flex-1">
-                                                            {renderEditableText(data.projectPortfolio.additionalEngagements, val => setData({ ...data, projectPortfolio: { ...data.projectPortfolio, additionalEngagements: val } }), false, "inline-block", "")}
+                                                            {renderEditableText(displayData.projectPortfolio.additionalEngagements, val => setData({ ...data, projectPortfolio: { ...data.projectPortfolio, additionalEngagements: val } }), false, "inline-block", "")}
                                                         </span>
                                                     </div>
                                                 )}
@@ -891,11 +957,11 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     </div>
 
                     {/* Education Section */}
-                    {data.education && data.education.length > 0 && (
+                    {displayData.education && displayData.education.length > 0 && (
                         <div className="mb-8">
                             <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('education')}</h2>
                             <div className="space-y-4">
-                                {data.education.map((edu, i) => (
+                                {displayData.education.map((edu, i) => (
                                     <div key={edu.id} className="break-inside-avoid">
                                         <div className="flex justify-between items-start">
                                             <div className="flex-1">
@@ -940,13 +1006,13 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     )}
 
                     {/* Skills Section */}
-                    {data.skills && data.skills.length > 0 && (
+                    {displayData.skills && displayData.skills.length > 0 && (
                         <div className="mb-8">
                             <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('skills')}</h2>
                             <div className="flex flex-wrap gap-2">
-                                {data.skills.map((skill, i) => (
+                                {displayData.skills.map((skill, i) => (
                                     <div key={i} className="inline-flex items-center">
-                                        {activeTab === 'preview' ? (
+                                        {(activeTab === 'preview' || isPreviewMode) ? (
                                             <span className="px-3 py-1 bg-slate-100 text-slate-800 text-[9pt] rounded-md border border-slate-200">
                                                 {skill}
                                             </span>
@@ -969,11 +1035,11 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     )}
 
                     {/* Certifications Section */}
-                    {data.certifications && data.certifications.length > 0 && (
+                    {displayData.certifications && displayData.certifications.length > 0 && (
                         <div className="mb-8">
                             <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('certifications')}</h2>
                             <div className="space-y-2">
-                                {data.certifications.map((cert, i) => (
+                                {displayData.certifications.map((cert, i) => (
                                     <div key={i} className="flex gap-2 text-[9.5pt] text-slate-800">
                                         <span className="text-slate-900 font-bold">•</span>
                                         <div className="flex-1">

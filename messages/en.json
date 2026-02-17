@@ -197,7 +197,11 @@
 		"companyAndPosition": "Company & Position",
 		"reason": "Reason",
 		"employerTimeline": "Employer Timeline",
-		"skillTimeline": "Skill Timeline"
+		"skillTimeline": "Skill Timeline",
+		"previewingVersion": "Previewing Version",
+		"restoreThis": "Restore This Version",
+		"exitPreview": "Exit Preview",
+		"preRestoreBackup": "Pre-Restore Backup"
 	},
 	"Versions": {
 		"title": "Version History",
@@ -223,7 +227,9 @@
 		"trigger_auto_evaluated": "Evaluated",
 		"trigger_auto_saved": "Saved",
 		"trigger_auto_pre_restore": "Backup",
-		"trigger_auto_pre_interview": "Pre-Interview"
+		"trigger_auto_pre_interview": "Pre-Interview",
+		"preview": "Preview",
+		"previewing": "Previewing"
 	},
 	"Interview": {
 		"finish": "Finish & Generate Resume",

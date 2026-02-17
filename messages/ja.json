@@ -197,7 +197,11 @@
 		"companyAndPosition": "会社名 & 役職",
 		"reason": "理由",
 		"employerTimeline": "雇用主タイムライン",
-		"skillTimeline": "スキルタイムライン"
+		"skillTimeline": "スキルタイムライン",
+		"previewingVersion": "バージョンをプレビュー中",
+		"restoreThis": "このバージョンを復元",
+		"exitPreview": "プレビューを終了",
+		"preRestoreBackup": "復元前バックアップ"
 	},
 	"Versions": {
 		"title": "バージョン履歴",
@@ -223,7 +227,9 @@
 		"trigger_auto_evaluated": "評価済み",
 		"trigger_auto_saved": "保存済み",
 		"trigger_auto_pre_restore": "バックアップ",
-		"trigger_auto_pre_interview": "インタビュー前"
+		"trigger_auto_pre_interview": "インタビュー前",
+		"preview": "プレビュー",
+		"previewing": "プレビュー中"
 	},
 	"Interview": {
 		"finish": "終了してレジュメ生成",
