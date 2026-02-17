@@ -12,7 +12,7 @@ import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from 
 import { useParseResume, useAnalyzeImport } from '../../../hooks/useGemini';
 import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile } from '../../../services/storageService';
 import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/dataMigration';
-import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3 } from 'lucide-react';
+import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield } from 'lucide-react';
 
 // --- Sub-Components ---
 
@@ -548,6 +548,17 @@ export default function Page() {
   };
 
   const { data: session } = useSession();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check admin status
+  useEffect(() => {
+    if (session?.user) {
+      fetch('/api/admin/check')
+        .then(res => res.json())
+        .then(data => setIsAdmin(data.isAdmin))
+        .catch(() => {});
+    }
+  }, [session]);
 
   return (
     <div className="font-sans text-slate-900 bg-slate-50 min-h-screen">
@@ -569,6 +580,15 @@ export default function Page() {
                   <span className="font-black text-slate-800 tracking-tight text-lg">JNJGO Resume</span>
                 </div>
                 <div className="flex items-center gap-4">
+                  {isAdmin && (
+                    <a
+                      href="/admin"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-100"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      Admin
+                    </a>
+                  )}
                   <AuthButton />
                   <LanguageSwitcher />
                 </div>

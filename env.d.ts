@@ -56,6 +56,12 @@ declare global {
              * @default 'false'
              */
             NEXT_PUBLIC_DEBUG?: string;
+
+            /**
+             * Comma-separated list of admin email addresses (for initial bootstrap)
+             * @optional
+             */
+            ADMIN_EMAILS?: string;
         }
     }
 }

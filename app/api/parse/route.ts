@@ -3,6 +3,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { Message, ResumeData, ImportData } from '@/types';
 import { GEMINI_MODEL } from '@/config/models';
 import { getParseResumePrompt } from '@/lib/prompts';
+import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -23,12 +24,15 @@ export async function POST(request: NextRequest) {
         const { history, importData, locale }: { history: Message[], importData?: ImportData, locale?: string } = body;
 
         const ai = new GoogleGenAI({ apiKey: API_KEY });
-        const model = GEMINI_MODEL;
+
+        // Read model from admin settings (cached)
+        const aiConfig = await getAdminAIConfig();
+        const model = aiConfig.model;
 
         const conversationText = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
         const importedText = importData ? `IMPORTED RESUME CONTENT:\n${importData.sourceText}\n\n` : '';
 
-        const prompt = getParseResumePrompt(conversationText, importedText, locale || 'en');
+        const prompt = await getParseResumePrompt(conversationText, importedText, locale || 'en');
 
         const response = await ai.models.generateContent({
             model,

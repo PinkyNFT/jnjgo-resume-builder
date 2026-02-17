@@ -42,7 +42,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
             bufferCommands: false,
             maxPoolSize: 10,
             minPoolSize: 2,
-            serverSelectionTimeoutMS: 5000,
+            serverSelectionTimeoutMS: 30000,
             socketTimeoutMS: 45000,
         };
 

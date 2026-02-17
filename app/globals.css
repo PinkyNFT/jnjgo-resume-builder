@@ -24,3 +24,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Improve placeholder contrast across admin inputs */
+input::placeholder,
+textarea::placeholder,
+select::placeholder {
+  color: #64748b; /* slate-500 */
+  opacity: 1;
+}

@@ -3,6 +3,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { ImportData, ResumeData, RoleType, EvaluationResult } from '@/types';
 import { GEMINI_MODEL } from '@/config/models';
 import { getAnalyzeImportPrompt, getEvaluateResumePrompt } from '@/lib/prompts';
+import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -24,12 +25,14 @@ export async function POST(request: NextRequest) {
 
         const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-        const model = GEMINI_MODEL;
+        // Read model from admin settings (cached)
+        const aiConfig = await getAdminAIConfig();
+        const model = aiConfig.model;
 
         // Handle different analysis actions
         if (action === 'analyzeImport') {
             // Analyze imported resume text
-            const prompt = getAnalyzeImportPrompt(text, locale || 'en');
+            const prompt = await getAnalyzeImportPrompt(text, locale || 'en');
 
             const response = await ai.models.generateContent({
                 model,
@@ -100,7 +103,7 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            const prompt = getEvaluateResumePrompt(resumeData, role, {
+            const prompt = await getEvaluateResumePrompt(resumeData, role, {
                 hasBasicProfile,
                 hasWorkHistory,
                 hasEducation,

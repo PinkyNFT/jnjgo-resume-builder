@@ -3,6 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { Message, RoleType, ImportData, ResumeData } from '@/types';
 import { GEMINI_MODEL } from '@/config/models';
 import { getSystemInstruction } from '@/lib/prompts';
+import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -24,16 +25,22 @@ export async function POST(request: NextRequest) {
 
         const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-        const model = GEMINI_MODEL;
+        // Read model and temperature from admin settings (cached, fast)
+        const aiConfig = await getAdminAIConfig();
+        const model = aiConfig.model;
+        const temperature = aiConfig.temperature;
 
         // Handle different chat actions
         if (action === 'sendMessage') {
+            // Resolve system instruction from DB (or fallback)
+            const systemInstruction = await getSystemInstruction(roleType, importData, initialData, locale || 'en');
+
             // Create chat with history
             const chat = ai.chats.create({
                 model,
                 config: {
-                    systemInstruction: getSystemInstruction(roleType, importData, initialData, locale || 'en'),
-                    temperature: 0.7,
+                    systemInstruction,
+                    temperature,
                 },
                 history: history ? history.map((h: Message) => ({
                     role: h.role,
@@ -66,12 +73,15 @@ export async function POST(request: NextRequest) {
             });
 
         } else if (action === 'generateHint') {
+            // Resolve system instruction from DB (or fallback)
+            const systemInstruction = await getSystemInstruction(roleType, importData, initialData, locale || 'en');
+
             // Generate helpful hint
             const chat = ai.chats.create({
                 model,
                 config: {
-                    systemInstruction: getSystemInstruction(roleType, importData, initialData, locale || 'en'),
-                    temperature: 0.7,
+                    systemInstruction,
+                    temperature,
                 },
                 history: history ? history.map((h: Message) => ({
                     role: h.role,
