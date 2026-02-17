@@ -268,7 +268,10 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             {/* Print Styles */}
             <style>{`
         @media print {
-          @page { margin: 0; size: auto; }
+          @page {
+            margin: 15mm 0;
+            size: auto;
+          }
           body * { visibility: hidden; }
           #resume-preview, #resume-preview * { visibility: visible; }
           #resume-preview {
@@ -277,7 +280,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             top: 0;
             width: 100%;
             margin: 0;
-            padding: 15mm;
+            padding: 0 15mm;
             background: white;
             box-shadow: none;
             overflow: visible;
@@ -290,6 +293,10 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
           }
           /* Hide placeholders in print */
           input::placeholder, textarea::placeholder { color: transparent; }
+          /* Avoid breaking inside major sections */
+          #resume-preview h2 {
+            break-after: avoid;
+          }
         }
       `}</style>
 
