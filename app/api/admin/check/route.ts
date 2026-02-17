@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
         // 1. If no admins exist at all, promote this user to super_admin
         // 2. If user email is in ADMIN_EMAILS, promote them to super_admin
         const adminCount = await AdminUserModel.countDocuments();
-        
+
         if (adminCount === 0 || (isAdminEmail && adminCount > 0)) {
             const existingAdmin = await AdminUserModel.findOne({ userId: session.user.id });
-            
+
             if (!existingAdmin) {
                 await AdminUserModel.create({
                     userId: session.user.id,

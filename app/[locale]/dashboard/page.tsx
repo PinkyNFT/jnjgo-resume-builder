@@ -556,7 +556,7 @@ export default function Page() {
       fetch('/api/admin/check')
         .then(res => res.json())
         .then(data => setIsAdmin(data.isAdmin))
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [session]);
 
