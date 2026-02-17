@@ -126,6 +126,12 @@
 	},
 	"Editor": {
 		"backToDashboard": "Back to Dashboard",
+		"resumeInterview": "Resume Interview",
+		"resumeInterviewDesc": "Go back to the AI interview to provide more details. Your current resume will be saved as a version.",
+		"resumeInterviewConfirmTitle": "Resume Interview?",
+		"resumeInterviewConfirmDesc": "Your current resume will be automatically saved as a version before returning to the interview. You can regenerate the resume after adding more information.",
+		"resumeInterviewConfirm": "Yes, Resume Interview",
+		"resumeInterviewKeepEditing": "Keep Editing",
 		"preview": "Preview",
 		"editData": "Edit Data",
 		"runScoreAnalysis": "Run Score Analysis",
@@ -216,7 +222,8 @@
 		"trigger_auto_generated": "Generated",
 		"trigger_auto_evaluated": "Evaluated",
 		"trigger_auto_saved": "Saved",
-		"trigger_auto_pre_restore": "Backup"
+		"trigger_auto_pre_restore": "Backup",
+		"trigger_auto_pre_interview": "Pre-Interview"
 	},
 	"Interview": {
 		"finish": "Finish & Generate Resume",

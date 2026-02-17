@@ -554,6 +554,35 @@ export default function Page() {
     }
   };
 
+  const handleResumeInterview = async () => {
+    if (!currentProject || !currentProject.data) return;
+
+    try {
+      // Auto-save the current resume as a version before returning to interview
+      await createVersion(
+        currentProject.id,
+        `Pre-Interview — ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+        'auto_pre_interview',
+        currentProject.data,
+        currentProject.evaluation
+      );
+
+      // Update project status back to interviewing
+      const updatedProject: Project = {
+        ...currentProject,
+        status: 'interviewing',
+        updatedAt: Date.now(),
+      };
+      await saveProject(updatedProject);
+      await refreshProjects();
+      setCurrentProject(updatedProject);
+      setStep('interview');
+    } catch (error) {
+      console.error('Failed to resume interview:', error);
+      alert('Failed to resume interview. Please try again.');
+    }
+  };
+
   const { data: session } = useSession();
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -697,6 +726,7 @@ export default function Page() {
                 project={currentProject}
                 onUpdate={handleUpdateProjectData}
                 onBack={() => setStep('dashboard')}
+                onResumeInterview={handleResumeInterview}
               />
             </div>
           )}

@@ -6,7 +6,7 @@ import { ResumeData, Project, EvaluationResult } from '../types';
 import { evaluateResume } from '../services/geminiService';
 import { saveProject, createVersion } from '../services/storageService';
 import { VersionHistory } from './VersionHistory';
-import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2, History } from 'lucide-react';
+import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2, History, MessageSquare } from 'lucide-react';
 import { TimelineChart, TimelineChartItem } from './TimelineChart';
 import { parsePeriod } from '../utils/dateParser';
 import { insertGapsInTimeline } from '../utils/timelineGenerator';
@@ -15,6 +15,7 @@ interface ResumeEditorProps {
     project: Project;
     onUpdate: (data: ResumeData) => void;
     onBack: () => void;
+    onResumeInterview?: () => void;
 }
 
 const ScoreBar = ({ label, score, max, colorClass, description }: { label: string, score: number, max: number, colorClass: string, description?: string }) => (
@@ -39,12 +40,13 @@ const ScoreBar = ({ label, score, max, colorClass, description }: { label: strin
     </div>
 );
 
-export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, onBack }) => {
+export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, onBack, onResumeInterview }) => {
     const t = useTranslations('Editor');
     const [data, setData] = useState<ResumeData>(project.data!);
     const [evaluation, setEvaluation] = useState<EvaluationResult | undefined>(project.evaluation);
     const [isEvaluating, setIsEvaluating] = useState(false);
     const [activeTab, setActiveTab] = useState<'preview' | 'edit'>('preview');
+    const [showResumeInterviewConfirm, setShowResumeInterviewConfirm] = useState(false);
 
     // Generate employer timeline data from work experience
     const employerTimelineData = useMemo((): TimelineChartItem[] => {
@@ -434,6 +436,20 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                         <button onClick={handlePrint} className="w-full py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2">
                             <Printer className="w-4 h-4" /> {t('exportPDF')}
                         </button>
+
+                        {onResumeInterview && (
+                            <div className="pt-3 border-t border-slate-100">
+                                <button
+                                    onClick={() => setShowResumeInterviewConfirm(true)}
+                                    className="w-full py-3 bg-amber-50 text-amber-700 font-bold text-sm rounded-xl hover:bg-amber-100 transition-all flex items-center justify-center gap-2 border border-amber-200 shadow-sm"
+                                >
+                                    <MessageSquare className="w-4 h-4" /> {t('resumeInterview')}
+                                </button>
+                                <p className="text-[10px] text-slate-400 mt-1.5 leading-snug text-center">
+                                    {t('resumeInterviewDesc')}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -974,6 +990,41 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     )}
                 </div>
             </div>
+
+            {/* Resume Interview Confirmation Dialog */}
+            {showResumeInterviewConfirm && onResumeInterview && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-start gap-4">
+                            <div className="p-3 bg-amber-50 rounded-xl text-amber-600 shrink-0">
+                                <MessageSquare className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900">{t('resumeInterviewConfirmTitle')}</h3>
+                                <p className="text-sm text-slate-500 mt-1 leading-relaxed">{t('resumeInterviewConfirmDesc')}</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 justify-end pt-2">
+                            <button
+                                onClick={() => setShowResumeInterviewConfirm(false)}
+                                className="px-5 py-2.5 text-slate-600 font-bold text-sm hover:bg-slate-100 rounded-xl transition-all"
+                            >
+                                {t('resumeInterviewKeepEditing')}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowResumeInterviewConfirm(false);
+                                    onResumeInterview();
+                                }}
+                                className="px-5 py-2.5 bg-amber-500 text-white font-bold text-sm rounded-xl hover:bg-amber-600 shadow-lg shadow-amber-500/25 hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                            >
+                                <MessageSquare className="w-4 h-4" />
+                                {t('resumeInterviewConfirm')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

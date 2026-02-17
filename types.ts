@@ -178,7 +178,7 @@ export interface Project {
 
 // --- Version History ---
 
-export type VersionTrigger = 'manual' | 'auto_generated' | 'auto_evaluated' | 'auto_saved' | 'auto_pre_restore';
+export type VersionTrigger = 'manual' | 'auto_generated' | 'auto_evaluated' | 'auto_saved' | 'auto_pre_restore' | 'auto_pre_interview';
 
 export interface ResumeVersion {
     id: string;

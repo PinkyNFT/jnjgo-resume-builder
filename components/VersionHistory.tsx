@@ -22,6 +22,7 @@ import {
     X,
     AlertTriangle,
     Loader2,
+    MessageSquare,
 } from 'lucide-react';
 
 interface VersionHistoryProps {
@@ -37,6 +38,7 @@ const TRIGGER_CONFIG: Record<VersionTrigger, { icon: React.ElementType; color: s
     auto_evaluated: { icon: BarChart3, color: 'text-violet-600', bgColor: 'bg-violet-50', borderColor: 'border-violet-200' },
     auto_saved: { icon: CheckCircle2, color: 'text-sky-600', bgColor: 'bg-sky-50', borderColor: 'border-sky-200' },
     auto_pre_restore: { icon: Shield, color: 'text-amber-600', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
+    auto_pre_interview: { icon: MessageSquare, color: 'text-orange-600', bgColor: 'bg-orange-50', borderColor: 'border-orange-200' },
 };
 
 function formatRelativeTime(timestamp: number): string {
@@ -192,11 +194,10 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                         <button
                             onClick={handleSaveVersion}
                             disabled={isSaving}
-                            className={`w-full py-2.5 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 ${
-                                saveSuccess
+                            className={`w-full py-2.5 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 ${saveSuccess
                                     ? 'bg-green-50 text-green-700 border border-green-200'
                                     : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100'
-                            }`}
+                                }`}
                         >
                             {isSaving ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -235,9 +236,8 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                                     return (
                                         <div
                                             key={version.id}
-                                            className={`group px-4 py-3 hover:bg-slate-50/50 transition-colors relative ${
-                                                index === 0 ? 'bg-slate-50/30' : ''
-                                            }`}
+                                            className={`group px-4 py-3 hover:bg-slate-50/50 transition-colors relative ${index === 0 ? 'bg-slate-50/30' : ''
+                                                }`}
                                         >
                                             <div className="flex items-start gap-3">
                                                 {/* Timeline dot */}
@@ -306,11 +306,10 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                                                     {/* Evaluation score badge */}
                                                     {version.evaluation && (
                                                         <div className="mt-1.5 flex items-center gap-1">
-                                                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
-                                                                version.evaluation.isPassing
+                                                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${version.evaluation.isPassing
                                                                     ? 'bg-green-50 text-green-700 border-green-200'
                                                                     : 'bg-amber-50 text-amber-700 border-amber-200'
-                                                            }`}>
+                                                                }`}>
                                                                 {t('score')}: {version.evaluation.totalScore}/100
                                                             </span>
                                                         </div>

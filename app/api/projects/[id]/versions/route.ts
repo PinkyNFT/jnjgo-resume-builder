@@ -72,7 +72,7 @@ export async function POST(
             return NextResponse.json({ error: 'Missing required fields: label, trigger, data' }, { status: 400 });
         }
 
-        const validTriggers = ['manual', 'auto_generated', 'auto_evaluated', 'auto_saved', 'auto_pre_restore'];
+        const validTriggers = ['manual', 'auto_generated', 'auto_evaluated', 'auto_saved', 'auto_pre_restore', 'auto_pre_interview'];
         if (!validTriggers.includes(trigger)) {
             return NextResponse.json({ error: 'Invalid trigger type' }, { status: 400 });
         }

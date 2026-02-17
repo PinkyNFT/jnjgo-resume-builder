@@ -126,6 +126,12 @@
 	},
 	"Editor": {
 		"backToDashboard": "ダッシュボードに戻る",
+		"resumeInterview": "インタビューを再開",
+		"resumeInterviewDesc": "AIインタビューに戻り、詳細情報を追加します。現在のレジュメはバージョンとして保存されます。",
+		"resumeInterviewConfirmTitle": "インタビューを再開しますか？",
+		"resumeInterviewConfirmDesc": "インタビューに戻る前に、現在のレジュメはバージョンとして自動保存されます。情報を追加した後、レジュメを再生成できます。",
+		"resumeInterviewConfirm": "はい、インタビューを再開",
+		"resumeInterviewKeepEditing": "編集を続ける",
 		"preview": "プレビュー",
 		"editData": "データ編集",
 		"runScoreAnalysis": "スコア分析を実行",
@@ -216,7 +222,8 @@
 		"trigger_auto_generated": "生成",
 		"trigger_auto_evaluated": "評価済み",
 		"trigger_auto_saved": "保存済み",
-		"trigger_auto_pre_restore": "バックアップ"
+		"trigger_auto_pre_restore": "バックアップ",
+		"trigger_auto_pre_interview": "インタビュー前"
 	},
 	"Interview": {
 		"finish": "終了してレジュメ生成",
