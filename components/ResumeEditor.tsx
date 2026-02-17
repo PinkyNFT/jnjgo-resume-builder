@@ -4,8 +4,9 @@ import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { ResumeData, Project, EvaluationResult } from '../types';
 import { evaluateResume } from '../services/geminiService';
-import { saveProject } from '../services/storageService';
-import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { saveProject, createVersion } from '../services/storageService';
+import { VersionHistory } from './VersionHistory';
+import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2, History } from 'lucide-react';
 import { TimelineChart, TimelineChartItem } from './TimelineChart';
 import { parsePeriod } from '../utils/dateParser';
 import { insertGapsInTimeline } from '../utils/timelineGenerator';
@@ -114,6 +115,14 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             setEvaluation(result);
             const updatedProject = { ...project, evaluation: result, data: data };
             await saveProject(updatedProject);
+            // Auto-version after evaluation
+            await createVersion(
+                project.id,
+                `Score: ${result.totalScore}/100 — ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+                'auto_evaluated',
+                data,
+                result
+            );
         } catch (e) {
             console.error(e);
             alert("Evaluation failed.");
@@ -166,11 +175,26 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                 updatedAt: Date.now()
             };
             await saveProject(updatedProject);
+            // Auto-version when saving as complete
+            await createVersion(
+                project.id,
+                `Completed — ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+                'auto_saved',
+                data,
+                evaluation
+            );
             alert(t('saved') || "Saved!");
             onBack();
         } catch (error) {
             console.error('Failed to save project:', error);
             alert('Failed to save project. Please try again.');
+        }
+    };
+
+    const handleRestoreVersion = (restoredData: ResumeData, restoredEvaluation?: EvaluationResult) => {
+        setData(restoredData);
+        if (restoredEvaluation) {
+            setEvaluation(restoredEvaluation);
         }
     };
 
@@ -450,6 +474,14 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                         </div>
                     );
                 })()}
+
+                {/* Version History */}
+                <VersionHistory
+                    projectId={project.id}
+                    currentData={data}
+                    currentEvaluation={evaluation}
+                    onRestore={handleRestoreVersion}
+                />
             </div>
 
             {/* RIGHT COLUMN: Master Resume (Japanese Style Layout) */}

@@ -176,6 +176,20 @@ export interface Project {
     evaluation?: EvaluationResult;
 }
 
+// --- Version History ---
+
+export type VersionTrigger = 'manual' | 'auto_generated' | 'auto_evaluated' | 'auto_saved' | 'auto_pre_restore';
+
+export interface ResumeVersion {
+    id: string;
+    projectId: string;
+    label: string;
+    trigger: VersionTrigger;
+    data: ResumeData;
+    evaluation?: EvaluationResult;
+    createdAt: number;
+}
+
 export const INITIAL_RESUME_DATA: ResumeData = {
     fullName: '',
     currentRole: '',

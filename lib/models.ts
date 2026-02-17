@@ -7,7 +7,9 @@ import {
     ResumeData,
     EvaluationResult,
     ProjectStatus,
-    RoleType
+    RoleType,
+    ResumeVersion,
+    VersionTrigger
 } from '../types';
 
 // ===== INTERFACES FOR MONGOOSE DOCUMENTS =====
@@ -23,6 +25,12 @@ export interface IProjectDocument extends Omit<Document, '_id'>, Omit<Project, '
     userId: string;
     id: string;
     createdAt: Date;
+}
+
+export interface IResumeVersionDocument extends Omit<Document, '_id'>, Omit<ResumeVersion, 'id'> {
+    _id: Types.ObjectId;
+    userId: string;
+    id: string;
 }
 
 // ===== SCHEMAS =====
@@ -187,6 +195,27 @@ const ProjectSchema = new Schema<IProjectDocument>({
 ProjectSchema.index({ userId: 1, updatedAt: -1 });
 ProjectSchema.index({ userId: 1, status: 1 });
 
+// ===== RESUME VERSION SCHEMA =====
+
+const ResumeVersionSchema = new Schema<IResumeVersionDocument>({
+    userId: { type: String, required: true, index: true },
+    id: { type: String, required: true, unique: true },
+    projectId: { type: String, required: true, index: true },
+    label: { type: String, required: true },
+    trigger: {
+        type: String,
+        enum: ['manual', 'auto_generated', 'auto_evaluated', 'auto_saved', 'auto_pre_restore'],
+        required: true
+    },
+    data: { type: ResumeDataSchema, required: true },
+    evaluation: { type: EvaluationResultSchema },
+    createdAt: { type: Number, required: true }
+}, {
+    collection: 'resumeVersions'
+});
+
+ResumeVersionSchema.index({ userId: 1, projectId: 1, createdAt: -1 });
+
 // ===== MODELS =====
 
 export const UserProfileModel: Model<IUserProfileDocument> =
@@ -194,3 +223,6 @@ export const UserProfileModel: Model<IUserProfileDocument> =
 
 export const ProjectModel: Model<IProjectDocument> =
     mongoose.models.Project || mongoose.model<IProjectDocument>('Project', ProjectSchema);
+
+export const ResumeVersionModel: Model<IResumeVersionDocument> =
+    mongoose.models.ResumeVersion || mongoose.model<IResumeVersionDocument>('ResumeVersion', ResumeVersionSchema);

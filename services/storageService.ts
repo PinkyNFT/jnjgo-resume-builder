@@ -1,4 +1,4 @@
-import { Project, ResumeData, RoleType, ImportData, UserProfile, INITIAL_RESUME_DATA } from '../types';
+import { Project, ResumeData, RoleType, ImportData, UserProfile, INITIAL_RESUME_DATA, ResumeVersion, VersionTrigger } from '../types';
 
 // API configuration
 const API_BASE = '/api';
@@ -156,4 +156,63 @@ export const createNewProject = (roleType: RoleType, importData?: ImportData, pr
         importData,
         data: initialData
     };
+};
+
+// --- Resume Versions ---
+
+export const getVersions = async (projectId: string): Promise<ResumeVersion[]> => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const data = await apiFetch<{ versions: ResumeVersion[] }>(`/projects/${projectId}/versions`);
+        return data.versions;
+    } catch (error) {
+        console.error('Error fetching versions:', error);
+        return [];
+    }
+};
+
+export const createVersion = async (
+    projectId: string,
+    label: string,
+    trigger: VersionTrigger,
+    data: ResumeData,
+    evaluation?: import('../types').EvaluationResult
+): Promise<ResumeVersion | null> => {
+    if (typeof window === 'undefined') return null;
+    try {
+        const result = await apiFetch<{ version: ResumeVersion }>(`/projects/${projectId}/versions`, {
+            method: 'POST',
+            body: JSON.stringify({ label, trigger, data, evaluation }),
+        });
+        return result.version;
+    } catch (error) {
+        console.error('Error creating version:', error);
+        return null;
+    }
+};
+
+export const deleteVersion = async (projectId: string, versionId: string): Promise<void> => {
+    if (typeof window === 'undefined') return;
+    try {
+        await apiFetch(`/projects/${projectId}/versions/${versionId}`, {
+            method: 'DELETE',
+        });
+    } catch (error) {
+        console.error('Error deleting version:', error);
+        throw error;
+    }
+};
+
+export const updateVersionLabel = async (projectId: string, versionId: string, label: string): Promise<ResumeVersion | null> => {
+    if (typeof window === 'undefined') return null;
+    try {
+        const result = await apiFetch<{ version: ResumeVersion }>(`/projects/${projectId}/versions/${versionId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ label }),
+        });
+        return result.version;
+    } catch (error) {
+        console.error('Error updating version label:', error);
+        return null;
+    }
 };

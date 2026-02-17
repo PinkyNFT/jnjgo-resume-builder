@@ -10,7 +10,7 @@ import { ResumeEditor } from '../../../components/ResumeEditor';
 import { ResumeGeneratingView } from '../../../components/ResumeGeneratingView';
 import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from '../../../types';
 import { useParseResume, useAnalyzeImport } from '../../../hooks/useGemini';
-import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile } from '../../../services/storageService';
+import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile, createVersion } from '../../../services/storageService';
 import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/dataMigration';
 import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield } from 'lucide-react';
 
@@ -513,6 +513,13 @@ export default function Page() {
             : currentProject.title
         };
         await saveProject(updatedProject);
+        // Auto-version on initial generation
+        await createVersion(
+          updatedProject.id,
+          `Initial Generation — ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+          'auto_generated',
+          data
+        );
         await refreshProjects();
         setCurrentProject(updatedProject);
       }
