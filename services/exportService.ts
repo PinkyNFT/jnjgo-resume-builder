@@ -6,7 +6,15 @@
  */
 
 import { ResumeData, WorkExperience, Education, RepresentativeProject } from '../types';
-import { PlatformId, PLATFORM_CONFIGS, PlatformConfig } from '../config/exportPlatforms';
+import {
+    PlatformId,
+    PLATFORM_CONFIGS,
+    PlatformConfig,
+    ExportVariant,
+    VariantRules,
+    DEFAULT_VARIANT_RULES,
+    getVariantRules,
+} from '../config/exportPlatforms';
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -16,12 +24,14 @@ function truncate(text: string, maxLength: number): string {
     return text.slice(0, maxLength - 3) + '...';
 }
 
-function bulletList(items: string[], bullet = '・'): string {
-    return items.filter(Boolean).map(item => `${bullet} ${item}`).join('\n');
+function bulletList(items: string[], bullet = '・', limit?: number): string {
+    const capped = limit ? items.filter(Boolean).slice(0, limit) : items.filter(Boolean);
+    return capped.map(item => `${bullet} ${item}`).join('\n');
 }
 
-function dashList(items: string[]): string {
-    return items.filter(Boolean).map(item => `- ${item}`).join('\n');
+function dashList(items: string[], limit?: number): string {
+    const capped = limit ? items.filter(Boolean).slice(0, limit) : items.filter(Boolean);
+    return capped.map(item => `- ${item}`).join('\n');
 }
 
 function divider(): string {
@@ -41,11 +51,11 @@ function sectionPlain(heading: string, content: string): string {
 /**
  * Format work experience in Japanese style (職務経歴書)
  */
-function formatWorkJa(experiences: WorkExperience[], reverseChron: boolean): string {
+function formatWorkJa(experiences: WorkExperience[], reverseChron: boolean, bulletLimit?: number): string {
     const sorted = reverseChron ? [...experiences].reverse() : experiences;
     return sorted.map(work => {
         const responsibilities = work.responsibilities?.length
-            ? '\n' + bulletList(work.responsibilities)
+            ? '\n' + bulletList(work.responsibilities, '・', bulletLimit)
             : '';
         return `■ ${work.company}\n${work.position}　（${work.period}）${responsibilities}`;
     }).join('\n\n');
@@ -54,11 +64,11 @@ function formatWorkJa(experiences: WorkExperience[], reverseChron: boolean): str
 /**
  * Format work experience in English style
  */
-function formatWorkEn(experiences: WorkExperience[], reverseChron: boolean): string {
+function formatWorkEn(experiences: WorkExperience[], reverseChron: boolean, bulletLimit?: number): string {
     const sorted = reverseChron ? [...experiences].reverse() : experiences;
     return sorted.map(work => {
         const responsibilities = work.responsibilities?.length
-            ? '\n' + dashList(work.responsibilities)
+            ? '\n' + dashList(work.responsibilities, bulletLimit)
             : '';
         return `${work.position}\n${work.company} | ${work.period}${responsibilities}`;
     }).join('\n\n');
@@ -468,6 +478,32 @@ function formatIndeed(data: ResumeData, config: PlatformConfig): string {
 
 // ─── Main Export Function ──────────────────────────────────
 
+// ─── Link Injection ────────────────────────────────────────
+
+export interface LinkInjectionOptions {
+    enabled: boolean;
+    candidateSlug?: string;   // e.g. "abc123" → /c/abc123
+    baseUrl?: string;         // e.g. "https://jnjgo.app"
+}
+
+/**
+ * Build the JNJGO detail link line for injection into exported text.
+ * Per spec 3.3: natural single line, not ad-like, emphasizes recruiter benefit.
+ */
+function buildLinkLine(
+    platformId: PlatformId,
+    linkOpts: LinkInjectionOptions,
+    locale: 'ja' | 'en' | 'both',
+): string {
+    if (!linkOpts.enabled || !linkOpts.candidateSlug) return '';
+    const base = linkOpts.baseUrl || 'https://jnjgo.app';
+    const url = `${base}/c/${linkOpts.candidateSlug}?ref=export&site=${platformId}&utm_campaign=export&utm_medium=copy`;
+    if (locale === 'en') {
+        return `\n---\nPreferences, conditions & availability (private): ${url}`;
+    }
+    return `\n---\n希望条件・転職意向の詳細（非公開情報）: ${url}`;
+}
+
 // ─── Section-level types ───────────────────────────────────
 
 export interface ExportSection {
@@ -480,17 +516,25 @@ export interface ExportSection {
     hintKey?: string;     // i18n key for section-specific instruction
 }
 
+/** Options passed to formatForPlatform */
+export interface ExportOptions {
+    variant?: ExportVariant;
+    linkInjection?: LinkInjectionOptions;
+}
+
 export interface ExportResult {
     platformId: PlatformId;
+    variant: ExportVariant;
     formattedText: string;     // full concatenated output (backward compat)
     sections: ExportSection[]; // individual copyable sections
     charCount: number;
     sectionCount: number;
+    linkIncluded: boolean;
 }
 
 // ─── Section-aware Formatters ──────────────────────────────
 
-type SectionFormatter = (data: ResumeData, config: PlatformConfig) => ExportSection[];
+type SectionFormatter = (data: ResumeData, config: PlatformConfig, rules: VariantRules) => ExportSection[];
 
 /**
  * Wrap a legacy full-text formatter into the section-based interface.
@@ -522,7 +566,7 @@ function legacySections(
  *  - Be objective, fact-based, with concrete numbers
  * A separate "Skills entered" list maps the numbers to competency labels.
  */
-function formatBizReachSections(data: ResumeData, config: PlatformConfig): ExportSection[] {
+function formatBizReachSections(data: ResumeData, config: PlatformConfig, rules: VariantRules): ExportSection[] {
     const sections: ExportSection[] = [];
 
     // ── 1. Build the narrative job summary ─────────────────
@@ -591,10 +635,10 @@ function formatBizReachSections(data: ResumeData, config: PlatformConfig): Expor
     sections.push({
         key: 'jobSummary',
         heading: '職務要約',
-        content: taggedNarrative.trim(),
-        charCount: taggedNarrative.trim().length,
+        content: truncate(taggedNarrative.trim(), rules.maxCharsPerSection),
+        charCount: truncate(taggedNarrative.trim(), rules.maxCharsPerSection).length,
         maxLength: 2000,
-        recommendedLength: 400,
+        recommendedLength: rules.tone === 'concise' ? 300 : 400,
         hintKey: 'bizreachJobSummaryHint',
     });
 
@@ -613,13 +657,13 @@ function formatBizReachSections(data: ResumeData, config: PlatformConfig): Expor
     }
 
     // ── 4. Optional: work history for company-level entries ──
-    if (data.workExperience?.length) {
-        const workText = formatWorkJa(data.workExperience, config.reverseChronological);
+    if (data.workExperience?.length && rules.includeOptionalSections) {
+        const workText = formatWorkJa(data.workExperience, config.reverseChronological, rules.bulletLimit);
         sections.push({
             key: 'workHistory',
             heading: '職務経歴（各社入力用）',
-            content: workText,
-            charCount: workText.length,
+            content: truncate(workText, rules.maxCharsPerSection),
+            charCount: truncate(workText, rules.maxCharsPerSection).length,
             hintKey: 'bizreachWorkHistoryHint',
         });
     }
@@ -647,42 +691,73 @@ const LEGACY_FORMATTERS: Record<PlatformId, (data: ResumeData, config: PlatformC
 
 /**
  * Format resume data for a specific platform.
+ * Supports variant (short/standard/long) and optional link injection.
  */
-export function formatForPlatform(data: ResumeData, platformId: PlatformId): ExportResult {
+export function formatForPlatform(
+    data: ResumeData,
+    platformId: PlatformId,
+    options: ExportOptions = {},
+): ExportResult {
     const config = PLATFORM_CONFIGS[platformId];
     if (!config) throw new Error(`Unknown platform: ${platformId}`);
+
+    const variant = options.variant || 'standard';
+    const rules = getVariantRules(platformId, variant);
 
     // Prefer section-aware formatter, fall back to legacy wrapper
     const sectionFormatter = SECTION_FORMATTERS[platformId];
     let sections: ExportSection[];
 
     if (sectionFormatter) {
-        sections = sectionFormatter(data, config);
+        sections = sectionFormatter(data, config, rules);
     } else {
         const legacyFn = LEGACY_FORMATTERS[platformId];
         if (!legacyFn) throw new Error(`No formatter for platform: ${platformId}`);
         sections = legacySections(legacyFn, data, config);
     }
 
-    const formattedText = sections.map(s => {
+    // Apply per-section maxLength truncation only (variant length is handled by AI rewrite)
+    sections = sections.map(s => {
+        if (s.maxLength) {
+            const truncated = truncate(s.content, s.maxLength);
+            return { ...s, content: truncated, charCount: truncated.length };
+        }
+        return s;
+    });
+
+    // Build full text
+    let formattedText = sections.map(s => {
         if (sections.length === 1) return s.content;
         return `【${s.heading}】\n${s.content}`;
     }).join('\n\n');
 
+    // Link injection (per spec 3.3)
+    let linkIncluded = false;
+    const linkOpts = options.linkInjection;
+    if (linkOpts?.enabled) {
+        const linkLine = buildLinkLine(platformId, linkOpts, config.locale);
+        if (linkLine) {
+            formattedText += linkLine;
+            linkIncluded = true;
+        }
+    }
+
     return {
         platformId,
+        variant,
         formattedText,
         sections,
         charCount: formattedText.length,
         sectionCount: sections.length,
+        linkIncluded,
     };
 }
 
 /**
- * Format resume data for all platforms.
+ * Format resume data for all platforms (standard variant, no link).
  */
-export function formatForAllPlatforms(data: ResumeData): ExportResult[] {
+export function formatForAllPlatforms(data: ResumeData, options: ExportOptions = {}): ExportResult[] {
     return Object.keys(LEGACY_FORMATTERS).map(id =>
-        formatForPlatform(data, id as PlatformId)
+        formatForPlatform(data, id as PlatformId, options)
     );
 }

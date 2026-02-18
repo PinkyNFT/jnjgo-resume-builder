@@ -532,7 +532,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                 })()}
 
                 {/* Export Templates */}
-                <ExportTemplates data={displayData} />
+                <ExportTemplates data={displayData} projectId={project.id} />
 
                 {/* Version History */}
                 <VersionHistory
