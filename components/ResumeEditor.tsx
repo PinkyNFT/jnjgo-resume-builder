@@ -6,6 +6,7 @@ import { ResumeData, ResumeVersion, Project, EvaluationResult } from '../types';
 import { evaluateResume } from '../services/geminiService';
 import { saveProject, createVersion } from '../services/storageService';
 import { VersionHistory } from './VersionHistory';
+import { ExportTemplates } from './ExportTemplates';
 import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2, History, MessageSquare, Eye, X, RotateCcw } from 'lucide-react';
 import { TimelineChart, TimelineChartItem } from './TimelineChart';
 import { parsePeriod } from '../utils/dateParser';
@@ -529,6 +530,9 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                         </div>
                     );
                 })()}
+
+                {/* Export Templates */}
+                <ExportTemplates data={displayData} />
 
                 {/* Version History */}
                 <VersionHistory
