@@ -1,4 +1,17 @@
 {
+	"Nav": {
+		"dashboard": "ダッシュボード",
+		"profile": "プロフィール",
+		"export": "エクスポート",
+		"admin": "管理画面",
+		"signIn": "ログイン",
+		"signOut": "ログアウト",
+		"projects": "プロジェクト",
+		"quickActions": "クイックアクション",
+		"newProject": "新規プロジェクト",
+		"recentActivity": "最近のアクティビティ",
+		"viewAll": "すべて表示"
+	},
 	"Common": {
 		"cancel": "キャンセル",
 		"back": "戻る",

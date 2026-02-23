@@ -1,4 +1,17 @@
 {
+	"Nav": {
+		"dashboard": "Dashboard",
+		"profile": "Profile",
+		"export": "Export",
+		"admin": "Admin",
+		"signIn": "Sign In",
+		"signOut": "Sign Out",
+		"projects": "Projects",
+		"quickActions": "Quick Actions",
+		"newProject": "New Project",
+		"recentActivity": "Recent Activity",
+		"viewAll": "View All"
+	},
 	"Common": {
 		"cancel": "Cancel",
 		"back": "Back",

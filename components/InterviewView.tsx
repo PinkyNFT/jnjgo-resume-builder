@@ -425,18 +425,18 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     };
 
     return (
-        <div className="flex flex-col h-full max-w-4xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200/60">
-            <div className="bg-white/95 backdrop-blur-sm border-b border-slate-100 p-4 flex justify-between items-center sticky top-0 z-10">
+        <div className="flex flex-col h-full max-w-4xl mx-auto bg-white shadow-2xl shadow-slate-200/60 rounded-2xl overflow-hidden border border-slate-200/60">
+            <div className="glass border-b border-slate-100 p-4 flex justify-between items-center sticky top-0 z-10 shadow-sm shadow-slate-100/50">
                 <div className="flex items-center gap-3">
-                    <button onClick={handleExit} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors">
+                    <button onClick={handleExit} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-800 transition-all duration-200 active:scale-95">
                         <Home className="w-5 h-5" />
                     </button>
                     <div className="h-6 w-px bg-slate-200 mx-1"></div>
                     <div>
                         <h2 className="font-bold text-slate-800 text-sm md:text-base">{t('agentName')}</h2>
                         <div className="flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                            <p className="text-[10px] text-slate-500 font-medium uppercase">{t('roleExpert', { role: roleType })}</p>
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">{t('roleExpert', { role: roleType })}</p>
                         </div>
                     </div>
                 </div>
@@ -602,9 +602,9 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                         {/* Generate Resume Button - changes based on data completeness */}
                         <button
                             onClick={() => setShowGenerateConfirm(true)}
-                            className={`flex items-center gap-2 text-xs px-4 py-2 rounded-lg font-semibold transition-colors ${isReadyToGenerate
-                                ? 'bg-green-600 text-white hover:bg-green-700'
-                                : 'bg-orange-500 text-white hover:bg-orange-600'
+                            className={`flex items-center gap-2 text-xs px-4 py-2.5 rounded-xl font-bold transition-all duration-200 active:scale-95 ${isReadyToGenerate
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-200/50 hover:shadow-lg'
+                                : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm'
                                 }`}
                             title={isReadyToGenerate ? t('generateResume') : 'Generate with incomplete data - missing critical sections'}
                         >
@@ -621,13 +621,13 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                 {showGenerateConfirm && (
                     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                         <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 animate-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
-                            <div className="flex items-start gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                                    <CheckCircle2 className="w-5 h-5 text-indigo-600" />
+                            <div className="flex items-start gap-3 mb-5">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0">
+                                    <CheckCircle2 className="w-6 h-6 text-indigo-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-lg text-slate-900 mb-1">{t('generateConfirmTitle')}</h3>
-                                    <p className="text-sm text-slate-600">{t('generateConfirmDesc')}</p>
+                                    <h3 className="font-black text-lg text-slate-900 mb-1">{t('generateConfirmTitle')}</h3>
+                                    <p className="text-sm text-slate-500">{t('generateConfirmDesc')}</p>
                                 </div>
                             </div>
 
@@ -742,7 +742,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                     onClick={() => {
                                         setShowGenerateConfirm(false);
                                     }}
-                                    className="flex-1 px-4 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all"
+                                    className="flex-1 px-4 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 active:scale-[0.98]"
                                 >
                                     {t('continueInterview')}
                                 </button>
@@ -751,7 +751,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                         setShowGenerateConfirm(false);
                                         onFinish(messages);
                                     }}
-                                    className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg hover:shadow-xl"
+                                    className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all duration-200 shadow-lg shadow-indigo-200/50 hover:shadow-xl active:scale-[0.98]"
                                 >
                                     {t('confirmGenerate')}
                                 </button>
@@ -790,8 +790,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                 <Bot className="w-5 h-5 text-white" />
                             </motion.div>
                         )}
-                        <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-6 py-4 text-sm leading-relaxed shadow-sm relative group whitespace-pre-wrap ${msg.role === 'user' ? 'bg-slate-900 text-white rounded-br-none' : 'bg-white text-slate-700 border border-slate-200/60 rounded-bl-none'}`}>
-                            {msg.isHint && <div className="flex items-center gap-1.5 mb-2 text-amber-600 font-bold text-xs uppercase"><HelpCircle className="w-3 h-3" /> {t('hint')}</div>}
+                        <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-6 py-4 text-sm leading-relaxed relative group whitespace-pre-wrap transition-shadow duration-200 ${msg.role === 'user' ? 'bg-linear-to-br from-slate-800 to-slate-900 text-white rounded-br-sm shadow-md shadow-slate-300/40' : 'bg-white text-slate-700 border border-slate-200/60 rounded-bl-sm shadow-sm hover:shadow-md'}`}>
+                            {msg.isHint && <div className="flex items-center gap-1.5 mb-2 text-amber-500 font-bold text-xs uppercase tracking-wide"><HelpCircle className="w-3 h-3" /> {t('hint')}</div>}
                             <span>{formatMarkdown(msg.text)}</span>
                         </div>
                         {msg.role === 'user' && (
@@ -799,9 +799,9 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
-                                className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center shrink-0 mt-1"
+                                className="w-8 h-8 rounded-full bg-linear-to-br from-slate-700 to-slate-800 flex items-center justify-center shrink-0 mt-1 shadow-sm ring-2 ring-slate-200"
                             >
-                                <User className="w-5 h-5 text-slate-500" />
+                                <User className="w-5 h-5 text-white" />
                             </motion.div>
                         )}
                     </motion.div>
@@ -825,29 +825,29 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                         >
                             <Bot className="w-5 h-5 text-white" />
                         </motion.div>
-                        <div className="bg-white px-5 py-4 rounded-2xl rounded-bl-none border border-slate-100 shadow-sm flex items-center gap-1.5">
-                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: 0 }} className="w-2 h-2 bg-indigo-400 rounded-full inline-block" />
-                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: 0.2 }} className="w-2 h-2 bg-indigo-400 rounded-full inline-block" />
-                            <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: 0.4 }} className="w-2 h-2 bg-indigo-400 rounded-full inline-block" />
+                        <div className="bg-white px-5 py-4 rounded-2xl rounded-bl-sm border border-slate-100 shadow-sm flex items-center gap-2">
+                            <motion.span animate={{ scale: [0.8, 1.2, 0.8], opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.4, repeat: Infinity, delay: 0, ease: 'easeInOut' }} className="w-2 h-2 bg-indigo-500 rounded-full inline-block" />
+                            <motion.span animate={{ scale: [0.8, 1.2, 0.8], opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.4, repeat: Infinity, delay: 0.2, ease: 'easeInOut' }} className="w-2 h-2 bg-indigo-500 rounded-full inline-block" />
+                            <motion.span animate={{ scale: [0.8, 1.2, 0.8], opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.4, repeat: Infinity, delay: 0.4, ease: 'easeInOut' }} className="w-2 h-2 bg-indigo-500 rounded-full inline-block" />
                         </div>
                     </motion.div>
                 )}
                 <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-3 md:p-4 bg-white/95 backdrop-blur-sm border-t border-slate-200/80 shadow-[0_-1px_3px_rgba(0,0,0,0.03)]">
+            <div className="p-3 md:p-4 glass border-t border-slate-200/80 shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
                 <div className="flex items-end gap-2 max-w-4xl mx-auto">
                     {/* Hint Button with improved styling */}
                     <div className="group relative">
                         <button
                             onClick={handleHint}
                             disabled={isLoading}
-                            className="p-2.5 bg-amber-50 text-amber-600 hover:bg-amber-100 hover:text-amber-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-amber-200"
+                            className="p-2.5 bg-amber-50 text-amber-600 hover:bg-amber-100 hover:text-amber-700 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-amber-200 hover:shadow-sm active:scale-95"
                             title={t('getHint')}
                         >
                             <HelpCircle className="w-5 h-5" />
                         </button>
-                        <div className="absolute bottom-full left-0 mb-2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                        <div className="absolute bottom-full left-0 mb-2 px-2.5 py-1.5 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 font-medium shadow-lg">
                             {t('getHint')}
                         </div>
                     </div>
@@ -855,7 +855,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                     {/* Input Area with improved styling */}
                     <div className={`flex-1 rounded-xl flex items-center px-4 py-1.5 border-2 transition-all duration-200 ${isLoading
                             ? 'bg-slate-100 border-slate-200'
-                            : 'bg-slate-50 border-slate-200 focus-within:border-indigo-400 focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.1)]'
+                            : 'bg-slate-50 border-slate-200 focus-within:border-indigo-400 focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.08)]'
                         }`}>
                         <textarea
                             ref={inputRef}
@@ -880,7 +880,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                     setAbortController(null);
                                 }
                             }}
-                            className="p-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                            className="p-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-200 shadow-sm active:scale-95"
                             title={t('stopGenerating')}
                         >
                             <Square className="w-5 h-5 fill-current" />
@@ -889,8 +889,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                         <button
                             onClick={onSendClick}
                             disabled={!inputValue.trim() || isLoading}
-                            className={`p-2.5 rounded-lg transition-colors ${inputValue.trim()
-                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                            className={`p-2.5 rounded-xl transition-all duration-200 active:scale-95 ${inputValue.trim()
+                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200/50 hover:shadow-lg'
                                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                                 }`}
                             title={t('sendMessage')}

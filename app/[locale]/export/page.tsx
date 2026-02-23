@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { CandidatePublicPageModel, ProjectModel } from "../../../lib/models";
 import ExportHub from "../../../components/export/ExportHub";
+import AppShell from "../../../components/navigation/AppShell";
 
 export default async function ExportPage({
     searchParams,
@@ -46,13 +47,13 @@ export default async function ExportPage({
     }).lean();
 
     return (
-        <div className="min-h-screen bg-slate-100">
+        <AppShell>
             <ExportHub
                 resumeData={project.data}
                 candidateSlug={publicPage?.pageSlug}
                 projectId={project.id?.toString()}
                 projectTitle={project.title}
             />
-        </div>
+        </AppShell>
     );
 }

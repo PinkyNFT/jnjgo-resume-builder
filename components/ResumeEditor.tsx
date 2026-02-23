@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import Link from 'next/link';
 import { ResumeData, ResumeVersion, Project, EvaluationResult } from '../types';
 import { evaluateResume } from '../services/geminiService';
 import { saveProject, createVersion } from '../services/storageService';
 import { VersionHistory } from './VersionHistory';
-import { ExportTemplates } from './ExportTemplates';
-import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2, History, MessageSquare, Eye, X, RotateCcw } from 'lucide-react';
+import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2, MessageSquare, Eye, X, RotateCcw, Share2 } from 'lucide-react';
 import { TimelineChart, TimelineChartItem } from './TimelineChart';
 import { parsePeriod } from '../utils/dateParser';
 import { insertGapsInTimeline } from '../utils/timelineGenerator';
@@ -21,11 +21,11 @@ interface ResumeEditorProps {
 
 const ScoreBar = ({ label, score, max, colorClass, description }: { label: string, score: number, max: number, colorClass: string, description?: string }) => (
     <div className="group relative">
-        <div className="flex justify-between items-end mb-1">
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">{label}</span>
-            <span className="text-[10px] font-medium text-slate-500">{score}/{max}</span>
+        <div className="flex justify-between items-end mb-1.5">
+            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">{label}</span>
+            <span className="text-[10px] font-bold text-slate-500 tabular-nums">{score}/{max}</span>
         </div>
-        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
             <div
                 className={`h-full rounded-full transition-all duration-1000 ease-out ${colorClass}`}
                 style={{ width: `${Math.min((score / max) * 100, 100)}%` }}
@@ -33,7 +33,7 @@ const ScoreBar = ({ label, score, max, colorClass, description }: { label: strin
         </div>
         {/* Tooltip on hover */}
         {description && (
-            <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-slate-800 text-white text-[9px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl leading-tight">
+            <div className="absolute bottom-full left-0 mb-2 w-52 p-2.5 bg-slate-800 text-white text-[9px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl leading-relaxed">
                 {description}
                 <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-800"></div>
             </div>
@@ -43,6 +43,7 @@ const ScoreBar = ({ label, score, max, colorClass, description }: { label: strin
 
 export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, onBack, onResumeInterview }) => {
     const t = useTranslations('Editor');
+    const locale = useLocale();
     const [data, setData] = useState<ResumeData>(project.data!);
     const [evaluation, setEvaluation] = useState<EvaluationResult | undefined>(project.evaluation);
     const [isEvaluating, setIsEvaluating] = useState(false);
@@ -246,7 +247,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
         if (multiline) {
             return (
                 <textarea
-                    className={`w-full border border-indigo-200 bg-indigo-50/50 rounded p-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800 ${className}`}
+                    className={`w-full border border-indigo-200 bg-indigo-50/30 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-300 text-slate-800 transition-all duration-200 ${className}`}
                     value={value || ""}
                     onChange={(e) => onChange(e.target.value)}
                     rows={Math.max(2, (value || "").split('\n').length)}
@@ -256,7 +257,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
         }
         return (
             <input
-                className={`w-full border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800 ${className}`}
+                className={`w-full border border-indigo-200 bg-indigo-50/30 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-300 text-slate-800 transition-all duration-200 ${className}`}
                 value={value || ""}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
@@ -265,7 +266,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
     };
 
     return (
-        <div className="max-w-7xl mx-auto pb-20 flex gap-8">
+        <div className="max-w-7xl mx-auto pb-20 flex gap-8 page-transition">
             {/* Print Styles */}
             <style>{`
         @media print {
@@ -303,33 +304,37 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
             {/* LEFT COLUMN: Controls */}
             <div className="w-80 shrink-0 space-y-6 print:hidden h-fit sticky top-6">
-                <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium text-sm mb-2 transition-colors">
-                    <ArrowLeft className="w-4 h-4" /> {t('backToDashboard')}
+                <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-semibold text-sm mb-2 transition-all duration-200 hover:-translate-x-0.5 group">
+                    <ArrowLeft className="w-4 h-4 group-hover:scale-110 transition-transform" /> {t('backToDashboard')}
                 </button>
 
                 <div className="bg-white p-5 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100">
-                    <div className="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-xl">
-                        <button onClick={() => setActiveTab('preview')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'preview' ? 'bg-white shadow-sm text-slate-900 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}>{t('preview')}</button>
-                        <button onClick={() => !isPreviewMode && setActiveTab('edit')} disabled={isPreviewMode} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${isPreviewMode ? 'opacity-40 cursor-not-allowed text-slate-400' : activeTab === 'edit' ? 'bg-white shadow-sm text-slate-900 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700'}`}>{t('editData')}</button>
+                    <div className="flex gap-1.5 mb-6 bg-slate-100 p-1.5 rounded-xl">
+                        <button onClick={() => setActiveTab('preview')} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-200 ${activeTab === 'preview' ? 'bg-white shadow-md text-slate-900 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}>
+                            <span className="flex items-center justify-center gap-1.5"><Eye className="w-3.5 h-3.5" />{t('preview')}</span>
+                        </button>
+                        <button onClick={() => !isPreviewMode && setActiveTab('edit')} disabled={isPreviewMode} className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-200 ${isPreviewMode ? 'opacity-40 cursor-not-allowed text-slate-400' : activeTab === 'edit' ? 'bg-white shadow-md text-slate-900 ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}>
+                            <span className="flex items-center justify-center gap-1.5">{t('editData')}</span>
+                        </button>
                     </div>
 
                     <div className="space-y-3">
-                        <button onClick={handleRunEvaluation} disabled={isEvaluating} className="w-full py-3 bg-indigo-50 text-indigo-700 font-bold text-sm rounded-xl hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 group border border-indigo-100 shadow-sm">
+                        <button onClick={handleRunEvaluation} disabled={isEvaluating} className="w-full py-3 bg-indigo-50 text-indigo-700 font-bold text-sm rounded-xl hover:bg-indigo-100 transition-all duration-200 flex items-center justify-center gap-2 group border border-indigo-100 shadow-sm hover:shadow-md active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed">
                             {isEvaluating ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4 group-hover:scale-110 transition-transform" />}
                             {t('runScoreAnalysis')}
                         </button>
 
                         {evaluation && (
-                            <div className="mt-4 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm animate-in fade-in slide-in-from-top-2">
+                            <div className="mt-4 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm animate-in fade-in slide-in-from-top-2">
                                 {/* Score Header */}
-                                <div className={`p-4 border-b border-slate-100 flex justify-between items-center ${evaluation.isPassing ? 'bg-green-50/50' : 'bg-amber-50/50'}`}>
+                                <div className={`p-4 border-b border-slate-100 flex justify-between items-center ${evaluation.isPassing ? 'bg-emerald-50/50' : 'bg-amber-50/50'}`}>
                                     <div>
                                         <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t('qualityScore')}</div>
-                                        <div className={`text-3xl font-black flex items-baseline ${evaluation.isPassing ? 'text-green-600' : 'text-amber-600'}`}>
+                                        <div className={`text-3xl font-black flex items-baseline tabular-nums ${evaluation.isPassing ? 'text-emerald-600' : 'text-amber-600'}`}>
                                             {evaluation.totalScore}<span className="text-sm text-slate-400 font-medium ml-1">/100</span>
                                         </div>
                                     </div>
-                                    <div className={`px-3 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1 ${evaluation.isPassing ? 'bg-green-100 text-green-700 border-green-200' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
+                                    <div className={`px-3 py-1.5 rounded-full text-[10px] font-bold border flex items-center gap-1.5 ${evaluation.isPassing ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-amber-100 text-amber-700 border-amber-200'}`}>
                                         {evaluation.isPassing ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
                                         {evaluation.isPassing ? t('passing') : t('needsWork')}
                                     </div>
@@ -347,8 +352,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
                                     {/* Detailed Structure Breakdown if available */}
                                     {evaluation.detailedBreakdown?.structure && (
-                                        <div className="ml-4 p-3 bg-slate-50 rounded-lg space-y-2 border border-slate-100">
-                                            <div className="text-[9px] font-bold text-slate-500 uppercase mb-2">{t('structureDetails')}</div>
+                                        <div className="ml-4 p-3 bg-slate-50 rounded-xl space-y-2 border border-slate-100">
+                                            <div className="text-[9px] font-bold text-slate-500 uppercase mb-2 tracking-wider">{t('structureDetails')}</div>
                                             <div className="grid grid-cols-2 gap-2 text-[9px]">
                                                 <div className="flex justify-between">
                                                     <span className="text-slate-600">{t('basicProfile')}</span>
@@ -386,8 +391,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
                                     {/* Detailed Reproducibility Breakdown if available */}
                                     {evaluation.detailedBreakdown?.reproducibility && (
-                                        <div className="ml-4 p-3 bg-slate-50 rounded-lg space-y-2 border border-slate-100">
-                                            <div className="text-[9px] font-bold text-slate-500 uppercase mb-2">{t('reproducibilityDetails')}</div>
+                                        <div className="ml-4 p-3 bg-slate-50 rounded-xl space-y-2 border border-slate-100">
+                                            <div className="text-[9px] font-bold text-slate-500 uppercase mb-2 tracking-wider">{t('reproducibilityDetails')}</div>
                                             <div className="grid grid-cols-2 gap-2 text-[9px]">
                                                 <div className="flex justify-between">
                                                     <span className="text-slate-600">{t('decisionMaking')}</span>
@@ -415,7 +420,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
                                     {/* Role Fit Details if available */}
                                     {evaluation.detailedBreakdown?.roleFit?.details && (
-                                        <div className="ml-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                        <div className="ml-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
                                             <div className="text-[9px] text-slate-600 leading-relaxed">{evaluation.detailedBreakdown.roleFit.details}</div>
                                         </div>
                                     )}
@@ -468,12 +473,12 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                         <button
                             onClick={handleSaveComplete}
                             disabled={!evaluation?.isPassing}
-                            className={`w-full py-3 font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg hover:-translate-y-0.5 ${evaluation?.isPassing ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                            className={`w-full py-3 font-bold text-sm rounded-xl transition-all duration-200 flex items-center justify-center gap-2 ${evaluation?.isPassing ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/20 hover:-translate-y-0.5 active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
                         >
                             <Save className="w-4 h-4" /> {t('saveAsComplete')}
                         </button>
 
-                        <button onClick={handlePrint} className="w-full py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2">
+                        <button onClick={handlePrint} className="w-full py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98]">
                             <Printer className="w-4 h-4" /> {t('exportPDF')}
                         </button>
 
@@ -481,7 +486,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                             <div className="pt-3 border-t border-slate-100">
                                 <button
                                     onClick={() => setShowResumeInterviewConfirm(true)}
-                                    className="w-full py-3 bg-amber-50 text-amber-700 font-bold text-sm rounded-xl hover:bg-amber-100 transition-all flex items-center justify-center gap-2 border border-amber-200 shadow-sm"
+                                    className="w-full py-3 bg-amber-50 text-amber-700 font-bold text-sm rounded-xl hover:bg-amber-100 transition-all duration-200 flex items-center justify-center gap-2 border border-amber-200 shadow-sm hover:shadow-md active:scale-[0.98]"
                                 >
                                     <MessageSquare className="w-4 h-4" /> {t('resumeInterview')}
                                 </button>
@@ -531,8 +536,20 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     );
                 })()}
 
-                {/* Export Templates */}
-                <ExportTemplates data={displayData} projectId={project.id} />
+                {/* Export for Platforms */}
+                <Link
+                    href={`/${locale}/export?projectId=${project.id}`}
+                    className="flex items-center gap-3 w-full p-4 bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:border-indigo-100 hover:-translate-y-0.5 transition-all duration-200 group"
+                >
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 group-hover:bg-indigo-100 transition-colors">
+                        <Share2 className="w-4 h-4 text-indigo-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-900">Export for Platforms</p>
+                        <p className="text-xs text-slate-500 mt-0.5">One-click copy for job platforms</p>
+                    </div>
+                    <ArrowLeft className="w-4 h-4 text-slate-400 rotate-180 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
 
                 {/* Version History */}
                 <VersionHistory
@@ -563,14 +580,14 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={handleRestoreFromPreview}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-white text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors shadow-sm"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-white text-indigo-700 rounded-lg hover:bg-indigo-50 transition-all duration-200 shadow-sm active:scale-[0.97]"
                                 >
                                     <RotateCcw className="w-3 h-3" />
                                     {t('restoreThis')}
                                 </button>
                                 <button
                                     onClick={() => setPreviewVersion(null)}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-white/15 text-white rounded-lg hover:bg-white/25 transition-colors"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-white/15 text-white rounded-lg hover:bg-white/25 transition-all duration-200 active:scale-[0.97]"
                                 >
                                     <X className="w-3 h-3" />
                                     {t('exitPreview')}
@@ -728,7 +745,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                 <span className="font-medium text-slate-900">
                                                     {(activeTab === 'preview' || isPreviewMode) ? gap.period : (
                                                         <input
-                                                            className="border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
+                                                            className="border border-indigo-200 bg-indigo-50/30 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-300 text-slate-800 transition-all duration-200"
                                                             value={gap.period}
                                                             onChange={(e) => {
                                                                 const newGaps = [...data.careerGaps];
@@ -743,7 +760,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                 <span className="text-slate-700">
                                                     {(activeTab === 'preview' || isPreviewMode) ? gap.reason : (
                                                         <input
-                                                            className="border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
+                                                            className="border border-indigo-200 bg-indigo-50/30 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-300 text-slate-800 transition-all duration-200"
                                                             value={gap.reason}
                                                             onChange={(e) => {
                                                                 const newGaps = [...data.careerGaps];
@@ -783,7 +800,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                     ) : (
                                                         <div className="flex items-center gap-2">
                                                             <input
-                                                                className="flex-1 border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
+                                                                className="flex-1 border border-indigo-200 bg-indigo-50/30 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-300 text-slate-800 transition-all duration-200"
                                                                 value={work.company}
                                                                 onChange={(e) => {
                                                                     const newWork = [...(data.workExperience || [])];
@@ -794,7 +811,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                                             />
                                                             <span className="text-slate-500">|</span>
                                                             <input
-                                                                className="flex-1 border border-indigo-200 bg-indigo-50/50 rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
+                                                                className="flex-1 border border-indigo-200 bg-indigo-50/30 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-300 text-slate-800 transition-all duration-200"
                                                                 value={work.position}
                                                                 onChange={(e) => {
                                                                     const newWork = [...(data.workExperience || [])];
@@ -926,7 +943,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
                                         {/* Detailed Box: Challenge/Approach/Results */}
                                         {(proj.clientType || proj.theme || displayData.projectPortfolio.additionalEngagements) && (
-                                            <div className="bg-slate-100 border border-slate-200 px-4 py-3 text-[9pt] leading-relaxed space-y-2">
+                                            <div className="bg-slate-50 border border-slate-200 px-4 py-3.5 text-[9pt] leading-relaxed space-y-2 rounded-lg">
                                                 {proj.clientType && (
                                                     <div className="flex gap-2">
                                                         <span className="font-bold text-slate-900 min-w-20">{t('challenge')}</span>
@@ -1024,12 +1041,12 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                 {displayData.skills.map((skill, i) => (
                                     <div key={i} className="inline-flex items-center">
                                         {(activeTab === 'preview' || isPreviewMode) ? (
-                                            <span className="px-3 py-1 bg-slate-100 text-slate-800 text-[9pt] rounded-md border border-slate-200">
+                                            <span className="px-3 py-1.5 bg-slate-100 text-slate-800 text-[9pt] rounded-lg border border-slate-200">
                                                 {skill}
                                             </span>
                                         ) : (
                                             <input
-                                                className="px-3 py-1 border border-indigo-200 bg-indigo-50/50 rounded-md text-[9pt] focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-800"
+                                                className="px-3 py-1.5 border border-indigo-200 bg-indigo-50/30 rounded-lg text-[9pt] focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-300 text-slate-800 transition-all duration-200"
                                                 value={skill}
                                                 onChange={(e) => {
                                                     const newSkills = [...(data.skills || [])];
@@ -1084,7 +1101,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                         <div className="flex gap-3 justify-end pt-2">
                             <button
                                 onClick={() => setShowResumeInterviewConfirm(false)}
-                                className="px-5 py-2.5 text-slate-600 font-bold text-sm hover:bg-slate-100 rounded-xl transition-all"
+                                className="px-5 py-2.5 text-slate-600 font-bold text-sm hover:bg-slate-100 rounded-xl transition-all duration-200 active:scale-[0.98]"
                             >
                                 {t('resumeInterviewKeepEditing')}
                             </button>
@@ -1093,7 +1110,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                     setShowResumeInterviewConfirm(false);
                                     onResumeInterview();
                                 }}
-                                className="px-5 py-2.5 bg-amber-500 text-white font-bold text-sm rounded-xl hover:bg-amber-600 shadow-lg shadow-amber-500/25 hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                                className="px-5 py-2.5 bg-amber-500 text-white font-bold text-sm rounded-xl hover:bg-amber-600 shadow-lg shadow-amber-500/25 hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 active:scale-[0.98]"
                             >
                                 <MessageSquare className="w-4 h-4" />
                                 {t('resumeInterviewConfirm')}

@@ -12,8 +12,9 @@ import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from 
 import { useParseResume, useAnalyzeImport } from '../../../hooks/useGemini';
 import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile, createVersion } from '../../../services/storageService';
 import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/dataMigration';
-import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2 } from 'lucide-react';
+import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2, Sparkles, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
+import AppNavbar from '../../../components/navigation/AppNavbar';
 
 // --- Sub-Components ---
 
@@ -22,18 +23,22 @@ type Step = 'dashboard' | 'setup' | 'personal_info' | 'interview' | 'generating'
 const EmptyState = ({ onStart }: { onStart: () => void }) => {
   const t = useTranslations('Dashboard');
   return (
-    <div className="text-center max-w-lg mx-auto space-y-6 py-20 px-6 animate-in fade-in duration-500">
-      <div className="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto">
-        <FolderOpen className="w-10 h-10 text-indigo-400" />
+    <div className="text-center max-w-lg mx-auto space-y-8 py-24 px-6 page-transition">
+      <div className="relative w-24 h-24 mx-auto">
+        <div className="absolute inset-0 bg-indigo-100 rounded-3xl rotate-6 opacity-60" />
+        <div className="relative w-24 h-24 bg-linear-to-br from-indigo-50 to-purple-50 rounded-3xl flex items-center justify-center shadow-sm border border-indigo-100/50">
+          <FolderOpen className="w-12 h-12 text-indigo-400" />
+        </div>
       </div>
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-slate-900">{t('emptyTitle')}</h2>
-        <p className="text-slate-500 leading-relaxed">{t('emptyDesc')}</p>
+      <div className="space-y-3">
+        <h2 className="text-3xl font-black text-slate-900">{t('emptyTitle')}</h2>
+        <p className="text-slate-500 leading-relaxed max-w-sm mx-auto">{t('emptyDesc')}</p>
       </div>
       <button
         onClick={onStart}
-        className="group inline-flex items-center justify-center px-8 py-4 font-bold text-white text-lg transition-all duration-300 bg-slate-900 rounded-2xl hover:bg-indigo-600 hover:shadow-2xl hover:shadow-indigo-500/25 hover:-translate-y-0.5"
+        className="group inline-flex items-center justify-center px-8 py-4 font-bold text-white text-lg transition-all duration-300 bg-slate-900 rounded-2xl hover:bg-indigo-600 hover:shadow-2xl hover:shadow-indigo-500/25 hover:-translate-y-1"
       >
+        <Sparkles className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
         {t('startNew')}
         <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
       </button>
@@ -49,22 +54,22 @@ const StatsCards = ({ projects }: { projects: Project[] }) => {
   const avgScore = projects.filter(p => p.evaluation?.totalScore).reduce((acc, p) => acc + (p.evaluation?.totalScore || 0), 0) / (projects.filter(p => p.evaluation?.totalScore).length || 1);
 
   const stats = [
-    { label: t('statTotal'), value: total, icon: FileText, color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100' },
-    { label: t('statCompleted'), value: completed, icon: CheckCircle, color: 'bg-green-50 text-green-600', border: 'border-green-100' },
-    { label: t('statInProgress'), value: inProgress, icon: PenLine, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
-    { label: t('statAvgScore'), value: projects.filter(p => p.evaluation?.totalScore).length > 0 ? Math.round(avgScore) : '—', icon: BarChart3, color: 'bg-purple-50 text-purple-600', border: 'border-purple-100' },
+    { label: t('statTotal'), value: total, icon: FileText, color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100', gradient: 'from-indigo-500 to-indigo-600' },
+    { label: t('statCompleted'), value: completed, icon: CheckCircle, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100', gradient: 'from-emerald-500 to-emerald-600' },
+    { label: t('statInProgress'), value: inProgress, icon: PenLine, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100', gradient: 'from-amber-500 to-amber-600' },
+    { label: t('statAvgScore'), value: projects.filter(p => p.evaluation?.totalScore).length > 0 ? Math.round(avgScore) : '—', icon: BarChart3, color: 'bg-purple-50 text-purple-600', border: 'border-purple-100', gradient: 'from-purple-500 to-purple-600' },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
       {stats.map((stat, i) => (
-        <div key={i} className={`bg-white rounded-xl border ${stat.border} p-5 flex items-center gap-4`}>
-          <div className={`w-11 h-11 rounded-xl ${stat.color} flex items-center justify-center shrink-0`}>
+        <div key={i} className={`group bg-white rounded-xl border ${stat.border} p-5 flex items-center gap-4 card-hover cursor-default`}>
+          <div className={`w-11 h-11 rounded-xl ${stat.color} flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110`}>
             <stat.icon className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-900">{stat.value}</div>
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">{stat.label}</div>
+            <div className="text-2xl font-black text-slate-900 tabular-nums">{stat.value}</div>
+            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{stat.label}</div>
           </div>
         </div>
       ))}
@@ -79,17 +84,20 @@ const ProjectCard = ({ project, locale, onOpen, onDelete }: { project: Project, 
   const score = project.evaluation?.totalScore || 0;
 
   const statusConfig = isCompleted
-    ? { label: t('statusComplete'), color: 'bg-green-50 text-green-700 border-green-200', dot: 'bg-green-500' }
+    ? { label: t('statusComplete'), color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' }
     : { label: t('statusDraft'), color: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' };
 
   return (
     <div
       onClick={onOpen}
-      className="bg-white rounded-2xl border border-slate-200/80 p-6 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col h-full relative"
+      className="group bg-white rounded-2xl border border-slate-200/80 p-6 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col h-full relative overflow-hidden"
     >
+      {/* Subtle gradient accent on hover */}
+      <div className={`absolute top-0 left-0 right-0 h-1 transition-opacity duration-300 opacity-0 group-hover:opacity-100 bg-linear-to-r ${isCompleted ? 'from-emerald-400 to-teal-400' : 'from-indigo-400 to-purple-400'}`} />
+
       {/* Top row: icon + status + delete */}
       <div className="flex justify-between items-start mb-5">
-        <div className={`p-3 rounded-xl ${isCompleted ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>
+        <div className={`p-3 rounded-xl transition-all duration-200 group-hover:scale-105 ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
           <FileText className="w-6 h-6" />
         </div>
         <div className="flex items-center gap-2">
@@ -99,7 +107,7 @@ const ProjectCard = ({ project, locale, onOpen, onDelete }: { project: Project, 
           </span>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-all"
+            className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-all duration-200"
             title={tCommon('delete')}
           >
             <Trash2 className="w-4 h-4" />
@@ -108,15 +116,15 @@ const ProjectCard = ({ project, locale, onOpen, onDelete }: { project: Project, 
       </div>
 
       {/* Title */}
-      <h3 className="font-bold text-slate-800 text-lg mb-2 line-clamp-1 group-hover:text-indigo-700 transition-colors">{project.title}</h3>
+      <h3 className="font-bold text-slate-800 text-lg mb-2 line-clamp-1 group-hover:text-indigo-700 transition-colors duration-200">{project.title}</h3>
 
       {/* Role tag */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <span className="text-[10px] px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 uppercase font-bold tracking-wider border border-slate-200">
+        <span className="text-[10px] px-2.5 py-1 rounded-md bg-slate-50 text-slate-600 uppercase font-bold tracking-wider border border-slate-200">
           {t(`roleType.${project.roleType}` as const)}
         </span>
         {isCompleted && project.evaluation && (
-          <span className={`text-[10px] px-2.5 py-1 rounded-md font-bold tracking-wider border ${score >= 80 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+          <span className={`text-[10px] px-2.5 py-1 rounded-md font-bold tracking-wider border ${score >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
             SCORE: {score}
           </span>
         )}
@@ -127,7 +135,7 @@ const ProjectCard = ({ project, locale, onOpen, onDelete }: { project: Project, 
         <div className="mb-4">
           <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+              className={`h-full rounded-full transition-all duration-700 ${score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
               style={{ width: `${Math.min(score, 100)}%` }}
             ></div>
           </div>
@@ -146,21 +154,21 @@ const ProjectCard = ({ project, locale, onOpen, onDelete }: { project: Project, 
           <div className="flex gap-2">
             <button
               onClick={onOpen}
-              className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
+              className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 active:scale-[0.98]"
             >
               <Eye className="w-4 h-4" /> {t('openEditor')}
             </button>
             <Link
               href={`/${locale}/export?projectId=${project.id}`}
               onClick={(e) => e.stopPropagation()}
-              className="px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+              className="px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 active:scale-[0.98]"
               title="Export to job sites"
             >
               <Share2 className="w-4 h-4" />
             </Link>
           </div>
         ) : (
-          <button className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all bg-slate-900 text-white hover:bg-indigo-600 shadow-md hover:shadow-lg">
+          <button className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 bg-slate-900 text-white hover:bg-indigo-600 shadow-md hover:shadow-lg active:scale-[0.98]">
             <Edit3 className="w-4 h-4" /> {t('continueEditing')}
           </button>
         )}
@@ -196,23 +204,28 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-12 px-6">
-      <h2 className="text-3xl font-bold text-slate-900 mb-8">{t('title')}</h2>
+    <div className="max-w-3xl mx-auto py-12 px-6 page-transition">
+      <div className="mb-8">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-4">
+          <Sparkles className="w-3 h-3" /> Step 1 of 3
+        </div>
+        <h2 className="text-3xl font-black text-slate-900">{t('title')}</h2>
+      </div>
 
-      <div className="space-y-8 bg-white p-8 md:p-10 rounded-3xl shadow-xl border border-slate-100">
+      <div className="space-y-8 bg-white p-8 md:p-10 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-4 uppercase tracking-wide">{t('selectRole')}</label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               onClick={() => setRole('consultant')}
-              className={`p-6 rounded-2xl border-2 text-left transition-all ${role === 'consultant' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-4 ring-indigo-500/10' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
+              className={`p-6 rounded-2xl border-2 text-left transition-all duration-200 ${role === 'consultant' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-4 ring-indigo-500/10 shadow-sm' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
             >
               <div className="font-bold text-lg mb-1">{t('roleConsultant')}</div>
               <div className="text-xs text-indigo-600/80 font-medium">{t('roleConsultantDesc')}</div>
             </button>
             <button
               onClick={() => setRole('senior_engineer')}
-              className={`p-6 rounded-2xl border-2 text-left transition-all ${role === 'senior_engineer' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-4 ring-indigo-500/10' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
+              className={`p-6 rounded-2xl border-2 text-left transition-all duration-200 ${role === 'senior_engineer' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-4 ring-indigo-500/10 shadow-sm' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
             >
               <div className="font-bold text-lg mb-1">{t('roleEngineer')}</div>
               <div className="text-xs text-indigo-600/80 font-medium">{t('roleEngineerDesc')}</div>
@@ -224,7 +237,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
           <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide items-center gap-2">
             <Upload className="w-4 h-4" /> {t('importTitle')}
           </label>
-          <p className="text-sm text-slate-500 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <p className="text-sm text-slate-500 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
             {t('importDesc')}
           </p>
           <textarea
@@ -236,16 +249,16 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
         </div>
 
         <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
-          <button onClick={onCancel} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">{tCommon('cancel')}</button>
+          <button onClick={onCancel} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all duration-200">{tCommon('cancel')}</button>
           <button
             onClick={handleStart}
             disabled={isAnalyzing}
-            className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2"
+            className="group px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-indigo-600 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isAnalyzing ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> {t('analyzing')}</>
             ) : (
-              <><ArrowRight className="w-4 h-4" /> {t('startInterview')}</>
+              <><ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" /> {t('startInterview')}</>
             )}
           </button>
         </div>
@@ -271,11 +284,16 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-12 px-6">
-      <h2 className="text-3xl font-bold text-slate-900 mb-2">{t('title')}</h2>
-      <p className="text-slate-500 mb-8">{t('subtitle')}</p>
+    <div className="max-w-2xl mx-auto py-12 px-6 page-transition">
+      <div className="mb-8">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-4">
+          <User className="w-3 h-3" /> Step 2 of 3
+        </div>
+        <h2 className="text-3xl font-black text-slate-900 mb-2">{t('title')}</h2>
+        <p className="text-slate-500">{t('subtitle')}</p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="col-span-2">
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{t('fullName')}</label>
@@ -613,62 +631,101 @@ export default function Page() {
     <div className="font-sans text-slate-900 bg-slate-50 min-h-screen">
       {isLoading ? (
         <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center space-y-4">
-            <Loader2 className="w-12 h-12 animate-spin mx-auto text-indigo-600" />
-            <p className="text-slate-600 font-medium">Loading...</p>
+          <div className="text-center space-y-6">
+            <div className="relative w-16 h-16 mx-auto">
+              <div className="absolute inset-0 bg-indigo-100 rounded-2xl animate-pulse" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-slate-700 font-semibold">Loading your workspace...</p>
+              <p className="text-sm text-slate-400">Fetching projects and settings</p>
+            </div>
           </div>
         </div>
       ) : (
         <>
           {step === 'dashboard' && (
             <div className="animate-in fade-in duration-500">
-              {/* Dashboard Header */}
-              <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-6 py-4 flex justify-between items-center transition-all">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-2xl drop-shadow-sm">🚀</span>
-                  <span className="font-black text-slate-800 tracking-tight text-lg">JNJGO Resume</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  {isAdmin && (
-                    <a
-                      href="/admin"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-100"
-                    >
-                      <Shield className="w-3.5 h-3.5" />
-                      Admin
-                    </a>
-                  )}
-                  <Link
-                    href={`/${locale}/profile/private`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-colors border border-slate-200 shadow-sm"
-                  >
-                    <UserCircle className="w-4 h-4" />
-                    <span className="hidden sm:inline">Recruiter Profile</span>
-                  </Link>
-                  <AuthButton />
-                  <LanguageSwitcher />
-                </div>
-              </div>
+              {/* Shared navigation */}
+              <AppNavbar isAdmin={isAdmin} />
 
-              <div className="max-w-7xl mx-auto px-6 pb-20">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-24 md:pb-20">
                 {projects.length === 0 ? (
                   <EmptyState onStart={handleStartSetup} />
                 ) : (
-                  <div className="py-10 space-y-8">
-                    {/* Welcome section */}
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                      <div className="space-y-1">
-                        <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-                          {t('welcomeBack')}{session?.user?.name ? `, ${session.user.name.split(' ')[0]}` : ''}
-                        </h1>
-                        <p className="text-slate-500">{t('manageResumes')}</p>
+                  <div className="py-8 space-y-8">
+                    {/* Welcome banner */}
+                    <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 p-6 md:p-8">
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+                      <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
+                      <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="space-y-1">
+                          <h1 className="text-2xl md:text-3xl font-bold text-white">
+                            {t('welcomeBack')}{session?.user?.name ? `, ${session.user.name.split(' ')[0]}` : ''} 👋
+                          </h1>
+                          <p className="text-slate-400 text-sm md:text-base">{t('manageResumes')}</p>
+                        </div>
+                        <button
+                          onClick={handleStartSetup}
+                          className="group flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-xl hover:bg-indigo-50 transition-all font-bold text-sm shadow-lg hover:-translate-y-0.5 shrink-0"
+                        >
+                          <Plus className="w-4 h-4" /> {t('createNewProject')}
+                          <ArrowRight className="w-4 h-4 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                        </button>
                       </div>
+                    </div>
+
+                    {/* Quick Actions row */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
                       <button
                         onClick={handleStartSetup}
-                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all font-bold text-sm shadow-lg shadow-slate-200 hover:shadow-indigo-200 hover:-translate-y-0.5"
+                        className="group bg-white rounded-xl border border-slate-200 p-4 text-left hover:border-indigo-200 hover:shadow-md hover:-translate-y-0.5 transition-all"
                       >
-                        <Plus className="w-4 h-4" /> {t('createNewProject')}
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center mb-3 group-hover:bg-indigo-100 transition-colors">
+                          <Plus className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div className="text-sm font-bold text-slate-800">{t('createNewProject')}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">AI-guided interview</div>
                       </button>
+
+                      <Link
+                        href={`/${locale}/profile/private`}
+                        className="group bg-white rounded-xl border border-slate-200 p-4 text-left hover:border-purple-200 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center mb-3 group-hover:bg-purple-100 transition-colors">
+                          <UserCircle className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div className="text-sm font-bold text-slate-800">Recruiter Profile</div>
+                        <div className="text-xs text-slate-500 mt-0.5">Private conditions</div>
+                      </Link>
+
+                      {projects.filter(p => p.status === 'completed' || p.status === 'generated').length > 0 && (
+                        <Link
+                          href={`/${locale}/export?projectId=${projects.find(p => p.status === 'completed' || p.status === 'generated')?.id}`}
+                          className="group bg-white rounded-xl border border-slate-200 p-4 text-left hover:border-green-200 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center mb-3 group-hover:bg-green-100 transition-colors">
+                            <Share2 className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div className="text-sm font-bold text-slate-800">Export Resume</div>
+                          <div className="text-xs text-slate-500 mt-0.5">Job site formats</div>
+                        </Link>
+                      )}
+
+                      {isAdmin && (
+                        <Link
+                          href={`/${locale}/admin`}
+                          className="group bg-white rounded-xl border border-slate-200 p-4 text-left hover:border-amber-200 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-3 group-hover:bg-amber-100 transition-colors">
+                            <Shield className="w-5 h-5 text-amber-600" />
+                          </div>
+                          <div className="text-sm font-bold text-slate-800">Admin Panel</div>
+                          <div className="text-xs text-slate-500 mt-0.5">Settings & users</div>
+                        </Link>
+                      )}
                     </div>
 
                     {/* Stats */}
@@ -676,8 +733,11 @@ export default function Page() {
 
                     {/* Projects list */}
                     <div className="space-y-5">
-                      <h2 className="text-lg font-bold text-slate-800">{t('myResumes')}</h2>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-bold text-slate-800">{t('myResumes')}</h2>
+                        <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full tabular-nums">{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
                         {projects.map(project => (
                           <ProjectCard
                             key={project.id}
@@ -691,12 +751,13 @@ export default function Page() {
                         {/* Create New Card (Ghost) */}
                         <button
                           onClick={handleStartSetup}
-                          className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group min-h-70"
+                          className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all duration-300 group min-h-70"
                         >
-                          <div className="w-14 h-14 rounded-full bg-slate-50 group-hover:bg-white flex items-center justify-center mb-3 transition-colors shadow-sm">
+                          <div className="w-14 h-14 rounded-2xl bg-slate-50 group-hover:bg-indigo-50 flex items-center justify-center mb-3 transition-all duration-200 group-hover:scale-110">
                             <Plus className="w-7 h-7 opacity-50 group-hover:opacity-100 transition-opacity" />
                           </div>
                           <span className="font-bold text-sm">{t('createNewProject')}</span>
+                          <span className="text-xs text-slate-400 mt-1 group-hover:text-indigo-400 transition-colors">AI-guided interview</span>
                         </button>
                       </div>
                     </div>
@@ -707,15 +768,21 @@ export default function Page() {
           )}
 
           {step === 'setup' && (
-            <SetupView onComplete={handleSetupComplete} onCancel={() => setStep('dashboard')} />
+            <>
+              <AppNavbar isAdmin={isAdmin} minimal />
+              <SetupView onComplete={handleSetupComplete} onCancel={() => setStep('dashboard')} />
+            </>
           )}
 
           {step === 'personal_info' && (
-            <PersonalInfoView
-              initialProfile={userProfile}
-              onComplete={handlePersonalInfoComplete}
-              onBack={() => setStep('setup')}
-            />
+            <>
+              <AppNavbar isAdmin={isAdmin} minimal />
+              <PersonalInfoView
+                initialProfile={userProfile}
+                onComplete={handlePersonalInfoComplete}
+                onBack={() => setStep('setup')}
+              />
+            </>
           )}
 
           {step === 'interview' && currentProject && (

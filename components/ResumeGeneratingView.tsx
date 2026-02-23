@@ -92,23 +92,23 @@ export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGe
     };
 
     return (
-        <div className="h-screen flex flex-col bg-linear-to-br from-slate-50 via-white to-indigo-50/30">
+        <div className="h-screen flex flex-col bg-linear-to-br from-slate-50 via-white to-indigo-50/30 page-transition">
             {/* Header with back/cancel */}
-            <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-6 py-4">
+            <div className="sticky top-0 z-30 glass border-b border-slate-200/60 px-6 py-4 shadow-sm">
                 <div className="max-w-3xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handleCancelClick}
-                            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors group"
+                            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-all duration-200 group font-medium"
                         >
                             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
                             {t('backToInterview')}
                         </button>
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-slate-400">
+                    <div className="flex items-center gap-3 text-sm text-slate-400 font-medium">
                         <div className="flex items-center gap-1.5">
                             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
-                            <span>{formatTime(elapsed)}</span>
+                            <span className="tabular-nums">{formatTime(elapsed)}</span>
                         </div>
                     </div>
                 </div>
@@ -119,25 +119,25 @@ export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGe
                 <div className="max-w-2xl w-full space-y-8">
                     {/* Title area */}
                     <div className="text-center space-y-3">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full text-sm font-semibold">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full text-sm font-bold border border-indigo-100">
                             <Sparkles className="w-4 h-4" />
                             {t('title')}
                         </div>
-                        <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+                        <h1 className="text-3xl md:text-4xl font-black text-slate-900">
                             {t('heading')}
                         </h1>
-                        <p className="text-slate-500 text-lg max-w-md mx-auto">
+                        <p className="text-slate-400 text-lg max-w-md mx-auto">
                             {t('description')}
                         </p>
                     </div>
 
                     {/* Progress bar */}
                     <div className="space-y-2">
-                        <div className="flex justify-between text-xs text-slate-500 font-medium">
+                        <div className="flex justify-between text-xs text-slate-500 font-bold">
                             <span>{t('progress')}</span>
-                            <span>{Math.round(progressPercent)}%</span>
+                            <span className="tabular-nums">{Math.round(progressPercent)}%</span>
                         </div>
-                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                             <div
                                 className="h-full bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full transition-all duration-1000 ease-out"
                                 style={{ width: `${progressPercent}%` }}
@@ -146,7 +146,7 @@ export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGe
                     </div>
 
                     {/* Steps */}
-                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden divide-y divide-slate-100">
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-lg shadow-slate-200/40 overflow-hidden divide-y divide-slate-100">
                         {STEPS.map((step, index) => {
                             const isCompleted = completedSteps.has(step.id);
                             const isActive = index === currentStepIndex && !isCompleted && !error;
@@ -155,12 +155,12 @@ export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGe
                             return (
                                 <div
                                     key={step.id}
-                                    className={`flex items-center gap-4 px-5 py-4 transition-all duration-500 ${isActive ? 'bg-indigo-50/50' : isCompleted ? 'bg-green-50/30' : ''
+                                    className={`flex items-center gap-4 px-5 py-4 transition-all duration-500 ${isActive ? 'bg-indigo-50/50' : isCompleted ? 'bg-emerald-50/30' : ''
                                         }`}
                                 >
                                     {/* Step icon */}
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500 ${isCompleted
-                                        ? 'bg-green-100 text-green-600'
+                                        ? 'bg-emerald-100 text-emerald-600'
                                         : isActive
                                             ? 'bg-indigo-100 text-indigo-600'
                                             : 'bg-slate-100 text-slate-400'
@@ -176,8 +176,8 @@ export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGe
 
                                     {/* Step label */}
                                     <div className="flex-1 min-w-0">
-                                        <p className={`text-sm font-semibold transition-colors duration-300 ${isCompleted
-                                            ? 'text-green-700'
+                                        <p className={`text-sm font-bold transition-colors duration-300 ${isCompleted
+                                            ? 'text-emerald-700'
                                             : isActive
                                                 ? 'text-indigo-700'
                                                 : 'text-slate-400'
@@ -189,12 +189,12 @@ export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGe
                                     {/* Status badge */}
                                     <div className="shrink-0">
                                         {isCompleted && (
-                                            <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                            <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-full">
                                                 {t('done')}
                                             </span>
                                         )}
                                         {isActive && (
-                                            <span className="text-xs font-medium text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full animate-pulse">
+                                            <span className="text-xs font-bold text-indigo-600 bg-indigo-100 px-2.5 py-1 rounded-full animate-pulse">
                                                 {t('inProgress')}
                                             </span>
                                         )}
@@ -224,7 +224,7 @@ export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGe
                             <div className="flex gap-3">
                                 <button
                                     onClick={onCancel}
-                                    className="flex-1 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                                    className="flex-1 py-2.5 text-sm font-bold text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 active:scale-[0.98]"
                                 >
                                     {t('backToInterview')}
                                 </button>
@@ -234,11 +234,11 @@ export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGe
 
                     {/* Pro tip carousel */}
                     {!error && (
-                        <div className="bg-linear-to-r from-amber-50 to-orange-50 border border-amber-200/60 rounded-xl px-5 py-4">
+                        <div className="bg-linear-to-r from-amber-50 to-orange-50 border border-amber-200/60 rounded-2xl px-5 py-4">
                             <div className="flex items-start gap-3">
                                 <span className="text-lg mt-0.5">💡</span>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">{t('proTip')}</p>
+                                    <p className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-1">{t('proTip')}</p>
                                     <p className="text-sm text-amber-900 leading-relaxed transition-opacity duration-500" key={tipIndex}>
                                         {t(TIP_KEYS[tipIndex])}
                                     </p>
@@ -266,22 +266,22 @@ export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGe
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
                         <div className="text-center space-y-2">
-                            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto">
                                 <ArrowLeft className="w-6 h-6 text-amber-600" />
                             </div>
-                            <h3 className="font-bold text-lg text-slate-900">{t('cancelTitle')}</h3>
-                            <p className="text-sm text-slate-500">{t('cancelDesc')}</p>
+                            <h3 className="font-black text-lg text-slate-900">{t('cancelTitle')}</h3>
+                            <p className="text-sm text-slate-400">{t('cancelDesc')}</p>
                         </div>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowCancelConfirm(false)}
-                                className="flex-1 py-2.5 text-sm font-semibold text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                                className="flex-1 py-2.5 text-sm font-bold text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 active:scale-[0.98]"
                             >
                                 {t('keepWaiting')}
                             </button>
                             <button
                                 onClick={handleConfirmCancel}
-                                className="flex-1 py-2.5 text-sm font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors"
+                                className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-all duration-200 shadow-lg shadow-red-200/50 active:scale-[0.98]"
                             >
                                 {t('confirmCancel')}
                             </button>

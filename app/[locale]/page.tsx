@@ -27,10 +27,10 @@ export default function LandingPage() {
   return (
     <div className="font-sans text-slate-900 bg-white min-h-screen">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+      <nav className="sticky top-0 z-50 glass border-b border-slate-100 shadow-sm shadow-slate-100/50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2.5">
-            <span className="text-2xl drop-shadow-sm">🚀</span>
+          <div className="group flex items-center gap-2.5">
+            <span className="text-2xl drop-shadow-sm group-hover:scale-110 transition-transform inline-block">🚀</span>
             <span className="font-black text-slate-800 tracking-tight text-lg">JNJGO Resume</span>
           </div>
           <div className="flex items-center gap-3">
@@ -47,9 +47,9 @@ export default function LandingPage() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-200 h-150 bg-linear-to-br from-indigo-200/30 via-purple-200/20 to-pink-200/10 rounded-full blur-3xl"></div>
 
         <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-24 md:pt-32 md:pb-36">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
+          <div className="max-w-4xl mx-auto text-center space-y-8 page-transition">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-sm font-semibold">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-sm font-semibold shadow-sm">
               <Sparkles className="w-4 h-4" />
               {t('badge')}
             </div>
@@ -57,13 +57,13 @@ export default function LandingPage() {
             {/* Headline */}
             <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1]">
               {t('heroTitle')}
-              <span className="block text-transparent bg-clip-text bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600">
+              <span className="block gradient-text">
                 {t('heroHighlight')}
               </span>
             </h1>
 
             {/* Subtitle */}
-            <p className="text-xl md:text-2xl text-slate-600 max-w-2xl mx-auto leading-relaxed font-medium">
+            <p className="text-xl md:text-2xl text-slate-500 max-w-2xl mx-auto leading-relaxed font-medium">
               {t('heroSubtitle')}
             </p>
 
@@ -71,12 +71,12 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
               <button
                 onClick={handleGetStarted}
-                className="group relative inline-flex items-center justify-center px-8 py-4 font-bold text-white text-lg transition-all duration-300 bg-slate-900 rounded-2xl hover:bg-indigo-600 hover:shadow-2xl hover:shadow-indigo-500/25 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900"
+                className="group relative inline-flex items-center justify-center px-8 py-4 font-bold text-white text-lg transition-all duration-300 bg-slate-900 rounded-2xl hover:bg-indigo-600 hover:shadow-2xl hover:shadow-indigo-500/25 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 active:scale-[0.98]"
               >
                 {t('getStarted')}
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </button>
-              <p className="text-sm text-slate-500">{t('freeToUse')}</p>
+              <p className="text-sm text-slate-400 font-medium">{t('freeToUse')}</p>
             </div>
           </div>
 
@@ -151,36 +151,36 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-slate-50">
+      <section className="py-24 bg-slate-50/80">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">{t('featuresTitle')}</h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">{t('featuresSubtitle')}</p>
+            <p className="text-lg text-slate-500 max-w-2xl mx-auto">{t('featuresSubtitle')}</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
-              <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6 group-hover:bg-indigo-100 transition-colors">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 stagger-children">
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6 group-hover:bg-indigo-100 group-hover:scale-110 transition-all duration-200">
                 <Zap className="w-7 h-7 text-indigo-600" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">{t('feature1Title')}</h3>
-              <p className="text-slate-600 leading-relaxed">{t('feature1Desc')}</p>
+              <p className="text-slate-500 leading-relaxed">{t('feature1Desc')}</p>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
-              <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center mb-6 group-hover:bg-purple-100 transition-colors">
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group">
+              <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center mb-6 group-hover:bg-purple-100 group-hover:scale-110 transition-all duration-200">
                 <BarChart3 className="w-7 h-7 text-purple-600" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">{t('feature2Title')}</h3>
-              <p className="text-slate-600 leading-relaxed">{t('feature2Desc')}</p>
+              <p className="text-slate-500 leading-relaxed">{t('feature2Desc')}</p>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
-              <div className="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center mb-6 group-hover:bg-pink-100 transition-colors">
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group">
+              <div className="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center mb-6 group-hover:bg-pink-100 group-hover:scale-110 transition-all duration-200">
                 <FileText className="w-7 h-7 text-pink-600" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">{t('feature3Title')}</h3>
-              <p className="text-slate-600 leading-relaxed">{t('feature3Desc')}</p>
+              <p className="text-slate-500 leading-relaxed">{t('feature3Desc')}</p>
             </div>
           </div>
         </div>
@@ -191,26 +191,26 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">{t('howItWorksTitle')}</h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">{t('howItWorksSubtitle')}</p>
+            <p className="text-lg text-slate-500 max-w-2xl mx-auto">{t('howItWorksSubtitle')}</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-4xl mx-auto">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mx-auto text-indigo-600 font-black text-2xl">1</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-4xl mx-auto stagger-children">
+            <div className="text-center space-y-4 group">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto text-indigo-600 font-black text-2xl group-hover:bg-indigo-100 group-hover:scale-110 transition-all duration-200 shadow-sm border border-indigo-100/50">1</div>
               <h3 className="text-lg font-bold text-slate-900">{t('step1Title')}</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">{t('step1Desc')}</p>
+              <p className="text-sm text-slate-500 leading-relaxed">{t('step1Desc')}</p>
             </div>
 
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mx-auto text-purple-600 font-black text-2xl">2</div>
+            <div className="text-center space-y-4 group">
+              <div className="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto text-purple-600 font-black text-2xl group-hover:bg-purple-100 group-hover:scale-110 transition-all duration-200 shadow-sm border border-purple-100/50">2</div>
               <h3 className="text-lg font-bold text-slate-900">{t('step2Title')}</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">{t('step2Desc')}</p>
+              <p className="text-sm text-slate-500 leading-relaxed">{t('step2Desc')}</p>
             </div>
 
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center mx-auto text-pink-600 font-black text-2xl">3</div>
+            <div className="text-center space-y-4 group">
+              <div className="w-16 h-16 rounded-2xl bg-pink-50 flex items-center justify-center mx-auto text-pink-600 font-black text-2xl group-hover:bg-pink-100 group-hover:scale-110 transition-all duration-200 shadow-sm border border-pink-100/50">3</div>
               <h3 className="text-lg font-bold text-slate-900">{t('step3Title')}</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">{t('step3Desc')}</p>
+              <p className="text-sm text-slate-500 leading-relaxed">{t('step3Desc')}</p>
             </div>
           </div>
         </div>
@@ -219,8 +219,8 @@ export default function LandingPage() {
       {/* Benefits Section */}
       <section className="py-24 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 text-white relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full">
-          <div className="absolute top-20 right-20 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-20 right-20 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl animate-pulse-soft"></div>
+          <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse-soft"></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6">
@@ -229,14 +229,16 @@ export default function LandingPage() {
             <p className="text-lg text-slate-400">{t('benefitsSubtitle')}</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-5 max-w-3xl mx-auto stagger-right">
             {[
               t('benefit1'), t('benefit2'), t('benefit3'),
               t('benefit4'), t('benefit5'), t('benefit6')
             ].map((benefit, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
-                <span className="text-slate-300">{benefit}</span>
+              <div key={i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors duration-200">
+                <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                </div>
+                <span className="text-slate-300 font-medium">{benefit}</span>
               </div>
             ))}
           </div>
@@ -244,13 +246,14 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 bg-white">
-        <div className="max-w-3xl mx-auto text-center px-6 space-y-8">
+      <section className="py-28 bg-white relative overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-200 h-100 bg-linear-to-br from-indigo-50/40 via-purple-50/20 to-transparent rounded-full blur-3xl"></div>
+        <div className="relative max-w-3xl mx-auto text-center px-6 space-y-8">
           <h2 className="text-3xl md:text-4xl font-black text-slate-900">{t('ctaTitle')}</h2>
-          <p className="text-lg text-slate-600">{t('ctaSubtitle')}</p>
+          <p className="text-lg text-slate-500">{t('ctaSubtitle')}</p>
           <button
             onClick={handleGetStarted}
-            className="group inline-flex items-center justify-center px-10 py-5 font-bold text-white text-lg transition-all duration-300 bg-slate-900 rounded-2xl hover:bg-indigo-600 hover:shadow-2xl hover:shadow-indigo-500/25 hover:-translate-y-0.5"
+            className="group inline-flex items-center justify-center px-10 py-5 font-bold text-white text-lg transition-all duration-300 bg-slate-900 rounded-2xl hover:bg-indigo-600 hover:shadow-2xl hover:shadow-indigo-500/25 hover:-translate-y-1 active:scale-[0.98]"
           >
             {t('getStarted')}
             <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -263,7 +266,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-lg">🚀</span>
-            <span className="font-bold text-slate-700 text-sm">JNJGO Resume</span>
+            <span className="font-bold text-slate-600 text-sm">JNJGO Resume</span>
           </div>
           <p className="text-sm text-slate-400">{t('footer')}</p>
         </div>
