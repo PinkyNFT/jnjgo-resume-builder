@@ -28,6 +28,7 @@ import {
     Code,
     Zap,
     AlertCircle,
+    AlertTriangle,
     Search,
     Link2,
     Link2Off,
@@ -54,12 +55,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 
 // ─── Helpers ───────────────────────────────────────────────
 
-/** Generate a deterministic slug from projectId for link injection */
-function deriveSlug(projectId?: string): string {
-    if (!projectId) return '';
-    // Use first 8 chars of projectId as slug (MongoDB ObjectId is 24 hex chars)
-    return projectId.slice(0, 8);
-}
+// Removed deriveSlug as it generates fake non-resolvable links
 
 // ─── Toast Component ───────────────────────────────────────
 
@@ -179,16 +175,30 @@ export const ExportTemplates: React.FC<ExportTemplatesProps> = ({
     const [rewrittenSections, setRewrittenSections] = useState<Map<string, ExportSection[]>>(new Map());
     const [rewriteError, setRewriteError] = useState<string | null>(null);
 
-    // Derive a slug for link injection (from explicit prop or projectId)
-    const effectiveSlug = candidateSlug || deriveSlug(projectId);
+    const [serverSlug, setServerSlug] = useState<string | null>(null);
+
+    // Fetch genuine slug from server if not provided explicitly
+    useEffect(() => {
+        if (candidateSlug) {
+            setServerSlug(candidateSlug);
+        } else {
+            fetch('/api/profile/public/slug')
+                .then(r => r.json())
+                .then(d => setServerSlug(d.slug || null))
+                .catch(() => { });
+        }
+    }, [candidateSlug]);
+
+    const effectiveSlug = serverSlug;
 
     // Initialize link toggle from platform policy when platform changes
     useEffect(() => {
         if (selectedPlatform) {
             const config = PLATFORM_CONFIGS[selectedPlatform];
-            setLinkEnabled(config.linkInjectionPolicy === 'default_on');
+            // Only default to ON if we actually have a slug!
+            setLinkEnabled(config.linkInjectionPolicy === 'default_on' && !!effectiveSlug);
         }
-    }, [selectedPlatform]);
+    }, [selectedPlatform, effectiveSlug]);
 
     // Build export options (always uses 'standard' as the base — AI handles variant)
     const exportOptions: ExportOptions = useMemo(() => ({
@@ -231,7 +241,7 @@ export const ExportTemplates: React.FC<ExportTemplatesProps> = ({
         }).join('\n\n');
         if (linkEnabled && effectiveSlug && selectedPlatform) {
             const config = PLATFORM_CONFIGS[selectedPlatform];
-            const base = 'https://jnjgo.app';
+            const base = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || 'https://jnjgo.app');
             const url = `${base}/c/${effectiveSlug}?ref=export&site=${selectedPlatform}&utm_campaign=export&utm_medium=copy`;
             if (config.locale === 'en') {
                 text += `\n---\nPreferences, conditions & availability (private): ${url}`;
@@ -515,8 +525,8 @@ export const ExportTemplates: React.FC<ExportTemplatesProps> = ({
                                                             onClick={() => setVariant(v)}
                                                             disabled={isRewriting && v !== variant}
                                                             className={`relative flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isActive
-                                                                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
-                                                                    : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
+                                                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
+                                                                : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
                                                                 } ${isRewriting && v !== variant ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                         >
                                                             {isAI && isActive && isRewriting && (
@@ -550,8 +560,8 @@ export const ExportTemplates: React.FC<ExportTemplatesProps> = ({
                                             </label>
                                             <button
                                                 onClick={() => setLinkEnabled(prev => !prev)}
-                                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${linkEnabled ? 'bg-indigo-600' : 'bg-slate-300'
-                                                    }`}
+                                                disabled={!effectiveSlug}
+                                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${linkEnabled ? 'bg-indigo-600' : 'bg-slate-300'} ${!effectiveSlug ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 title={t('linkToggleTooltip')}
                                             >
                                                 <span
@@ -560,15 +570,23 @@ export const ExportTemplates: React.FC<ExportTemplatesProps> = ({
                                                 />
                                             </button>
                                         </div>
-                                        {linkEnabled && (
-                                            <div className="flex items-center gap-1.5 text-[9px] text-indigo-600 bg-indigo-50 rounded-lg px-2.5 py-1.5 -mt-1">
+                                        {linkEnabled && effectiveSlug && (
+                                            <div className="flex items-center gap-1.5 text-[9px] text-indigo-600 bg-indigo-50 rounded-lg px-2.5 py-1.5 mt-1">
                                                 <Link2 className="w-3 h-3 shrink-0" />
                                                 <span className="truncate">
-                                                    {effectiveSlug
-                                                        ? `jnjgo.app/c/${effectiveSlug}`
-                                                        : t('linkNoSlug')
-                                                    }
+                                                    jnjgo.app/c/{effectiveSlug}
                                                 </span>
+                                            </div>
+                                        )}
+                                        {!effectiveSlug && (
+                                            <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-100 flex flex-col gap-1.5">
+                                                <div className="flex items-center gap-1.5 text-[9px] text-amber-700">
+                                                    <AlertTriangle className="w-3 h-3 shrink-0" />
+                                                    <span className="leading-tight font-medium">Create your Recruiter Profile to enable direct links.</span>
+                                                </div>
+                                                <a href="/profile/private" target="_blank" className="text-[9px] bg-white border border-amber-200 text-amber-800 font-bold px-2 py-1 rounded text-center hover:bg-amber-100 transition shadow-sm w-fit">
+                                                    Create Profile
+                                                </a>
                                             </div>
                                         )}
                                     </div>

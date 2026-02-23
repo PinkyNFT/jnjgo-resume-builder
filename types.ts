@@ -1,6 +1,50 @@
 export type RoleType = 'consultant' | 'senior_engineer' | 'general';
 export type ProjectStatus = 'draft' | 'imported' | 'interviewing' | 'generated' | 'completed';
 
+// --- JNJGO Recruiter-Only Extended Types ---
+
+export interface CandidatePrivateProfile {
+    id?: string;
+    userId: string;
+    status: 'draft' | 'published';
+    orientation?: string; // tech-driven, business-driven, management-driven
+    aiObjectiveReview?: string;
+    jobChangeIntent?: 'now' | 'within_3_months' | 'open_to_offers';
+    desiredSalary?: {
+        minimum?: number;
+        target?: number;
+    };
+    desiredRoles?: Array<{ role: string; priority: number }>;
+    workingConditions?: string;
+    dealBreakers?: string[];
+    interviewAvailability?: string;
+    jobChangeReasonSummary?: string;
+    visibilityFlags?: {
+        isRecruiterOnly: boolean;
+    };
+    createdAt?: number;
+    updatedAt?: number;
+}
+
+export interface CandidatePublicPage {
+    id?: string;
+    userId: string;
+    pageSlug: string;
+    isActive: boolean;
+    createdAt?: number;
+}
+
+export interface ExportEvent {
+    id?: string;
+    userId: string;
+    projectId?: string | null;
+    siteKey: string;
+    variant?: 'short' | 'standard' | 'long';
+    linkIncluded: boolean;
+    copiedAt: number;
+}
+
+
 export interface Message {
     role: 'user' | 'model';
     text: string;

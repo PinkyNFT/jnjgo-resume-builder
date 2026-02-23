@@ -12,7 +12,8 @@ import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from 
 import { useParseResume, useAnalyzeImport } from '../../../hooks/useGemini';
 import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile, createVersion } from '../../../services/storageService';
 import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/dataMigration';
-import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield } from 'lucide-react';
+import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2 } from 'lucide-react';
+import Link from 'next/link';
 
 // --- Sub-Components ---
 
@@ -71,7 +72,7 @@ const StatsCards = ({ projects }: { projects: Project[] }) => {
   );
 };
 
-const ProjectCard = ({ project, onOpen, onDelete }: { project: Project, onOpen: () => void, onDelete: () => void }) => {
+const ProjectCard = ({ project, locale, onOpen, onDelete }: { project: Project, locale: string, onOpen: () => void, onDelete: () => void }) => {
   const t = useTranslations('Dashboard');
   const tCommon = useTranslations('Common');
   const isCompleted = project.status === 'completed' || project.status === 'generated';
@@ -139,18 +140,30 @@ const ProjectCard = ({ project, onOpen, onDelete }: { project: Project, onOpen: 
         {t('lastUpdated', { date: new Date(project.updatedAt).toLocaleDateString() })}
       </p>
 
-      {/* Action button */}
+      {/* Action button(s) */}
       <div className="mt-auto">
-        <button className={`w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${isCompleted
-          ? 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
-          : 'bg-slate-900 text-white hover:bg-indigo-600 shadow-md hover:shadow-lg'
-          }`}>
-          {isCompleted ? (
-            <><Eye className="w-4 h-4" /> {t('openEditor')}</>
-          ) : (
-            <><Edit3 className="w-4 h-4" /> {t('continueEditing')}</>
-          )}
-        </button>
+        {isCompleted ? (
+          <div className="flex gap-2">
+            <button
+              onClick={onOpen}
+              className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200"
+            >
+              <Eye className="w-4 h-4" /> {t('openEditor')}
+            </button>
+            <Link
+              href={`/${locale}/export?projectId=${project.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+              title="Export to job sites"
+            >
+              <Share2 className="w-4 h-4" />
+            </Link>
+          </div>
+        ) : (
+          <button className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all bg-slate-900 text-white hover:bg-indigo-600 shadow-md hover:shadow-lg">
+            <Edit3 className="w-4 h-4" /> {t('continueEditing')}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -625,6 +638,13 @@ export default function Page() {
                       Admin
                     </a>
                   )}
+                  <Link
+                    href={`/${locale}/profile/private`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold text-slate-700 bg-white rounded-lg hover:bg-slate-50 transition-colors border border-slate-200 shadow-sm"
+                  >
+                    <UserCircle className="w-4 h-4" />
+                    <span className="hidden sm:inline">Recruiter Profile</span>
+                  </Link>
                   <AuthButton />
                   <LanguageSwitcher />
                 </div>
@@ -662,6 +682,7 @@ export default function Page() {
                           <ProjectCard
                             key={project.id}
                             project={project}
+                            locale={locale}
                             onOpen={() => handleOpenProject(project)}
                             onDelete={() => handleDeleteProject(project.id)}
                           />

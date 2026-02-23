@@ -9,7 +9,10 @@ import {
     ProjectStatus,
     RoleType,
     ResumeVersion,
-    VersionTrigger
+    VersionTrigger,
+    CandidatePrivateProfile,
+    CandidatePublicPage,
+    ExportEvent
 } from '../types';
 
 // ===== INTERFACES FOR MONGOOSE DOCUMENTS =====
@@ -31,6 +34,26 @@ export interface IResumeVersionDocument extends Omit<Document, '_id'>, Omit<Resu
     _id: Types.ObjectId;
     userId: string;
     id: string;
+}
+
+export interface ICandidatePrivateProfileDocument extends Omit<Document, '_id'>, Omit<CandidatePrivateProfile, 'id' | 'createdAt' | 'updatedAt'> {
+    _id: Types.ObjectId;
+    userId: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface ICandidatePublicPageDocument extends Omit<Document, '_id'>, Omit<CandidatePublicPage, 'id' | 'createdAt'> {
+    _id: Types.ObjectId;
+    userId: string;
+    createdAt: Date;
+}
+
+export interface IExportEventDocument extends Omit<Document, '_id'>, Omit<ExportEvent, 'id' | 'copiedAt'> {
+    _id: Types.ObjectId;
+    userId: string;
+    projectId?: string | null;
+    copiedAt: Date;
 }
 
 // ===== SCHEMAS =====
@@ -216,6 +239,54 @@ const ResumeVersionSchema = new Schema<IResumeVersionDocument>({
 
 ResumeVersionSchema.index({ userId: 1, projectId: 1, createdAt: -1 });
 
+// ===== ADDENDUM: RECRUITER-ONLY & EXPORT SCHEMAS =====
+
+const CandidatePrivateProfileSchema = new Schema<ICandidatePrivateProfileDocument>({
+    userId: { type: String, required: true, unique: true, index: true },
+    status: { type: String, enum: ['draft', 'published'], default: 'draft' },
+    orientation: { type: String },
+    aiObjectiveReview: { type: String },
+    jobChangeIntent: { type: String, enum: ['now', 'within_3_months', 'open_to_offers'] },
+    desiredSalary: {
+        minimum: { type: Number },
+        target: { type: Number }
+    },
+    desiredRoles: [{
+        role: { type: String },
+        priority: { type: Number }
+    }],
+    workingConditions: { type: String },
+    dealBreakers: [{ type: String }],
+    interviewAvailability: { type: String },
+    jobChangeReasonSummary: { type: String },
+    visibilityFlags: {
+        isRecruiterOnly: { type: Boolean, default: true }
+    }
+}, {
+    timestamps: true,
+    collection: 'candidatePrivateProfiles'
+});
+
+const CandidatePublicPageSchema = new Schema<ICandidatePublicPageDocument>({
+    userId: { type: String, required: true, unique: true, index: true },
+    pageSlug: { type: String, required: true, unique: true, index: true },
+    isActive: { type: Boolean, default: false }
+}, {
+    timestamps: { createdAt: true, updatedAt: false },
+    collection: 'candidatePublicPages'
+});
+
+const ExportEventSchema = new Schema<IExportEventDocument>({
+    userId: { type: String, required: true, index: true },
+    projectId: { type: String, default: null, index: true },
+    siteKey: { type: String, required: true },
+    variant: { type: String, enum: ['short', 'standard', 'long'] },
+    linkIncluded: { type: Boolean, required: true },
+    copiedAt: { type: Date, default: Date.now }
+}, {
+    collection: 'exportEvents'
+});
+
 // ===== MODELS =====
 
 export const UserProfileModel: Model<IUserProfileDocument> =
@@ -226,3 +297,12 @@ export const ProjectModel: Model<IProjectDocument> =
 
 export const ResumeVersionModel: Model<IResumeVersionDocument> =
     mongoose.models.ResumeVersion || mongoose.model<IResumeVersionDocument>('ResumeVersion', ResumeVersionSchema);
+
+export const CandidatePrivateProfileModel: Model<ICandidatePrivateProfileDocument> =
+    mongoose.models.CandidatePrivateProfile || mongoose.model<ICandidatePrivateProfileDocument>('CandidatePrivateProfile', CandidatePrivateProfileSchema);
+
+export const CandidatePublicPageModel: Model<ICandidatePublicPageDocument> =
+    mongoose.models.CandidatePublicPage || mongoose.model<ICandidatePublicPageDocument>('CandidatePublicPage', CandidatePublicPageSchema);
+
+export const ExportEventModel: Model<IExportEventDocument> =
+    mongoose.models.ExportEvent || mongoose.model<IExportEventDocument>('ExportEvent', ExportEventSchema);
