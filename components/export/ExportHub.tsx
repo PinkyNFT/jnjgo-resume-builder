@@ -120,7 +120,7 @@ export default function ExportHub({ resumeData, candidateSlug, projectId, projec
                                     className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 capitalize ${variant === v
                                         ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200/50'
                                         : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-slate-200'
-                                    }`}
+                                        }`}
                                 >
                                     {v}
                                 </button>

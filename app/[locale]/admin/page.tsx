@@ -141,8 +141,8 @@ export default function AdminDashboardPage() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab.id
-                                    ? 'bg-indigo-600 text-white shadow-sm'
-                                    : 'text-slate-600 hover:bg-slate-100'
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-600 hover:bg-slate-100'
                                 }`}
                         >
                             <tab.icon className="w-4 h-4" />

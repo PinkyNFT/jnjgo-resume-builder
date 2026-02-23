@@ -854,8 +854,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
 
                     {/* Input Area with improved styling */}
                     <div className={`flex-1 rounded-xl flex items-center px-4 py-1.5 border-2 transition-all duration-200 ${isLoading
-                            ? 'bg-slate-100 border-slate-200'
-                            : 'bg-slate-50 border-slate-200 focus-within:border-indigo-400 focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.08)]'
+                        ? 'bg-slate-100 border-slate-200'
+                        : 'bg-slate-50 border-slate-200 focus-within:border-indigo-400 focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.08)]'
                         }`}>
                         <textarea
                             ref={inputRef}
