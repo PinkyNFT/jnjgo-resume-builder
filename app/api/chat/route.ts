@@ -11,6 +11,47 @@ if (!API_KEY) {
     console.error('GEMINI_API_KEY environment variable is not set');
 }
 
+/**
+ * Detect which sections the agent marked as complete (✓) in its response,
+ * and whether it's offering to generate the resume (overall readiness).
+ */
+function detectAgentProgress(text: string): { completedSections: string[]; agentReady: boolean } {
+    const completedSections: string[] = [];
+
+    // Detect ✓-marked sections (English + Japanese)
+    const sectionPatterns: [RegExp, string][] = [
+        [/✓\s*(work\s*history|work|職務経歴|職歴)/i, 'work'],
+        [/✓\s*(experience\s*detail|detail|project|経験.*詳細|詳細)/i, 'details'],
+        [/✓\s*(education|学歴)/i, 'education'],
+        [/✓\s*(skill|スキル)/i, 'skills'],
+        [/✓\s*(cert|certification|資格)/i, 'certifications'],
+        [/✓\s*(gap|career\s*gap|ギャップ)/i, 'gaps'],
+    ];
+
+    for (const [pattern, id] of sectionPatterns) {
+        if (pattern.test(text)) {
+            completedSections.push(id);
+        }
+    }
+
+    // Detect overall readiness: agent offering to generate with multiple ✓ marks
+    const checkmarkCount = (text.match(/✓/g) || []).length;
+    const readyPatterns = [
+        /i have everything.*need/i,
+        /ready to generate/i,
+        /generate.*resume\??/i,
+        /shall\s*(i|we)\s*generate/i,
+        /want me to generate/i,
+        /すべて.*揃いました/,
+        /生成しますか/,
+        /レジュメ.*生成/,
+    ];
+    const hasReadyPhrase = readyPatterns.some(p => p.test(text));
+    const agentReady = (checkmarkCount >= 4 && hasReadyPhrase) || (checkmarkCount >= 5);
+
+    return { completedSections, agentReady };
+}
+
 export async function POST(request: NextRequest) {
     try {
         if (!API_KEY) {
@@ -67,9 +108,14 @@ export async function POST(request: NextRequest) {
                 responseText.includes('生成しますか')
             );
 
+            // Detect agent-reported section progress and readiness
+            const { completedSections, agentReady } = detectAgentProgress(responseText || '');
+
             return NextResponse.json({
                 text: responseText,
-                phase: isConfirmation ? 'confirmation' : undefined
+                phase: isConfirmation ? 'confirmation' : undefined,
+                completedSections,
+                agentReady,
             });
 
         } else if (action === 'generateHint') {

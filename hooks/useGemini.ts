@@ -54,7 +54,7 @@ export function useSendMessage() {
             }
 
             const data = await response.json();
-            return { text: data.text, phase: data.phase };
+            return { text: data.text, phase: data.phase, completedSections: data.completedSections, agentReady: data.agentReady };
         },
         // Retry configuration
         retry: (failureCount, error: unknown) => {

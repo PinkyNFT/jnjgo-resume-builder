@@ -4,137 +4,180 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Message, RoleType, ImportData, ResumeData } from '../types';
 import { useSendMessage, useGenerateHint } from '../hooks/useGemini';
-import { Send, Loader2, Sparkles, AlertCircle, ArrowUp, HelpCircle, Save, User, Bot, Home, CheckCircle2, ClipboardCheck, AlertTriangle, Square } from 'lucide-react';
+import { Send, Loader2, Sparkles, AlertCircle, ArrowUp, HelpCircle, Save, User, Bot, Home, CheckCircle2, ClipboardCheck, AlertTriangle, Square, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Check if there are any unresolved gap questions in the conversation
-const hasUnresolvedGapQuestions = (messages: Message[]): boolean => {
-    // Look for gap questions from the model followed by substantive user answers
-    for (let i = 0; i < messages.length - 1; i++) {
-        const msg = messages[i];
-        if (msg.role === 'model') {
-            const text = msg.text.toLowerCase();
-            // Check if this is a gap-related question
-            const isGapQuestion = (
-                text.includes('gap') ||
-                (text.includes('between') && text.includes('?')) ||
-                (text.includes('during that time') && text.includes('?')) ||
-                (text.includes('what were you doing') && text.includes('?'))
-            );
+// ===== INTERVIEW PROGRESS TRACKING (Agent-driven + fallback heuristics) =====
 
-            if (isGapQuestion) {
-                // Check if the next user message is a substantive answer (not just "yes" or "no")
-                const nextUserMsg = messages.slice(i + 1).find(m => m.role === 'user');
-                if (!nextUserMsg || nextUserMsg.text.trim().length < 10) {
-                    return true; // Found unanswered gap question
-                }
-                // Check if the answer actually addresses the gap - expanded keywords
-                const answer = nextUserMsg.text.toLowerCase();
-                const hasSubstantiveAnswer = (
-                    answer.includes('was') || answer.includes('did') || answer.includes('doing') ||
-                    answer.includes('search') || answer.includes('freelanc') || answer.includes('school') ||
-                    answer.includes('education') || answer.includes('personal') || answer.includes('break') ||
-                    answer.includes('transition') || answer.includes('time') || answer.includes('leave') ||
-                    answer.includes('medical') || answer.includes('family') || answer.includes('sabbatical') ||
-                    answer.includes('traveled') || answer.includes('study') || answer.includes('training') ||
-                    answer.includes('care') || answer.includes('health') || answer.includes('relocation')
-                );
-                if (!hasSubstantiveAnswer) {
-                    return true; // User didn't really answer the gap question
-                }
-            }
-        }
+interface SectionProgress {
+    id: string;
+    label: string;
+    complete: boolean;
+    critical: boolean;
+}
+
+interface InterviewProgress {
+    sections: SectionProgress[];
+    completedCount: number;
+    totalCount: number;
+    agentReady: boolean;
+    readyToGenerate: boolean;
+}
+
+/**
+ * Layer 1: Extract sections the agent explicitly marked with ✓ in its messages.
+ * The agent is prompted to use ✓ when transitioning between sections.
+ */
+function extractAgentMarkedSections(messages: Message[]): Set<string> {
+    const completed = new Set<string>();
+
+    for (const msg of messages) {
+        if (msg.role !== 'model' || msg.isHint) continue;
+        const text = msg.text;
+
+        // English section markers
+        if (/✓\s*(work\s*history|work history)/i.test(text)) completed.add('work');
+        if (/✓\s*(experience\s*detail|detail|project detail)/i.test(text)) completed.add('details');
+        if (/✓\s*(education)/i.test(text)) completed.add('education');
+        if (/✓\s*(skill)/i.test(text)) completed.add('skills');
+        if (/✓\s*(cert|certification)/i.test(text)) completed.add('certifications');
+        if (/✓\s*(gap|career\s*gap)/i.test(text)) completed.add('gaps');
+
+        // Japanese section markers
+        if (/✓\s*(職務経歴|職歴)/i.test(text)) completed.add('work');
+        if (/✓\s*(経験.*詳細|詳細|経験の詳細)/i.test(text)) completed.add('details');
+        if (/✓\s*(学歴)/i.test(text)) completed.add('education');
+        if (/✓\s*(スキル)/i.test(text)) completed.add('skills');
+        if (/✓\s*(資格)/i.test(text)) completed.add('certifications');
+        if (/✓\s*(ギャップ)/i.test(text)) completed.add('gaps');
     }
-    return false; // All gap questions were answered
-};
 
-// Calculate data completeness score based on collected information
-const calculateDataCompleteness = (messages: Message[], importData?: ImportData): { score: number; details: { category: string; complete: boolean; priority?: 'high' | 'normal' }[] } => {
-    const userMessages = messages.filter(m => m.role === 'user' && !m.isHint);
+    return completed;
+}
+
+/**
+ * Layer 2: Detect whether the agent has signaled overall readiness
+ * (i.e. offered to generate the resume with all sections complete).
+ */
+function detectAgentReadyInHistory(messages: Message[]): boolean {
+    return messages.some(msg => {
+        if (msg.role !== 'model' || msg.isHint) return false;
+        const text = msg.text;
+        const checkmarkCount = (text.match(/✓/g) || []).length;
+        const readyPatterns = [
+            /i have everything/i,
+            /ready to generate/i,
+            /generate.*resume\?/i,
+            /shall\s*(i|we)\s*generate/i,
+            /want me to generate/i,
+            /すべて.*揃いました/,
+            /生成しますか/,
+        ];
+        const hasReadyPhrase = readyPatterns.some(p => p.test(text));
+        return (checkmarkCount >= 4 && hasReadyPhrase) || checkmarkCount >= 5;
+    });
+}
+
+/**
+ * Layer 3: Fallback heuristic — detect topic coverage from conversation flow
+ * when the agent doesn't use ✓ markers. Analyzes agent questions + user answers.
+ */
+function detectTopicFromConversation(
+    modelMessages: Message[],
+    userMessages: Message[],
+    topic: string,
+    importData?: ImportData
+): boolean {
+    const modelText = modelMessages.map(m => m.text.toLowerCase()).join(' ');
+
+    switch (topic) {
+        case 'work': {
+            const agentAsked = /company|employer|position|role|where.*work|most recent|current.*job|会社|勤務|役職|直近/.test(modelText);
+            const userAnswered = userMessages.some(m =>
+                m.text.length > 15 &&
+                /compan|work|position|role|job|employ|manager|developer|engineer|analyst|director|lead/i.test(m.text)
+            );
+            return (agentAsked && userAnswered) || !!importData;
+        }
+        case 'details': {
+            const agentAsked = /responsibilit|achievement|project|team\s*size|impact|challenge|tell.*more|deep.*dive|contribution|責任|実績|プロジェクト|チーム.*規模|詳しく/.test(modelText);
+            return agentAsked && userMessages.filter(m => m.text.length > 50).length >= 2;
+        }
+        case 'education': {
+            const agentAsked = /education|degree|university|college|graduated|highest.*degree|school|bootcamp|学歴|学位|大学|卒業/.test(modelText);
+            const userAnswered = userMessages.some(m =>
+                /degree|university|college|school|bachelor|master|phd|diploma|bootcamp|self.?taught|no.*degree|graduat|enrolled|studied|major/i.test(m.text.toLowerCase())
+            );
+            return agentAsked && userAnswered;
+        }
+        case 'skills': {
+            const agentAsked = /skills?|technical|tools|technologies|programming|key.*tools|スキル|技術|ツール/.test(modelText);
+            const userAnswered = userMessages.some(m =>
+                /python|java|react|angular|aws|sql|skill|framework|docker|kubernetes|git|node|typescript|css|html|linux|agile|scrum/i.test(m.text.toLowerCase())
+            ) || userMessages.some(m =>
+                m.text.length > 20 && /skill|tool|tech|proficien/i.test(m.text.toLowerCase())
+            );
+            return agentAsked && userAnswered;
+        }
+        case 'certifications': {
+            return /certification|certified|professional cert|do you have any.*cert|資格|認定/.test(modelText);
+        }
+        case 'gaps': {
+            return /gap|between.*position|career break|what were you doing|between.*and|ギャップ|空白/.test(modelText)
+                || userMessages.length >= 5;
+        }
+        default:
+            return false;
+    }
+}
+
+/**
+ * Main progress analysis function.
+ * Uses a 3-layer approach: Agent ✓ markers → Agent readiness signal → Conversation heuristics
+ */
+function analyzeInterviewProgress(
+    messages: Message[],
+    agentReadyOverride: boolean,
+    importData?: ImportData
+): InterviewProgress {
     const modelMessages = messages.filter(m => m.role === 'model' && !m.isHint);
-    const allText = messages.map(m => m.text.toLowerCase()).join(' ');
+    const userMessages = messages.filter(m => m.role === 'user' && !m.isHint);
 
-    // Calculate average message length to gauge detail level
-    const avgUserMessageLength = userMessages.length > 0
-        ? userMessages.reduce((sum, m) => sum + m.text.length, 0) / userMessages.length
-        : 0;
+    // Layer 1: Agent ✓ markers
+    const markedComplete = extractAgentMarkedSections(messages);
 
-    // Count substantive messages (more than 50 characters)
-    const substantiveMessages = userMessages.filter(m => m.text.trim().length > 50).length;
+    // Layer 2: Agent readiness (from API flag or history scan)
+    const agentReady = agentReadyOverride || detectAgentReadyInHistory(messages);
 
-    // Check for specific section discussions
-    const workKeywords = ['company', 'position', 'role', 'job', 'work', 'employer', 'worked at', 'responsibilities'];
-    const hasWorkDiscussion = workKeywords.some(kw => allText.includes(kw)) && userMessages.length >= 3;
+    // Build section status
+    const sectionDefs = [
+        { id: 'work', label: 'Work History', critical: true },
+        { id: 'details', label: 'Project Details', critical: true },
+        { id: 'education', label: 'Education', critical: true },
+        { id: 'skills', label: 'Skills', critical: true },
+        { id: 'certifications', label: 'Certifications', critical: true },
+        { id: 'gaps', label: 'Career Gaps', critical: false },
+    ];
 
-    const projectKeywords = ['project', 'achievement', 'built', 'developed', 'led', 'managed', 'implemented'];
-    const hasProjectDiscussion = projectKeywords.some(kw => allText.includes(kw)) && substantiveMessages >= 5;
+    const sections: SectionProgress[] = sectionDefs.map(def => ({
+        ...def,
+        complete: agentReady
+            || markedComplete.has(def.id)
+            || detectTopicFromConversation(modelMessages, userMessages, def.id, importData),
+    }));
 
-    const gapKeywords = ['gap', 'break', 'unemployed', 'between jobs', 'career break', 'time off', 'sabbatical', 'hiatus', 'freelanc', 'job search', 'medical leave', 'medical', 'family leave', 'personal leave', 'traveling', 'study', 'relocation'];
-    const hasGapDiscussion = gapKeywords.some(kw => allText.includes(kw));
+    const completedCount = sections.filter(s => s.complete).length;
+    const totalCount = sections.length;
+    const allCriticalComplete = sections.filter(s => s.critical).every(s => s.complete);
 
-    // CRITICAL: Check for Education discussion
-    const educationKeywords = ['degree', 'university', 'college', 'bachelor', 'master', 'phd', 'graduated', 'education', 'school', 'mba', 'b.s', 'm.s', 'bootcamp', 'coursework'];
-    const educationQuestions = modelMessages.filter(m =>
-        m.text.toLowerCase().includes('education') ||
-        m.text.toLowerCase().includes('degree') ||
-        m.text.toLowerCase().includes('university') ||
-        m.text.toLowerCase().includes('graduated')
-    );
-    const hasEducationDiscussion = educationKeywords.some(kw => allText.includes(kw)) && educationQuestions.length > 0;
-
-    // CRITICAL: Check for Skills discussion
-    const skillsKeywords = ['skill', 'python', 'java', 'javascript', 'react', 'aws', 'framework', 'language', 'tool', 'technology', 'platform', 'proficient'];
-    const skillsQuestions = modelMessages.filter(m =>
-        m.text.toLowerCase().includes('skill') ||
-        m.text.toLowerCase().includes('technical') ||
-        m.text.toLowerCase().includes('tools')
-    );
-    const hasSkillsDiscussion = skillsKeywords.some(kw => allText.includes(kw)) && skillsQuestions.length > 0;
-
-    // CRITICAL: Check for Certifications discussion (asked, even if answer is "none")
-    const certificationsQuestions = modelMessages.filter(m =>
-        m.text.toLowerCase().includes('certification') ||
-        m.text.toLowerCase().includes('certified')
-    );
-    const hasCertificationsAsked = certificationsQuestions.length > 0;
-
-    const details: { category: string; complete: boolean; priority?: 'high' | 'normal' }[] = [];
-
-    // Minimum thresholds based on whether resume was imported
-    const minTimeline = importData ? 4 : 6;
-    const minProjects = importData ? 6 : 9;
-    const minDepth = importData ? 8 : 12;
-
-    // 1. Work History Timeline (15%)
-    const hasTimeline = hasWorkDiscussion && userMessages.length >= minTimeline;
-    details.push({ category: 'Work History', complete: hasTimeline, priority: 'high' });
-
-    // 2. Career Gaps Explained (10%)
-    const hasGaps = hasGapDiscussion || userMessages.length >= 4;
-    details.push({ category: 'Career Gaps', complete: hasGaps, priority: 'normal' });
-
-    // 3. Project Details (20%)
-    const hasProjects = hasProjectDiscussion && userMessages.length >= minProjects && substantiveMessages >= Math.floor(minProjects * 0.7);
-    details.push({ category: 'Project Details', complete: hasProjects, priority: 'high' });
-
-    // 4. Education (20%) - MANDATORY
-    details.push({ category: 'Education', complete: hasEducationDiscussion, priority: 'high' });
-
-    // 5. Skills (20%) - MANDATORY
-    details.push({ category: 'Skills', complete: hasSkillsDiscussion, priority: 'high' });
-
-    // 6. Certifications Asked (10%) - MANDATORY
-    details.push({ category: 'Certifications', complete: hasCertificationsAsked, priority: 'high' });
-
-    // 7. Overall Depth & Context (5%)
-    const hasDepth = userMessages.length >= minDepth && substantiveMessages >= Math.floor(minDepth * 0.7) && avgUserMessageLength > 80;
-    details.push({ category: 'Depth & Context', complete: hasDepth, priority: 'normal' });
-
-    const completeCount = details.filter(d => d.complete).length;
-    const score = Math.round((completeCount / details.length) * 100);
-
-    return { score, details };
-};
+    return {
+        sections,
+        completedCount,
+        totalCount,
+        agentReady,
+        readyToGenerate: agentReady || allCriticalComplete,
+    };
+}
 
 // Simple markdown formatter for basic formatting
 const formatMarkdown = (text: string) => {
@@ -187,6 +230,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
     const [abortController, setAbortController] = useState<AbortController | null>(null);
     const [isComposing, setIsComposing] = useState(false);
+    const [agentReadyFlag, setAgentReadyFlag] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const mountedRef = useRef(true);
@@ -202,12 +246,18 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     const error = (sendMessageMutation.error as any)?.message || (generateHintMutation.error as any)?.message || null;
 
     const userMessageCount = messages.filter(m => m.role === 'user').length;
-    const { score: dataCompleteness, details: completenessDetails } = calculateDataCompleteness(messages, importData);
 
-    // Check if all critical sections are complete (Work, Projects, Education, Skills, Certifications)
-    const criticalSections = completenessDetails.filter(d => d.priority === 'high');
-    const allCriticalComplete = criticalSections.every(s => s.complete);
-    const isReadyToGenerate = dataCompleteness >= 85 && allCriticalComplete; // Raised threshold to 85% and require all critical sections
+    // New agent-driven progress tracking (replaces old keyword-based system)
+    const progress = analyzeInterviewProgress(messages, agentReadyFlag, importData);
+    const { sections: completenessDetails, completedCount, totalCount, agentReady, readyToGenerate: isReadyToGenerate } = progress;
+
+    // Scan existing history for agent readiness on mount
+    useEffect(() => {
+        if (initialHistory && initialHistory.length > 0) {
+            const wasReady = detectAgentReadyInHistory(initialHistory);
+            if (wasReady) setAgentReadyFlag(true);
+        }
+    }, [initialHistory]);
 
     // Initialize chat on mount
     useEffect(() => {
@@ -325,6 +375,12 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                 const modelMessage: Message = { role: 'model', text: response.text, phase: response.phase };
                 const updatedMessages = [...newMessages, modelMessage];
                 setMessages(updatedMessages);
+
+                // Update agent readiness from API response
+                if (response.agentReady) {
+                    setAgentReadyFlag(true);
+                }
+
                 // Auto-save after AI response
                 setIsAutoSaving(true);
                 onSave(updatedMessages);
@@ -500,95 +556,90 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                         </span>
                     </motion.button>
 
-                    {/* Data Completeness Indicator */}
+                    {/* Data Completeness Indicator — Agent-driven Progress */}
                     <div className="hidden md:flex items-center gap-2">
                         <div className="relative group">
                             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-default transition-all group-hover:bg-white group-hover:border-slate-300">
                                 <div className="flex items-center gap-2">
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide leading-none mb-1">Quality</span>
-                                        <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                    {/* Section progress dots */}
+                                    <div className="flex items-center gap-1">
+                                        {completenessDetails.map((section, idx) => (
                                             <div
-                                                className={`h-full transition-all duration-700 ease-out ${dataCompleteness >= 85 ? 'bg-linear-to-r from-green-500 to-emerald-500' :
-                                                    dataCompleteness >= 60 ? 'bg-linear-to-r from-amber-500 to-yellow-500' :
-                                                        dataCompleteness >= 40 ? 'bg-linear-to-r from-orange-400 to-red-400' :
-                                                            'bg-slate-300'
+                                                key={idx}
+                                                className={`w-2 h-2 rounded-full transition-all duration-500 ${section.complete
+                                                    ? 'bg-emerald-500'
+                                                    : section.critical
+                                                        ? 'bg-slate-300'
+                                                        : 'bg-slate-200'
                                                     }`}
-                                                style={{ width: `${Math.max(dataCompleteness, 2)}%` }}
-                                            ></div>
-                                        </div>
+                                            />
+                                        ))}
                                     </div>
-                                    <div className="flex items-center gap-1 pl-1 border-l border-slate-200">
-                                        <div className={`w-1 h-1 rounded-full ${dataCompleteness >= 85 ? 'bg-green-500 animate-pulse' :
-                                            dataCompleteness >= 60 ? 'bg-amber-500' :
-                                                'bg-slate-300'
-                                            }`}></div>
-                                        <span className={`text-xs font-black tabular-nums ${dataCompleteness >= 85 ? 'text-green-600' :
-                                            dataCompleteness >= 60 ? 'text-amber-600' :
-                                                dataCompleteness >= 40 ? 'text-orange-500' :
+                                    <div className="flex items-center gap-1 pl-1.5 border-l border-slate-200">
+                                        {agentReady ? (
+                                            <motion.div
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                className="flex items-center gap-1"
+                                            >
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wide">{t('ready')}</span>
+                                            </motion.div>
+                                        ) : (
+                                            <span className={`text-[10px] font-bold tabular-nums ${completedCount >= totalCount - 1 ? 'text-emerald-600' :
+                                                completedCount >= 3 ? 'text-amber-600' :
                                                     'text-slate-400'
-                                            }`}>{dataCompleteness}%</span>
+                                                }`}>{completedCount}/{totalCount}</span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                             {/* Tooltip on hover */}
                             <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900 text-white text-xs rounded-xl p-4 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20 shadow-2xl border border-slate-700">
                                 <div className="space-y-3">
-                                    <p className="font-bold text-sm mb-2 text-slate-100">{t('dataQuality')}</p>
+                                    <p className="font-bold text-sm mb-2 text-slate-100">{t('interviewProgress')}</p>
 
-                                    {/* High Priority Items */}
-                                    {completenessDetails.filter(d => d.priority === 'high').length > 0 && (
-                                        <div className="mb-3">
-                                            <p className="text-[9px] text-amber-400 font-bold uppercase tracking-wider mb-2 flex items-center gap-1">
-                                                <AlertTriangle className="w-3 h-3" /> {t('criticalInfo')}
-                                            </p>
-                                            {completenessDetails.filter(d => d.priority === 'high').map((detail, idx) => (
-                                                <div key={idx} className="flex items-center gap-2.5 mb-2">
-                                                    {detail.complete ? (
-                                                        <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
-                                                    ) : (
-                                                        <div className="w-4 h-4 rounded-full border-2 border-amber-400 shrink-0 animate-pulse" />
-                                                    )}
-                                                    <span className={`text-xs font-medium ${detail.complete ? 'text-green-300' : 'text-amber-300'}`}>{detail.category}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Regular Items */}
+                                    {/* Section checklist */}
                                     <div className="space-y-2">
-                                        {completenessDetails.filter(d => d.priority !== 'high').map((detail, idx) => (
+                                        {completenessDetails.map((section, idx) => (
                                             <div key={idx} className="flex items-center gap-2.5">
-                                                {detail.complete ? (
-                                                    <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                                                {section.complete ? (
+                                                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                                ) : section.critical ? (
+                                                    <div className="w-4 h-4 rounded-full border-2 border-amber-400 shrink-0 animate-pulse" />
                                                 ) : (
-                                                    <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-500 shrink-0" />
+                                                    <div className="w-4 h-4 rounded-full border-2 border-slate-500 shrink-0" />
                                                 )}
-                                                <span className={`text-xs ${detail.complete ? 'text-green-300 font-medium' : 'text-slate-400'}`}>{detail.category}</span>
+                                                <span className={`text-xs font-medium ${section.complete ? 'text-emerald-300' :
+                                                    section.critical ? 'text-amber-300' : 'text-slate-400'
+                                                    }`}>{section.label}</span>
                                             </div>
                                         ))}
                                     </div>
 
                                     <div className="border-t border-slate-700 my-3 pt-3">
                                         <div className="flex justify-between items-center mb-1">
-                                            <span className="text-slate-400 text-[10px]">{t('responses')}</span>
-                                            <span className="text-white text-[10px] font-bold">{userMessageCount} / {importData ? '12+' : '16+'}</span>
+                                            <span className="text-slate-400 text-[10px]">{t('sectionsComplete')}</span>
+                                            <span className="text-white text-[10px] font-bold">{completedCount} / {totalCount}</span>
                                         </div>
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-400 text-[10px]">{t('qualityScore')}</span>
-                                            <span className={`text-[10px] font-bold ${dataCompleteness >= 85 ? 'text-green-400' :
-                                                dataCompleteness >= 60 ? 'text-amber-400' :
-                                                    'text-slate-400'
-                                                }`}>{dataCompleteness}%</span>
+                                            <span className="text-slate-400 text-[10px]">{t('responses')}</span>
+                                            <span className="text-white text-[10px] font-bold">{userMessageCount}</span>
                                         </div>
                                     </div>
-                                    {dataCompleteness >= 85 && allCriticalComplete ? (
-                                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2.5">
-                                            <p className="text-green-300 text-[10px] font-medium leading-relaxed">{t('excellent')}</p>
+                                    {agentReady ? (
+                                        <div className="bg-emerald-500/15 border border-emerald-500/30 rounded-lg p-2.5">
+                                            <p className="text-emerald-300 text-[10px] font-medium leading-relaxed flex items-center gap-1.5">
+                                                <Zap className="w-3 h-3" /> {t('readyToGenerateHint')}
+                                            </p>
                                         </div>
-                                    ) : dataCompleteness >= 60 ? (
+                                    ) : isReadyToGenerate ? (
+                                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2.5">
+                                            <p className="text-emerald-300 text-[10px] font-medium leading-relaxed">{t('allCriticalComplete')}</p>
+                                        </div>
+                                    ) : completedCount >= 3 ? (
                                         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5">
-                                            <p className="text-amber-300 text-[10px] leading-relaxed">{t('missingCritical')}</p>
+                                            <p className="text-amber-300 text-[10px] leading-relaxed">{t('gettingThere')}</p>
                                         </div>
                                     ) : (
                                         <div className="bg-slate-500/10 border border-slate-500/30 rounded-lg p-2.5">
@@ -599,19 +650,27 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                             </div>
                         </div>
 
-                        {/* Generate Resume Button - changes based on data completeness */}
-                        <button
+                        {/* Generate Resume Button — always available, visual emphasis changes based on readiness */}
+                        <motion.button
                             onClick={() => setShowGenerateConfirm(true)}
+                            animate={agentReady ? {
+                                boxShadow: ['0 0 0 0 rgba(16,185,129,0.3)', '0 0 0 8px rgba(16,185,129,0)', '0 0 0 0 rgba(16,185,129,0.3)'],
+                            } : {}}
+                            transition={agentReady ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : {}}
                             className={`flex items-center gap-2 text-xs px-4 py-2.5 rounded-xl font-bold transition-all duration-200 active:scale-95 ${isReadyToGenerate
                                 ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-200/50 hover:shadow-lg'
                                 : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm'
                                 }`}
-                            title={isReadyToGenerate ? t('generateResume') : 'Generate with incomplete data - missing critical sections'}
+                            title={isReadyToGenerate ? t('generateResume') : t('generateEarlyHint')}
                         >
-                            <ClipboardCheck className="w-4 h-4" />
-                            <span className="hidden sm:inline">{isReadyToGenerate ? t('generateResume') : t('forceGenerate')}</span>
-                            <span className="sm:hidden">{isReadyToGenerate ? 'Generate' : 'Force'}</span>
-                        </button>
+                            {isReadyToGenerate ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                            ) : (
+                                <ClipboardCheck className="w-4 h-4" />
+                            )}
+                            <span className="hidden sm:inline">{isReadyToGenerate ? t('generateResume') : t('generateEarly')}</span>
+                            <span className="sm:hidden">{isReadyToGenerate ? 'Generate' : 'Generate'}</span>
+                        </motion.button>
                     </div>
                 </div>
             </div>
@@ -643,31 +702,30 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                 </div>
 
                                 <div>
-                                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">{t('conversationSummary')}</h4>
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">{t('interviewProgress')}</h4>
                                     <div className="bg-white rounded-lg p-3 space-y-2">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-slate-600">{t('sectionsComplete')}</span>
+                                            <span className={`font-bold ${isReadyToGenerate ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                {completedCount} / {totalCount}
+                                            </span>
+                                        </div>
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-slate-600">{t('totalResponses')}</span>
                                             <span className="font-bold text-slate-900">{userMessageCount}</span>
                                         </div>
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-slate-600">{t('dataCompleteness')}</span>
-                                            <span className={`font-bold ${dataCompleteness >= 75 ? 'text-green-600' :
-                                                dataCompleteness >= 50 ? 'text-amber-600' :
-                                                    'text-orange-600'
-                                                }`}>{dataCompleteness}%</span>
-                                        </div>
                                         <div className="mt-3 pt-3 border-t border-slate-200">
                                             <p className="text-xs text-slate-500 mb-2">{t('collectionStatus')}</p>
-                                            <div className="space-y-1">
-                                                {completenessDetails.map((detail, idx) => (
+                                            <div className="space-y-1.5">
+                                                {completenessDetails.map((section, idx) => (
                                                     <div key={idx} className="flex items-center gap-2 text-xs">
-                                                        {detail.complete ? (
-                                                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                                                        {section.complete ? (
+                                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                                                         ) : (
-                                                            <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-300 shrink-0" />
+                                                            <div className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 ${section.critical ? 'border-amber-400' : 'border-slate-300'}`} />
                                                         )}
-                                                        <span className={detail.complete ? 'text-slate-700' : 'text-slate-400'}>
-                                                            {detail.category}
+                                                        <span className={section.complete ? 'text-slate-700 font-medium' : 'text-slate-400'}>
+                                                            {section.label}
                                                         </span>
                                                     </div>
                                                 ))}
@@ -676,13 +734,27 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                     </div>
                                 </div>
 
-                                {dataCompleteness < 85 && (
+                                {/* Agent Ready Confirmation */}
+                                {agentReady && (
+                                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                                        <div className="flex items-start gap-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="text-xs font-semibold text-emerald-900 mb-1">{t('agentConfirmsReady')}</p>
+                                                <p className="text-xs text-emerald-800">{t('agentConfirmsReadyDesc')}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Warning when generating without agent readiness */}
+                                {!isReadyToGenerate && (
                                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                                         <div className="flex items-start gap-2">
                                             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                             <div>
-                                                <p className="text-xs font-semibold text-amber-900 mb-1">{t('qualityBelowRecommended')}</p>
-                                                <p className="text-xs text-amber-800">{t('qualityBelowDesc')}</p>
+                                                <p className="text-xs font-semibold text-amber-900 mb-1">{t('incompleteDataTitle')}</p>
+                                                <p className="text-xs text-amber-800">{t('incompleteDataDesc')}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -690,8 +762,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
 
                                 {/* Missing Critical Sections Warning */}
                                 {(() => {
-                                    const missingCritical = completenessDetails.filter(d => d.priority === 'high' && !d.complete);
-                                    if (missingCritical.length > 0) {
+                                    const missingCritical = completenessDetails.filter(d => d.critical && !d.complete);
+                                    if (missingCritical.length > 0 && !agentReady) {
                                         return (
                                             <div className="bg-red-50 border border-red-300 rounded-lg p-3">
                                                 <div className="flex items-start gap-2">
@@ -701,7 +773,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                                         <p className="text-xs text-red-800 mb-2">{t('missingCriticalDesc')}</p>
                                                         <ul className="text-xs text-red-800 list-disc list-inside space-y-0.5">
                                                             {missingCritical.map((section, idx) => (
-                                                                <li key={idx}>{section.category}</li>
+                                                                <li key={idx}>{section.label}</li>
                                                             ))}
                                                         </ul>
                                                         <p className="text-xs text-red-800 mt-2 font-medium">{t('continueToProvide')}</p>
@@ -710,29 +782,6 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                             </div>
                                         );
                                     }
-                                    return null;
-                                })()}
-
-                                {/* Unresolved Gap Questions Warning */}
-                                {(() => {
-                                    const hasUnresolvedGaps = hasUnresolvedGapQuestions(messages);
-                                    const hasGapDiscussion = completenessDetails.find(d => d.category === 'Career Gaps')?.complete;
-
-                                    // Only show warning if there are unresolved gap questions
-                                    if (hasUnresolvedGaps && !hasGapDiscussion) {
-                                        return (
-                                            <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">
-                                                <div className="flex items-start gap-2">
-                                                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                                                    <div className="flex-1">
-                                                        <p className="text-xs font-semibold text-amber-900 mb-1">{t('timelineGapsTitle')}</p>
-                                                        <p className="text-xs text-amber-800">{t('timelineGapsDesc')}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    }
-
                                     return null;
                                 })()}
                             </div>
@@ -751,13 +800,42 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                         setShowGenerateConfirm(false);
                                         onFinish(messages);
                                     }}
-                                    className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all duration-200 shadow-lg shadow-indigo-200/50 hover:shadow-xl active:scale-[0.98]"
+                                    className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-[0.98] ${isReadyToGenerate
+                                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200/50'
+                                        : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200/50'
+                                        }`}
                                 >
                                     {t('confirmGenerate')}
                                 </button>
                             </div>
                         </div>
                     </div>
+                )}
+
+                {/* Agent Ready Banner — appears in chat when agent signals all sections complete */}
+                {agentReady && !showGenerateConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 12, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ duration: 0.4, ease: 'easeOut' }}
+                        className="mx-auto max-w-sm bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-5 text-center shadow-lg shadow-emerald-100/50"
+                    >
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: 'spring', delay: 0.2 }}
+                        >
+                            <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-3" />
+                        </motion.div>
+                        <p className="font-bold text-emerald-900 text-base mb-1">{t('readyBannerTitle')}</p>
+                        <p className="text-sm text-emerald-700 mb-4">{t('readyBannerDesc')}</p>
+                        <button
+                            onClick={() => setShowGenerateConfirm(true)}
+                            className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all duration-200 shadow-md shadow-emerald-200/50 hover:shadow-lg active:scale-95"
+                        >
+                            {t('generateResume')}
+                        </button>
+                    </motion.div>
                 )}
 
                 {error && (
