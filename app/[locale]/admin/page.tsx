@@ -12,7 +12,8 @@ import { AdminSettings } from '@/components/admin/AdminSettings';
 import { AdminPrompts } from '@/components/admin/AdminPrompts';
 import { AdminUsers } from '@/components/admin/AdminUsers';
 import { AdminAuditLog } from '@/components/admin/AdminAuditLog';
-import AppNavbar from '@/components/navigation/AppNavbar';
+import AppShell from '@/components/navigation/AppShell';
+import { AdminSkeleton } from '@/components/navigation/Skeletons';
 
 type AdminTab = 'overview' | 'settings' | 'prompts' | 'users' | 'audit';
 
@@ -45,14 +46,7 @@ export default function AdminDashboardPage() {
     }, [status, router]);
 
     if (status === 'loading' || isAdmin === null) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <div className="text-center space-y-4">
-                    <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto" />
-                    <p className="text-slate-600">Verifying admin access...</p>
-                </div>
-            </div>
-        );
+        return <AdminSkeleton />;
     }
 
     if (!isAdmin) {
@@ -85,10 +79,7 @@ export default function AdminDashboardPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-50">
-            {/* Shared navigation */}
-            <AppNavbar isAdmin={true} />
-
+        <AppShell>
             {/* Admin sub-header */}
             <div className="bg-white border-b border-slate-100">
                 <div className="max-w-7xl mx-auto px-6 py-4">
@@ -160,6 +151,6 @@ export default function AdminDashboardPage() {
                 {activeTab === 'users' && <AdminUsers adminRole={adminRole} />}
                 {activeTab === 'audit' && <AdminAuditLog />}
             </div>
-        </div>
+        </AppShell>
     );
 }

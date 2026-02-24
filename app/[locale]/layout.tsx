@@ -4,6 +4,7 @@ import "../globals.css";
 import { Providers } from "../providers";
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
+import PageTransition from '../../components/navigation/PageTransition';
 
 const inter = Inter({
   variable: "--font-inter",
@@ -31,7 +32,9 @@ export default async function RootLayout({
       <body className={`${inter.variable} bg-slate-50 text-slate-900 antialiased`}>
         <NextIntlClientProvider messages={messages}>
           <Providers>
-            {children}
+            <PageTransition>
+              {children}
+            </PageTransition>
           </Providers>
         </NextIntlClientProvider>
       </body>

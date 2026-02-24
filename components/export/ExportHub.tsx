@@ -5,6 +5,7 @@ import { useLocale } from 'next-intl';
 import { EXPORT_PLATFORMS, ExportPlatform, ExportVariant, generateExportText } from '../../lib/export-templates';
 import { ResumeData } from '../../types';
 import { Copy, Check, ChevronDown, Link as LinkIcon, AlertCircle, ExternalLink } from 'lucide-react';
+import BackToDashboard from '../navigation/BackToDashboard';
 
 interface ExportHubProps {
     resumeData?: ResumeData;
@@ -72,6 +73,9 @@ export default function ExportHub({ resumeData, candidateSlug, projectId, projec
 
     return (
         <div className="max-w-6xl mx-auto px-4 py-8 page-transition">
+            {/* Back navigation */}
+            <BackToDashboard />
+
             <div className="mb-8">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-3">
                     <ExternalLink className="w-3 h-3" /> Export Center

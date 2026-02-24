@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { AuthButton } from '../../components/AuthButton';
 import { ArrowRight, Zap, FileText, BarChart3, CheckCircle2, Sparkles } from 'lucide-react';
@@ -20,19 +21,15 @@ export default function LandingPage() {
     }
   }, [status, router]);
 
-  const handleGetStarted = () => {
-    router.push('/auth/signin');
-  };
-
   return (
     <div className="font-sans text-slate-900 bg-white min-h-screen">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 glass border-b border-slate-100 shadow-sm shadow-slate-100/50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="group flex items-center gap-2.5">
+          <Link href="/" className="group flex items-center gap-2.5">
             <span className="text-2xl drop-shadow-sm group-hover:scale-110 transition-transform inline-block">🚀</span>
             <span className="font-black text-slate-800 tracking-tight text-lg">JNJGO Resume</span>
-          </div>
+          </Link>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
             <AuthButton />
@@ -69,13 +66,13 @@ export default function LandingPage() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <button
-                onClick={handleGetStarted}
+              <Link
+                href="/auth/signin"
                 className="group relative inline-flex items-center justify-center px-8 py-4 font-bold text-white text-lg transition-all duration-300 bg-slate-900 rounded-2xl hover:bg-indigo-600 hover:shadow-2xl hover:shadow-indigo-500/25 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 active:scale-[0.98]"
               >
                 {t('getStarted')}
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </button>
+              </Link>
               <p className="text-sm text-slate-400 font-medium">{t('freeToUse')}</p>
             </div>
           </div>
@@ -251,13 +248,13 @@ export default function LandingPage() {
         <div className="relative max-w-3xl mx-auto text-center px-6 space-y-8">
           <h2 className="text-3xl md:text-4xl font-black text-slate-900">{t('ctaTitle')}</h2>
           <p className="text-lg text-slate-500">{t('ctaSubtitle')}</p>
-          <button
-            onClick={handleGetStarted}
+          <Link
+            href="/auth/signin"
             className="group inline-flex items-center justify-center px-10 py-5 font-bold text-white text-lg transition-all duration-300 bg-slate-900 rounded-2xl hover:bg-indigo-600 hover:shadow-2xl hover:shadow-indigo-500/25 hover:-translate-y-1 active:scale-[0.98]"
           >
             {t('getStarted')}
             <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-          </button>
+          </Link>
         </div>
       </section>
 

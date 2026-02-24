@@ -10,7 +10,6 @@ import {
     LayoutDashboard,
     FileText,
     UserCircle,
-    Share2,
     Shield,
     LogOut,
     ChevronDown,

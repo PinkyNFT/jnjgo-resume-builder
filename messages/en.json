@@ -10,7 +10,8 @@
 		"quickActions": "Quick Actions",
 		"newProject": "New Project",
 		"recentActivity": "Recent Activity",
-		"viewAll": "View All"
+		"viewAll": "View All",
+		"backToDashboard": "Back to Dashboard"
 	},
 	"Common": {
 		"cancel": "Cancel",
@@ -20,7 +21,7 @@
 		"close": "Close",
 		"saved": "Saved!",
 		"error": "Error",
-		"reload": "Reload page",
+		"reload": "Retry",
 		"confirmDelete": "Are you sure you want to delete this project?"
 	},
 	"Landing": {

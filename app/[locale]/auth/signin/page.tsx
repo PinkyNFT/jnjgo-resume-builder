@@ -4,6 +4,7 @@ import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { Shield, Zap, FileText, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 function SignInContent() {
     const searchParams = useSearchParams();
@@ -98,10 +99,10 @@ function SignInContent() {
             <div className="w-full lg:w-1/2 flex flex-col bg-slate-50">
                 {/* Mobile back button */}
                 <div className="p-6 lg:p-8">
-                    <a href="/" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+                    <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
                         <ArrowLeft className="w-4 h-4" />
                         Back to home
-                    </a>
+                    </Link>
                 </div>
 
                 <div className="flex-1 flex items-center justify-center px-6 pb-12">

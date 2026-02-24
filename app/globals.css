@@ -50,12 +50,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Text selection ────────────────────────────────── */
-::selection {
-  background: color-mix(in srgb, var(--accent) 25%, transparent);
-  color: var(--foreground);
-}
-
 /* ── Custom scrollbar ──────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
@@ -167,17 +161,26 @@ select::placeholder {
   opacity: 1;
 }
 
-/* Focus ring for agentic inputs */
+/* Focus ring for agentic inputs (skip elements that opt out with .no-global-focus) */
 input:focus,
-textarea:focus,
+textarea:focus:not(.no-global-focus),
 select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
+/* Opt-out: elements with .no-global-focus manage their own focus styles */
+.no-global-focus,
+.no-global-focus:focus,
+.no-global-focus:focus-visible,
+.no-global-focus:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* ── Focus visible for accessibility ───────────────── */
-:focus-visible {
+:focus-visible:not(.no-global-focus) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

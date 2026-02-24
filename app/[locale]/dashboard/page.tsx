@@ -15,6 +15,7 @@ import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/da
 import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2, Sparkles, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import AppNavbar from '../../../components/navigation/AppNavbar';
+import { DashboardSkeleton } from '../../../components/navigation/Skeletons';
 
 // --- Sub-Components ---
 
@@ -630,20 +631,7 @@ export default function Page() {
   return (
     <div className="font-sans text-slate-900 bg-slate-50 min-h-screen">
       {isLoading ? (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center space-y-6">
-            <div className="relative w-16 h-16 mx-auto">
-              <div className="absolute inset-0 bg-indigo-100 rounded-2xl animate-pulse" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-slate-700 font-semibold">Loading your workspace...</p>
-              <p className="text-sm text-slate-400">Fetching projects and settings</p>
-            </div>
-          </div>
-        </div>
+        <DashboardSkeleton />
       ) : (
         <>
           {step === 'dashboard' && (

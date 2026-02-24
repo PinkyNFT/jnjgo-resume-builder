@@ -845,7 +845,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                             <p className="font-semibold">{tCommon('error')}</p>
                             <p>{error}</p>
                             {error.includes('overloaded') && (
-                                <button onClick={() => window.location.reload()} className="mt-2 text-xs underline hover:no-underline">{tCommon('reload')}</button>
+                                <button onClick={() => { sendMessageMutation.reset(); generateHintMutation.reset(); }} className="mt-2 text-xs underline hover:no-underline">{tCommon('reload')}</button>
                             )}
                         </div>
                     </div>
@@ -931,7 +931,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                     </div>
 
                     {/* Input Area with improved styling */}
-                    <div className={`flex-1 rounded-xl flex items-center px-4 py-1.5 border-2 transition-all duration-200 ${isLoading
+                    <div className={`no-global-focus flex-1 rounded-xl flex items-center px-4 py-1.5 border-2 transition-all duration-200 ${isLoading
                         ? 'bg-slate-100 border-slate-200'
                         : 'bg-slate-50 border-slate-200 focus-within:border-indigo-400 focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.08)]'
                         }`}>
@@ -944,7 +944,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                             onCompositionEnd={handleCompositionEnd}
                             placeholder={isLoading ? t('agentThinking') : t('placeholder')}
                             disabled={isLoading}
-                            className="flex-1 bg-transparent border-none focus:ring-0 resize-none h-10 py-2.5 text-sm outline-none text-slate-800 placeholder:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="no-global-focus flex-1 bg-transparent border-none focus:ring-0 resize-none h-10 py-2.5 text-sm outline-none text-slate-800 placeholder:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
                             rows={1}
                         />
                     </div>
