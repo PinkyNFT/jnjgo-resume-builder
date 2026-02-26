@@ -257,11 +257,10 @@ function OnboardingContent() {
                                         <button
                                             key={size.value}
                                             onClick={() => setCompanySize(size.value)}
-                                            className={`p-2.5 rounded-xl text-center border-2 transition-all duration-200 ${
-                                                companySize === size.value
+                                            className={`p-2.5 rounded-xl text-center border-2 transition-all duration-200 ${companySize === size.value
                                                     ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                                                     : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200 hover:bg-white'
-                                            }`}
+                                                }`}
                                         >
                                             <div className="text-xs font-bold">{size.label}</div>
                                             <div className="text-[10px] text-slate-400 mt-0.5">{size.desc}</div>
@@ -280,11 +279,10 @@ function OnboardingContent() {
                                         <button
                                             key={ind}
                                             onClick={() => setIndustry(ind)}
-                                            className={`px-3.5 py-2 rounded-lg text-xs font-semibold border transition-all duration-200 ${
-                                                industry === ind
+                                            className={`px-3.5 py-2 rounded-lg text-xs font-semibold border transition-all duration-200 ${industry === ind
                                                     ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                                                     : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                                            }`}
+                                                }`}
                                         >
                                             {ind}
                                         </button>

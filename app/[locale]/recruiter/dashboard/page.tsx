@@ -171,9 +171,8 @@ export default function RecruiterDashboardPage() {
                             <div className="relative">
                                 <button
                                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                                    className={`flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl transition-all duration-200 ${
-                                        userMenuOpen ? 'bg-slate-100 ring-2 ring-slate-200' : 'hover:bg-slate-50'
-                                    }`}
+                                    className={`flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl transition-all duration-200 ${userMenuOpen ? 'bg-slate-100 ring-2 ring-slate-200' : 'hover:bg-slate-50'
+                                        }`}
                                 >
                                     {session?.user?.image ? (
                                         <img

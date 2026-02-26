@@ -108,22 +108,20 @@ function SelectRoleContent() {
                     <button
                         onClick={() => setSelectedRole('candidate')}
                         disabled={isSubmitting}
-                        className={`group relative text-left p-6 rounded-2xl border-2 transition-all duration-300 ${
-                            selectedRole === 'candidate'
+                        className={`group relative text-left p-6 rounded-2xl border-2 transition-all duration-300 ${selectedRole === 'candidate'
                                 ? 'border-indigo-600 bg-white shadow-xl shadow-indigo-100/50 ring-4 ring-indigo-50'
                                 : 'border-slate-200 bg-white hover:border-indigo-300 hover:shadow-lg hover:-translate-y-0.5'
-                        } disabled:opacity-60 disabled:cursor-not-allowed`}
+                            } disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                         {selectedRole === 'candidate' && (
                             <div className="absolute top-4 right-4">
                                 <CheckCircle2 className="w-6 h-6 text-indigo-600" />
                             </div>
                         )}
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-all duration-300 ${
-                            selectedRole === 'candidate'
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-all duration-300 ${selectedRole === 'candidate'
                                 ? 'bg-indigo-600 shadow-lg shadow-indigo-200/50'
                                 : 'bg-indigo-50 group-hover:bg-indigo-100'
-                        }`}>
+                            }`}>
                             <FileText className={`w-7 h-7 ${selectedRole === 'candidate' ? 'text-white' : 'text-indigo-600'}`} />
                         </div>
                         <h3 className="text-xl font-bold text-slate-900 mb-2">I&apos;m a Candidate</h3>
@@ -144,22 +142,20 @@ function SelectRoleContent() {
                     <button
                         onClick={() => setSelectedRole('recruiter')}
                         disabled={isSubmitting}
-                        className={`group relative text-left p-6 rounded-2xl border-2 transition-all duration-300 ${
-                            selectedRole === 'recruiter'
+                        className={`group relative text-left p-6 rounded-2xl border-2 transition-all duration-300 ${selectedRole === 'recruiter'
                                 ? 'border-emerald-600 bg-white shadow-xl shadow-emerald-100/50 ring-4 ring-emerald-50'
                                 : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-lg hover:-translate-y-0.5'
-                        } disabled:opacity-60 disabled:cursor-not-allowed`}
+                            } disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                         {selectedRole === 'recruiter' && (
                             <div className="absolute top-4 right-4">
                                 <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                             </div>
                         )}
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-all duration-300 ${
-                            selectedRole === 'recruiter'
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-all duration-300 ${selectedRole === 'recruiter'
                                 ? 'bg-emerald-600 shadow-lg shadow-emerald-200/50'
                                 : 'bg-emerald-50 group-hover:bg-emerald-100'
-                        }`}>
+                            }`}>
                             <Search className={`w-7 h-7 ${selectedRole === 'recruiter' ? 'text-white' : 'text-emerald-600'}`} />
                         </div>
                         <h3 className="text-xl font-bold text-slate-900 mb-2">I&apos;m a Recruiter</h3>
@@ -189,13 +185,12 @@ function SelectRoleContent() {
                     <button
                         onClick={handleSelectRole}
                         disabled={!selectedRole || isSubmitting}
-                        className={`inline-flex items-center justify-center gap-2 px-10 py-4 font-bold text-lg rounded-2xl transition-all duration-300 ${
-                            selectedRole
+                        className={`inline-flex items-center justify-center gap-2 px-10 py-4 font-bold text-lg rounded-2xl transition-all duration-300 ${selectedRole
                                 ? selectedRole === 'recruiter'
                                     ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xl shadow-emerald-200/40 hover:-translate-y-0.5'
                                     : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-200/40 hover:-translate-y-0.5'
                                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                        } disabled:cursor-not-allowed disabled:hover:translate-y-0`}
+                            } disabled:cursor-not-allowed disabled:hover:translate-y-0`}
                     >
                         {isSubmitting ? (
                             <>

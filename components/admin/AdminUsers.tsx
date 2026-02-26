@@ -224,11 +224,10 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
                                                 </select>
                                             ) : (
                                                 user.userRole ? (
-                                                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
-                                                        user.userRole === 'recruiter'
+                                                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${user.userRole === 'recruiter'
                                                             ? 'bg-emerald-100 text-emerald-700'
                                                             : 'bg-blue-100 text-blue-700'
-                                                    }`}>
+                                                        }`}>
                                                         {user.userRole === 'recruiter' ? (
                                                             <Briefcase className="w-3 h-3" />
                                                         ) : (

@@ -522,8 +522,8 @@ export default function PrivateProfileEditor() {
                                     whileHover={{ scale: 1.01 }}
                                     whileTap={{ scale: 0.98 }}
                                     className={`flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all duration-200 ${active
-                                            ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
-                                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                                        ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
+                                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
                                         }`}
                                 >
                                     <div className={`w-10 h-10 rounded-xl ${opt.color} flex items-center justify-center shrink-0 shadow-sm`}>
@@ -557,8 +557,8 @@ export default function PrivateProfileEditor() {
                                     whileHover={{ scale: 1.01 }}
                                     whileTap={{ scale: 0.98 }}
                                     className={`flex-1 px-4 py-3.5 rounded-xl border-2 text-left transition-all duration-200 ${active
-                                            ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
-                                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                                        ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
+                                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
                                         }`}
                                 >
                                     <div className="flex items-center gap-2 mb-1">
@@ -802,11 +802,10 @@ export default function PrivateProfileEditor() {
                             disabled={isSaving || (!isDirty && isPublished)}
                             whileHover={!isSaving && (isDirty || !isPublished) ? { y: -1, boxShadow: '0 8px 25px -5px rgba(99,102,241,0.25)' } : {}}
                             whileTap={!isSaving && (isDirty || !isPublished) ? { scale: 0.97 } : {}}
-                            className={`px-6 py-2.5 text-sm font-bold rounded-xl inline-flex items-center justify-center gap-2 transition-all ${
-                                !isDirty && isPublished
+                            className={`px-6 py-2.5 text-sm font-bold rounded-xl inline-flex items-center justify-center gap-2 transition-all ${!isDirty && isPublished
                                     ? 'text-slate-400 bg-slate-100 border-2 border-slate-200 cursor-default'
                                     : 'text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40'
-                            }`}
+                                }`}
                         >
                             {isSaving ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
