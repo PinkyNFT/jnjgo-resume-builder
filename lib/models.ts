@@ -12,7 +12,8 @@ import {
     VersionTrigger,
     CandidatePrivateProfile,
     CandidatePublicPage,
-    ExportEvent
+    ExportEvent,
+    RecruiterProfile
 } from '../types';
 
 // ===== INTERFACES FOR MONGOOSE DOCUMENTS =====
@@ -54,6 +55,13 @@ export interface IExportEventDocument extends Omit<Document, '_id'>, Omit<Export
     userId: string;
     projectId?: string | null;
     copiedAt: Date;
+}
+
+export interface IRecruiterProfileDocument extends Omit<Document, '_id'>, Omit<RecruiterProfile, 'id' | 'createdAt' | 'updatedAt'> {
+    _id: Types.ObjectId;
+    userId: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 // ===== SCHEMAS =====
@@ -259,6 +267,7 @@ const CandidatePrivateProfileSchema = new Schema<ICandidatePrivateProfileDocumen
     dealBreakers: [{ type: String }],
     interviewAvailability: { type: String },
     jobChangeReasonSummary: { type: String },
+    highlightedProjectId: { type: String, default: null },
     visibilityFlags: {
         isRecruiterOnly: { type: Boolean, default: true }
     }
@@ -287,6 +296,21 @@ const ExportEventSchema = new Schema<IExportEventDocument>({
     collection: 'exportEvents'
 });
 
+const RecruiterProfileSchema = new Schema<IRecruiterProfileDocument>({
+    userId: { type: String, required: true, unique: true, index: true },
+    companyName: { type: String, required: true },
+    jobTitle: { type: String, required: true },
+    phone: { type: String },
+    companyWebsite: { type: String },
+    companySize: { type: String, enum: ['startup', 'small', 'medium', 'large', 'enterprise'] },
+    industry: { type: String },
+    bio: { type: String },
+    onboardingCompleted: { type: Boolean, default: false }
+}, {
+    timestamps: true,
+    collection: 'recruiterProfiles'
+});
+
 // ===== MODELS =====
 
 export const UserProfileModel: Model<IUserProfileDocument> =
@@ -306,3 +330,6 @@ export const CandidatePublicPageModel: Model<ICandidatePublicPageDocument> =
 
 export const ExportEventModel: Model<IExportEventDocument> =
     mongoose.models.ExportEvent || mongoose.model<IExportEventDocument>('ExportEvent', ExportEventSchema);
+
+export const RecruiterProfileModel: Model<IRecruiterProfileDocument> =
+    mongoose.models.RecruiterProfile || mongoose.model<IRecruiterProfileDocument>('RecruiterProfile', RecruiterProfileSchema);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Loader2, Search, Shield, ShieldOff, Users as UsersIcon, ChevronLeft, ChevronRight, FileText, MapPin, Mail } from 'lucide-react';
+import { Loader2, Search, Shield, ShieldOff, Users as UsersIcon, ChevronLeft, ChevronRight, FileText, MapPin, Mail, UserCheck, Briefcase } from 'lucide-react';
 
 interface UserData {
     userId: string;
@@ -10,6 +10,7 @@ interface UserData {
     location: string;
     createdAt: string;
     updatedAt: string;
+    duplicateCount?: number;
     projectStats?: {
         count: number;
         completed: number;
@@ -17,6 +18,7 @@ interface UserData {
     };
     isAdmin: boolean;
     adminRole?: string;
+    userRole?: 'candidate' | 'recruiter' | null;
 }
 
 interface Pagination {
@@ -89,6 +91,35 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
         }
     };
 
+    const handleUserRoleChange = async (user: UserData, newRole: 'candidate' | 'recruiter') => {
+        if (user.userRole === newRole) return;
+        if (!confirm(`Change ${user.email}'s role to ${newRole}?`)) return;
+
+        setActionLoading(prev => ({ ...prev, [`role_${user.userId}`]: true }));
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.userId,
+                    email: user.email,
+                    name: user.fullName,
+                    action: 'change_user_role',
+                    role: newRole
+                })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed');
+            }
+            fetchUsers(pagination.page, search);
+        } catch (err: any) {
+            alert(err.message || 'Failed to change user role');
+        } finally {
+            setActionLoading(prev => ({ ...prev, [`role_${user.userId}`]: false }));
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -141,7 +172,8 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
                                     <th className="text-left text-xs font-semibold text-slate-600 uppercase tracking-wide px-6 py-3">Location</th>
                                     <th className="text-center text-xs font-semibold text-slate-600 uppercase tracking-wide px-6 py-3">Projects</th>
                                     <th className="text-center text-xs font-semibold text-slate-600 uppercase tracking-wide px-6 py-3">Completed</th>
-                                    <th className="text-center text-xs font-semibold text-slate-600 uppercase tracking-wide px-6 py-3">Role</th>
+                                    <th className="text-center text-xs font-semibold text-slate-600 uppercase tracking-wide px-6 py-3">User Role</th>
+                                    <th className="text-center text-xs font-semibold text-slate-600 uppercase tracking-wide px-6 py-3">Admin</th>
                                     {isSuperAdmin && (
                                         <th className="text-right text-xs font-semibold text-slate-600 uppercase tracking-wide px-6 py-3">Actions</th>
                                     )}
@@ -175,6 +207,41 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
                                             <span className="text-sm text-slate-700">{user.projectStats?.completed || 0}</span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
+                                            {actionLoading[`role_${user.userId}`] ? (
+                                                <Loader2 className="w-4 h-4 animate-spin text-slate-400 mx-auto" />
+                                            ) : isSuperAdmin ? (
+                                                <select
+                                                    value={user.userRole || ''}
+                                                    onChange={e => {
+                                                        const val = e.target.value as 'candidate' | 'recruiter';
+                                                        if (val) handleUserRoleChange(user, val);
+                                                    }}
+                                                    className="text-xs font-medium px-2 py-1 rounded-lg border border-slate-300 bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer"
+                                                >
+                                                    <option value="">Not set</option>
+                                                    <option value="candidate">Candidate</option>
+                                                    <option value="recruiter">Recruiter</option>
+                                                </select>
+                                            ) : (
+                                                user.userRole ? (
+                                                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
+                                                        user.userRole === 'recruiter'
+                                                            ? 'bg-emerald-100 text-emerald-700'
+                                                            : 'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                        {user.userRole === 'recruiter' ? (
+                                                            <Briefcase className="w-3 h-3" />
+                                                        ) : (
+                                                            <UserCheck className="w-3 h-3" />
+                                                        )}
+                                                        {user.userRole === 'recruiter' ? 'Recruiter' : 'Candidate'}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-slate-400">Not set</span>
+                                                )
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
                                             {user.isAdmin ? (
                                                 <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${user.adminRole === 'super_admin'
                                                     ? 'bg-purple-100 text-purple-700'
@@ -184,7 +251,7 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
                                                     {user.adminRole === 'super_admin' ? 'Super Admin' : 'Admin'}
                                                 </span>
                                             ) : (
-                                                <span className="text-xs text-slate-500">User</span>
+                                                <span className="text-xs text-slate-400">—</span>
                                             )}
                                         </td>
                                         {isSuperAdmin && (

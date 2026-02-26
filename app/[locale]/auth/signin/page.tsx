@@ -3,23 +3,28 @@
 import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { Shield, Zap, FileText, ArrowLeft } from 'lucide-react';
+import { Shield, Zap, FileText, ArrowLeft, Search, DollarSign, Users, Ban } from 'lucide-react';
 import Link from 'next/link';
 
 function SignInContent() {
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+    const intent = searchParams.get('intent'); // 'recruiter' for recruiter-focused sign-in
+    const isRecruiterIntent = intent === 'recruiter';
     const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
 
     const handleSignIn = (provider: string) => {
         setLoadingProvider(provider);
-        signIn(provider, { callbackUrl });
+        // After OAuth, redirect to select-role page if no callbackUrl that suggests existing flow
+        // Pass intent and original callbackUrl to role selection
+        const roleSelectUrl = `/auth/select-role?callbackUrl=${encodeURIComponent(callbackUrl)}${isRecruiterIntent ? '&intent=recruiter' : ''}`;
+        signIn(provider, { callbackUrl: roleSelectUrl });
     };
 
     return (
         <div className="min-h-screen flex">
             {/* Left Panel - Branding */}
-            <div className="hidden lg:flex lg:w-1/2 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 relative overflow-hidden">
+            <div className={`hidden lg:flex lg:w-1/2 relative overflow-hidden ${isRecruiterIntent ? 'bg-linear-to-br from-slate-900 via-emerald-950 to-slate-900' : 'bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900'}`}>
                 {/* Decorative elements */}
                 <div className="absolute top-0 left-0 w-full h-full">
                     <div className="absolute top-20 left-20 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl"></div>
@@ -45,52 +50,107 @@ function SignInContent() {
                     {/* Main content */}
                     <div className="space-y-8 max-w-lg">
                         <div className="space-y-4">
-                            <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight">
-                                Build Resumes That
-                                <span className="block text-transparent bg-clip-text bg-linear-to-r from-indigo-400 via-purple-400 to-pink-400">
-                                    Win Interviews
-                                </span>
-                            </h1>
-                            <p className="text-lg text-slate-400 leading-relaxed">
-                                AI-powered resume builder that helps IT professionals create decision-making documents, not just job listings.
-                            </p>
+                            {isRecruiterIntent ? (
+                                <>
+                                    <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight">
+                                        Unlock Verified
+                                        <span className="block text-transparent bg-clip-text bg-linear-to-r from-emerald-400 via-teal-400 to-cyan-400">
+                                            Candidate Profiles
+                                        </span>
+                                    </h1>
+                                    <p className="text-lg text-slate-400 leading-relaxed">
+                                        Access salary expectations, career intent, and deal-breakers — all verified through AI-powered interviews.
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight">
+                                        Build Resumes That
+                                        <span className="block text-transparent bg-clip-text bg-linear-to-r from-indigo-400 via-purple-400 to-pink-400">
+                                            Win Interviews
+                                        </span>
+                                    </h1>
+                                    <p className="text-lg text-slate-400 leading-relaxed">
+                                        AI-powered resume builder that helps IT professionals create decision-making documents, not just job listings.
+                                    </p>
+                                </>
+                            )}
                         </div>
 
-                        {/* Feature highlights */}
+                        {/* Feature highlights - recruiter vs candidate */}
                         <div className="space-y-4">
-                            <div className="flex items-start gap-4 group">
-                                <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">
-                                    <Zap className="w-5 h-5 text-indigo-400" />
-                                </div>
-                                <div>
-                                    <h3 className="text-white font-semibold mb-0.5">AI Interview Process</h3>
-                                    <p className="text-sm text-slate-400">Smart AI guides you through structured questions to capture your full career impact.</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-4 group">
-                                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0 border border-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
-                                    <FileText className="w-5 h-5 text-purple-400" />
-                                </div>
-                                <div>
-                                    <h3 className="text-white font-semibold mb-0.5">Master Resume Format</h3>
-                                    <p className="text-sm text-slate-400">Professional format emphasizing decision-making, metrics, and career progression.</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-4 group">
-                                <div className="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center shrink-0 border border-pink-500/20 group-hover:bg-pink-500/30 transition-colors">
-                                    <Shield className="w-5 h-5 text-pink-400" />
-                                </div>
-                                <div>
-                                    <h3 className="text-white font-semibold mb-0.5">Quality Scoring</h3>
-                                    <p className="text-sm text-slate-400">Built-in evaluation ensures your resume meets professional standards.</p>
-                                </div>
-                            </div>
+                            {isRecruiterIntent ? (
+                                <>
+                                    <div className="flex items-start gap-4 group">
+                                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/20 group-hover:bg-emerald-500/30 transition-colors">
+                                            <DollarSign className="w-5 h-5 text-emerald-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-white font-semibold mb-0.5">Salary Expectations</h3>
+                                            <p className="text-sm text-slate-400">See minimum and target salary upfront — no guessing.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-4 group">
+                                        <div className="w-10 h-10 rounded-lg bg-teal-500/20 flex items-center justify-center shrink-0 border border-teal-500/20 group-hover:bg-teal-500/30 transition-colors">
+                                            <Users className="w-5 h-5 text-teal-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-white font-semibold mb-0.5">Career Intent & Timing</h3>
+                                            <p className="text-sm text-slate-400">Know if they&apos;re actively looking, open to offers, or planning to move soon.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-4 group">
+                                        <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center shrink-0 border border-cyan-500/20 group-hover:bg-cyan-500/30 transition-colors">
+                                            <Ban className="w-5 h-5 text-cyan-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-white font-semibold mb-0.5">Deal Breakers</h3>
+                                            <p className="text-sm text-slate-400">Avoid mismatched roles — see working conditions and non-negotiables.</p>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex items-start gap-4 group">
+                                        <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">
+                                            <Zap className="w-5 h-5 text-indigo-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-white font-semibold mb-0.5">AI Interview Process</h3>
+                                            <p className="text-sm text-slate-400">Smart AI guides you through structured questions to capture your full career impact.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-4 group">
+                                        <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0 border border-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
+                                            <FileText className="w-5 h-5 text-purple-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-white font-semibold mb-0.5">Master Resume Format</h3>
+                                            <p className="text-sm text-slate-400">Professional format emphasizing decision-making, metrics, and career progression.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-4 group">
+                                        <div className="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center shrink-0 border border-pink-500/20 group-hover:bg-pink-500/30 transition-colors">
+                                            <Shield className="w-5 h-5 text-pink-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-white font-semibold mb-0.5">Quality Scoring</h3>
+                                            <p className="text-sm text-slate-400">Built-in evaluation ensures your resume meets professional standards.</p>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
 
                     {/* Bottom quote */}
                     <div className="border-t border-white/10 pt-6">
-                        <p className="text-slate-500 text-sm italic">&quot;Stop telling stories; start showing impact.&quot;</p>
+                        <p className="text-slate-500 text-sm italic">
+                            {isRecruiterIntent
+                                ? '&quot;The best hires start with the best information.&quot;'
+                                : '&quot;Stop telling stories; start showing impact.&quot;'
+                            }
+                        </p>
                     </div>
                 </div>
             </div>
@@ -117,8 +177,15 @@ function SignInContent() {
 
                         {/* Header */}
                         <div className="text-center lg:text-left">
-                            <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome back</h2>
-                            <p className="text-slate-500">Sign in to your account to continue building your resume</p>
+                            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                                {isRecruiterIntent ? 'Recruiter Sign In' : 'Welcome back'}
+                            </h2>
+                            <p className="text-slate-500">
+                                {isRecruiterIntent
+                                    ? 'Create your free recruiter account to access candidate profiles'
+                                    : 'Sign in to your account to continue building your resume'
+                                }
+                            </p>
                         </div>
 
                         {/* Sign in buttons */}

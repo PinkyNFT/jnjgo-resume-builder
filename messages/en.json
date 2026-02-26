@@ -11,7 +11,8 @@
 		"newProject": "New Project",
 		"recentActivity": "Recent Activity",
 		"viewAll": "View All",
-		"backToDashboard": "Back to Dashboard"
+		"backToDashboard": "Back to Dashboard",
+		"recruiterDashboard": "Recruiter Dashboard"
 	},
 	"Common": {
 		"cancel": "Cancel",

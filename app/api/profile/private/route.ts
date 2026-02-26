@@ -23,6 +23,8 @@ export async function GET(req: Request) {
             ...profile,
             id: (profile as any)._id?.toString(),
             userId: profile.userId,
+            // Ensure highlightedProjectId is always present (null for old profiles)
+            highlightedProjectId: (profile as any).highlightedProjectId || null,
             createdAt: (profile as any).createdAt instanceof Date ? (profile as any).createdAt.getTime() : (profile as any).createdAt,
             updatedAt: (profile as any).updatedAt instanceof Date ? (profile as any).updatedAt.getTime() : (profile as any).updatedAt,
         };

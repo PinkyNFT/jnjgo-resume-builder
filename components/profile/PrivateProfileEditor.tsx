@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Loader2, Sparkles, CheckCircle2, AlertCircle, XCircle,
     DollarSign, Briefcase, Ban, CalendarCheck, FileText, Globe,
-    Zap, Target, TrendingUp, Eye, Link2, Copy, Check,
+    Zap, Target, TrendingUp, Eye, Link2, Copy, Check, ExternalLink, Save,
 } from 'lucide-react';
 import { CandidatePrivateProfile } from '../../types';
 
@@ -105,6 +105,15 @@ export default function PrivateProfileEditor() {
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [copied, setCopied] = useState(false);
+    const [projects, setProjects] = useState<Array<{ id: string; title: string; status: string }>>([]);
+    const [projectsLoading, setProjectsLoading] = useState(false);
+    const initialProfileRef = useRef<string | null>(null);
+
+    /* ── Dirty-state tracking ── */
+    const isDirty = useMemo(() => {
+        if (!profile || initialProfileRef.current === null) return false;
+        return JSON.stringify(profile) !== initialProfileRef.current;
+    }, [profile]);
 
     /* ── Data loading ── */
 
@@ -114,6 +123,7 @@ export default function PrivateProfileEditor() {
             if (res.ok) {
                 const data = await res.json();
                 setProfile(data || null);
+                initialProfileRef.current = JSON.stringify(data || null);
             }
         } catch (e) {
             console.error(e);
@@ -126,6 +136,22 @@ export default function PrivateProfileEditor() {
     useEffect(() => {
         loadProfile();
     }, [loadProfile]);
+
+    // Load user's projects for highlighted resume selector
+    useEffect(() => {
+        setProjectsLoading(true);
+        fetch('/api/projects')
+            .then(r => r.json())
+            .then(data => {
+                // Only show completed/generated projects that have resume data
+                const eligibleProjects = (data.projects || []).filter(
+                    (p: any) => (p.status === 'completed' || p.status === 'generated') && p.data?.fullName
+                );
+                setProjects(eligibleProjects.map((p: any) => ({ id: p.id, title: p.title, status: p.status })));
+            })
+            .catch(() => setProjects([]))
+            .finally(() => setProjectsLoading(false));
+    }, []);
 
     useEffect(() => {
         if (profile?.status === 'published') {
@@ -152,6 +178,7 @@ export default function PrivateProfileEditor() {
             }
             const data = await res.json();
             setProfile(data);
+            initialProfileRef.current = JSON.stringify(data);
             setSuccessMessage('Draft created. Review and publish when ready.');
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -174,6 +201,7 @@ export default function PrivateProfileEditor() {
             if (!res.ok) throw new Error('Failed to save');
             const data = await res.json();
             setProfile(data);
+            initialProfileRef.current = JSON.stringify(data);
             setSuccessMessage(
                 status === 'published'
                     ? 'Profile is live — recruiters can now see it from your link.'
@@ -350,6 +378,17 @@ export default function PrivateProfileEditor() {
                     transition={{ delay: 0.15 }}
                     className="flex items-center gap-2 shrink-0"
                 >
+                    {isPublished && publicSlug && (
+                        <a
+                            href={`/c/${publicSlug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-3.5 py-1.5 rounded-full hover:bg-indigo-100 transition-colors"
+                        >
+                            <ExternalLink className="w-3 h-3" />
+                            Preview
+                        </a>
+                    )}
                     {isPublished ? (
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-full">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-soft" />
@@ -426,8 +465,52 @@ export default function PrivateProfileEditor() {
                     </SectionCard>
                 )}
 
+                {/* ── Highlighted Resume (top) ── */}
+                <SectionCard title="Highlighted resume" icon={FileText} badge="Recommended" index={1}>
+                    <div className="space-y-3">
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                            Attach a completed resume so recruiters can see your skills and career summary at a glance.
+                        </p>
+                        {projectsLoading ? (
+                            <div className="flex items-center gap-2 py-3">
+                                <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                                <span className="text-xs text-slate-500">Loading your resumes…</span>
+                            </div>
+                        ) : projects.length === 0 ? (
+                            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-center">
+                                <p className="text-xs text-slate-500">No completed resumes available. Complete a resume project first to attach it here.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <select
+                                    value={profile!.highlightedProjectId || ''}
+                                    onChange={(e) => updateProfile({ highlightedProjectId: e.target.value || null })}
+                                    className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm text-slate-900 focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all duration-200 bg-white"
+                                >
+                                    <option value="">None — don&apos;t show a resume</option>
+                                    {projects.map(p => (
+                                        <option key={p.id} value={p.id}>
+                                            {p.title} ({p.status})
+                                        </option>
+                                    ))}
+                                </select>
+                                {profile!.highlightedProjectId && (
+                                    <motion.p
+                                        initial={{ opacity: 0, y: -4 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="text-xs text-emerald-600 font-medium flex items-center gap-1.5"
+                                    >
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        Resume will be visible to recruiters browsing your profile
+                                    </motion.p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </SectionCard>
+
                 {/* ── Career Orientation ── */}
-                <SectionCard title="Career orientation" icon={Target} index={1}>
+                <SectionCard title="Career orientation" icon={Target} index={2}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {ORIENTATION_OPTIONS.map((opt) => {
                             const active = profile!.orientation === opt.value;
@@ -462,7 +545,7 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
                 {/* ── Job Change Intent ── */}
-                <SectionCard title="Job change intent" icon={TrendingUp} index={2}>
+                <SectionCard title="Job change intent" icon={TrendingUp} index={3}>
                     <div className="flex flex-col sm:flex-row gap-3">
                         {INTENT_OPTIONS.map((opt) => {
                             const active = profile!.jobChangeIntent === opt.value;
@@ -497,7 +580,7 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
                 {/* ── AI Objective Review ── */}
-                <SectionCard title="Objective summary" icon={Sparkles} badge="Recruiter sees this" index={3}>
+                <SectionCard title="Objective summary" icon={Sparkles} badge="Recruiter sees this" index={4}>
                     <InputField hint="2–3 sentences on your strengths and what you're looking for.">
                         <textarea
                             value={profile!.aiObjectiveReview || ''}
@@ -510,7 +593,7 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
                 {/* ── Salary Expectations ── */}
-                <SectionCard title="Salary expectations (JPY)" icon={DollarSign} index={4}>
+                <SectionCard title="Salary expectations (JPY)" icon={DollarSign} index={5}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <InputField label="Minimum">
                             <div className="relative">
@@ -554,7 +637,7 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
                 {/* ── Deal Breakers ── */}
-                <SectionCard title="Deal breakers" icon={Ban} index={5}>
+                <SectionCard title="Deal breakers" icon={Ban} index={6}>
                     {(profile!.dealBreakers?.filter(Boolean).length ?? 0) > 0 ? (
                         <div className="flex flex-wrap gap-2 mb-3">
                             {profile!.dealBreakers!.map((db, i) =>
@@ -599,7 +682,7 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
                 {/* ── Interview Availability ── */}
-                <SectionCard title="Interview availability" icon={CalendarCheck} index={6}>
+                <SectionCard title="Interview availability" icon={CalendarCheck} index={7}>
                     <InputField hint="When are you generally available for interviews?">
                         <input
                             type="text"
@@ -612,7 +695,7 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
                 {/* ── Working Conditions ── */}
-                <SectionCard title="Working conditions" icon={Globe} index={7}>
+                <SectionCard title="Working conditions" icon={Globe} index={8}>
                     <InputField hint="Remote, hybrid, office-based, location preferences.">
                         <input
                             type="text"
@@ -625,7 +708,7 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
                 {/* ── Visibility ── */}
-                <SectionCard title="Visibility" icon={Eye} index={8}>
+                <SectionCard title="Visibility" icon={Eye} index={9}>
                     <div className="flex items-center justify-between gap-4">
                         <div>
                             <p className="font-semibold text-slate-900 text-sm">Show to recruiters via your link</p>
@@ -656,6 +739,7 @@ export default function PrivateProfileEditor() {
                         </motion.button>
                     </div>
                 </SectionCard>
+
             </div>
 
             {/* ── Sticky Action Bar ── */}
@@ -666,42 +750,80 @@ export default function PrivateProfileEditor() {
                 className="fixed bottom-0 left-0 right-0 z-10 bg-white/95 backdrop-blur-xl border-t border-slate-200 px-4 py-4 safe-area-pb"
             >
                 <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <motion.button
-                        type="button"
-                        onClick={handleGenerateDraft}
-                        disabled={isGenerating}
-                        whileHover={{ x: -2 }}
-                        whileTap={{ scale: 0.97 }}
-                        className="text-sm font-semibold text-slate-500 hover:text-indigo-600 flex items-center gap-2 order-2 sm:order-1 transition-colors disabled:opacity-40"
-                    >
-                        <Sparkles className="w-4 h-4" />
-                        Regenerate with AI
-                    </motion.button>
-                    <div className="flex gap-3 order-1 sm:order-2">
+                    <div className="flex items-center gap-3 order-2 sm:order-1">
                         <motion.button
                             type="button"
-                            onClick={() => handleSave('draft')}
-                            disabled={isSaving}
-                            whileHover={{ y: -1 }}
+                            onClick={handleGenerateDraft}
+                            disabled={isGenerating}
+                            whileHover={{ x: -2 }}
                             whileTap={{ scale: 0.97 }}
-                            className="px-5 py-2.5 text-sm font-bold text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 transition-colors"
+                            className="text-sm font-semibold text-slate-500 hover:text-indigo-600 flex items-center gap-2 transition-colors disabled:opacity-40"
                         >
-                            {isPublished ? 'Unpublish' : 'Save draft'}
+                            <Sparkles className="w-4 h-4" />
+                            Regenerate with AI
                         </motion.button>
+                        {!isDirty && !isSaving && (
+                            <motion.span
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="text-xs font-medium text-slate-400 flex items-center gap-1"
+                            >
+                                <CheckCircle2 className="w-3 h-3" />
+                                Saved
+                            </motion.span>
+                        )}
+                        {isDirty && (
+                            <motion.span
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="text-xs font-medium text-amber-600 flex items-center gap-1"
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                Unsaved changes
+                            </motion.span>
+                        )}
+                    </div>
+                    <div className="flex gap-3 order-1 sm:order-2">
+                        {isPublished && (
+                            <motion.button
+                                type="button"
+                                onClick={() => handleSave('draft')}
+                                disabled={isSaving}
+                                whileHover={{ y: -1 }}
+                                whileTap={{ scale: 0.97 }}
+                                className="px-5 py-2.5 text-sm font-bold text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 transition-colors"
+                            >
+                                Unpublish
+                            </motion.button>
+                        )}
                         <motion.button
                             type="button"
-                            onClick={() => handleSave('published')}
-                            disabled={isSaving}
-                            whileHover={{ y: -1, boxShadow: '0 8px 25px -5px rgba(99,102,241,0.25)' }}
-                            whileTap={{ scale: 0.97 }}
-                            className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-40 inline-flex items-center justify-center gap-2 transition-colors"
+                            onClick={() => handleSave(isPublished ? 'published' : isDirty ? 'draft' : 'published')}
+                            disabled={isSaving || (!isDirty && isPublished)}
+                            whileHover={!isSaving && (isDirty || !isPublished) ? { y: -1, boxShadow: '0 8px 25px -5px rgba(99,102,241,0.25)' } : {}}
+                            whileTap={!isSaving && (isDirty || !isPublished) ? { scale: 0.97 } : {}}
+                            className={`px-6 py-2.5 text-sm font-bold rounded-xl inline-flex items-center justify-center gap-2 transition-all ${
+                                !isDirty && isPublished
+                                    ? 'text-slate-400 bg-slate-100 border-2 border-slate-200 cursor-default'
+                                    : 'text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40'
+                            }`}
                         >
                             {isSaving ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
+                            ) : !isDirty && isPublished ? (
                                 <CheckCircle2 className="w-4 h-4" />
+                            ) : (
+                                <Save className="w-4 h-4" />
                             )}
-                            {isPublished ? 'Save changes' : 'Publish'}
+                            {isSaving
+                                ? 'Saving…'
+                                : !isDirty && isPublished
+                                    ? 'Up to date'
+                                    : isDirty && isPublished
+                                        ? 'Save changes'
+                                        : isPublished
+                                            ? 'Save changes'
+                                            : 'Publish'}
                         </motion.button>
                     </div>
                 </div>

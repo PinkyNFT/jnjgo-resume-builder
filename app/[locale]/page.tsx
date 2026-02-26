@@ -7,19 +7,23 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 import { AuthButton } from '../../components/AuthButton';
-import { ArrowRight, Zap, FileText, BarChart3, CheckCircle2, Sparkles } from 'lucide-react';
+import { ArrowRight, Zap, FileText, BarChart3, CheckCircle2, Sparkles, Search, DollarSign, Users, Shield } from 'lucide-react';
 
 export default function LandingPage() {
   const t = useTranslations('Landing');
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
-  // If authenticated, redirect to dashboard
+  // If authenticated, redirect based on role
   useEffect(() => {
     if (status === 'authenticated') {
-      router.push('/dashboard');
+      if (session?.user?.role === 'recruiter') {
+        router.push('/recruiter/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
   return (
     <div className="font-sans text-slate-900 bg-white min-h-screen">
@@ -238,6 +242,53 @@ export default function LandingPage() {
                 <span className="text-slate-300 font-medium">{benefit}</span>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Recruiter Section */}
+      <section className="py-24 bg-linear-to-br from-emerald-50 via-teal-50/30 to-white relative overflow-hidden">
+        <div className="absolute top-10 right-10 w-64 h-64 bg-emerald-200/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-10 left-10 w-48 h-48 bg-teal-200/20 rounded-full blur-3xl" />
+        <div className="relative max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100/80 border border-emerald-200 text-emerald-700 text-sm font-semibold">
+                <Search className="w-4 h-4" />
+                For Recruiters
+              </div>
+              <h2 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight">
+                Access Verified
+                <span className="block text-emerald-600">Candidate Profiles</span>
+              </h2>
+              <p className="text-lg text-slate-500 leading-relaxed">
+                Stop guessing. See salary expectations, career intent, deal-breakers, and AI-verified career data — before your first conversation.
+              </p>
+              <Link
+                href="/auth/signin?intent=recruiter"
+                className="group inline-flex items-center justify-center px-8 py-4 font-bold text-white text-lg transition-all duration-300 bg-emerald-600 rounded-2xl hover:bg-emerald-700 hover:shadow-2xl hover:shadow-emerald-500/25 hover:-translate-y-1 active:scale-[0.98]"
+              >
+                Sign Up as Recruiter
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <p className="text-sm text-slate-400">Free forever · No credit card required</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { icon: DollarSign, title: 'Salary Expectations', desc: 'Minimum and target salary visible upfront', color: 'bg-green-50 text-green-600 border-green-100' },
+                { icon: Users, title: 'Career Intent', desc: 'Actively looking, passive, or planning to move', color: 'bg-blue-50 text-blue-600 border-blue-100' },
+                { icon: Shield, title: 'AI-Verified Data', desc: 'Career history verified through AI interview', color: 'bg-violet-50 text-violet-600 border-violet-100' },
+                { icon: Search, title: 'Deal Breakers', desc: 'Working conditions and non-negotiables', color: 'bg-red-50 text-red-600 border-red-100' },
+              ].map((item) => (
+                <div key={item.title} className="bg-white rounded-xl border border-slate-100 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                  <div className={`w-10 h-10 rounded-lg ${item.color} flex items-center justify-center mb-3 border`}>
+                    <item.icon className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-sm mb-1">{item.title}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

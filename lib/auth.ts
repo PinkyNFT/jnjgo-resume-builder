@@ -2,13 +2,19 @@ import NextAuth, { NextAuthOptions, DefaultSession, getServerSession } from "nex
 import GoogleProvider from "next-auth/providers/google";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import clientPromise from "./mongodb-client";
+import { UserRole } from "../types";
 
-// Extend NextAuth types to include user ID in session
+// Extend NextAuth types to include user ID and role in session
 declare module "next-auth" {
     interface Session {
         user: {
             id: string;
+            role?: UserRole | null;
         } & DefaultSession["user"];
+    }
+
+    interface User {
+        role?: UserRole | null;
     }
 }
 
@@ -28,6 +34,9 @@ export const authOptions: NextAuthOptions = {
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            httpOptions: {
+                timeout: 15000, // 15s — default 3500ms is too short for high-latency networks
+            },
         }),
     ],
     secret: process.env.NEXTAUTH_SECRET,
@@ -42,6 +51,7 @@ export const authOptions: NextAuthOptions = {
         session({ session, user }) {
             if (session.user) {
                 session.user.id = user.id;
+                session.user.role = (user as any).role || null;
             }
             return session;
         },

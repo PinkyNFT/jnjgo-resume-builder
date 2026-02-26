@@ -2,13 +2,14 @@ import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../lib/auth";
 import { connectToDatabase } from "../../../lib/mongodb";
-import { CandidatePublicPageModel, CandidatePrivateProfileModel } from "../../../lib/models";
+import { CandidatePublicPageModel, CandidatePrivateProfileModel, ProjectModel, UserProfileModel } from "../../../lib/models";
 import {
     Lock, Sparkles, Building2, TrendingUp, Eye, ArrowRight, Shield,
     DollarSign, Ban, CalendarCheck, Globe, Briefcase, Zap,
-    CheckCircle2, Clock, MapPin,
+    CheckCircle2, Clock, MapPin, Search, ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
+import { ResumePreviewCard } from "../../../components/ResumePreviewCard";
 
 /* ─── Helpers ────────────────────────────────────────────── */
 
@@ -46,6 +47,22 @@ export default async function CandidateLandingPage({ params }: { params: Promise
 
     const privateProfile = await CandidatePrivateProfileModel.findOne({ userId: publicPage.userId, status: 'published' });
 
+    // Fetch highlighted resume and user profile in parallel if private profile exists
+    let highlightedResume: any = null;
+    let candidateUserProfile: any = null;
+    if (privateProfile) {
+        const [resumeResult, userProfileResult] = await Promise.all([
+            privateProfile.highlightedProjectId
+                ? ProjectModel.findOne({ id: privateProfile.highlightedProjectId }, {
+                    'data': 1,
+                }).lean()
+                : Promise.resolve(null),
+            UserProfileModel.findOne({ userId: publicPage.userId }).lean(),
+        ]);
+        highlightedResume = resumeResult?.data || null;
+        candidateUserProfile = userProfileResult;
+    }
+
     /* ─── Profile not available ─── */
     if (!privateProfile || !privateProfile.visibilityFlags?.isRecruiterOnly) {
         return (
@@ -64,27 +81,53 @@ export default async function CandidateLandingPage({ params }: { params: Promise
     /* ─── Check authentication ─── */
     const session = await getServerSession(authOptions);
     const isAuthenticated = !!session?.user;
+    const isRecruiter = (session?.user as any)?.role === 'recruiter';
 
-    const signInUrl = `/api/auth/signin?callbackUrl=${encodeURIComponent(`/c/${slug}`)}`;
+    const signInUrl = `/auth/signin?intent=recruiter&callbackUrl=${encodeURIComponent(`/c/${slug}`)}`;
+    const roleSelectUrl = `/auth/select-role?intent=recruiter&callbackUrl=${encodeURIComponent(`/c/${slug}`)}`;
 
     /* ─── Shared header ─── */
     const Header = (
         <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-20">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
-                        <span className="text-white text-xs font-black">JN</span>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
+                            <span className="text-white text-xs font-black">JN</span>
+                        </div>
+                        <span className="font-black text-slate-900 tracking-tight text-lg">JNJGO</span>
                     </div>
-                    <span className="font-black text-slate-900 tracking-tight text-lg">JNJGO</span>
+                    {/* Back to dashboard for authenticated users */}
+                    {isAuthenticated && (
+                        <>
+                            <div className="w-px h-6 bg-slate-200 hidden sm:block" />
+                            <Link
+                                href={isRecruiter ? '/recruiter/dashboard' : '/dashboard'}
+                                className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-900 transition-all duration-200 hover:-translate-x-0.5 group"
+                            >
+                                <ArrowLeft className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                <span className="hidden sm:inline">{isRecruiter ? 'Dashboard' : 'My Dashboard'}</span>
+                            </Link>
+                        </>
+                    )}
                 </div>
                 <div className="flex items-center gap-3">
                     {isAuthenticated ? (
-                        <div className="flex items-center gap-2.5">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
-                                <CheckCircle2 className="w-3 h-3" />
-                                Recruiter Access
-                            </span>
-                        </div>
+                        isRecruiter ? (
+                            <div className="flex items-center gap-2.5">
+                                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    Recruiter Access
+                                </span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2.5">
+                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
+                                    <Clock className="w-3 h-3" />
+                                    Candidate Account
+                                </span>
+                            </div>
+                        )
                     ) : (
                         <>
                             <span className="text-xs font-medium text-slate-400 hidden sm:block">Recruiter Access</span>
@@ -103,9 +146,9 @@ export default async function CandidateLandingPage({ params }: { params: Promise
     );
 
     /* ═══════════════════════════════════════════════════════
-       AUTHENTICATED VIEW — Full recruiter profile
+       AUTHENTICATED VIEW — Full recruiter profile (only for recruiters)
        ═══════════════════════════════════════════════════════ */
-    if (isAuthenticated) {
+    if (isAuthenticated && isRecruiter) {
         const orientation = ORIENTATION_META[privateProfile.orientation || ''];
         const intent = INTENT_META[privateProfile.jobChangeIntent || ''];
         const OrientationIcon = orientation?.icon || Globe;
@@ -160,6 +203,11 @@ export default async function CandidateLandingPage({ params }: { params: Promise
                                 </div>
                             </div>
                         </div>
+
+                        {/* ── Full Resume Section ── */}
+                        {highlightedResume && (
+                            <ResumePreviewCard data={highlightedResume} defaultExpanded />
+                        )}
 
                         {/* ── Data Grid ── */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -246,6 +294,39 @@ export default async function CandidateLandingPage({ params }: { params: Promise
                     <div className="text-center mt-12 animate-fade-in">
                         <p className="text-xs text-slate-400 font-medium">
                             Powered by <span className="font-bold text-slate-500">JNJGO</span> · Direct scouting platform for IT professionals in Japan
+                        </p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       CANDIDATE USER VIEW — Signed in but not a recruiter
+       ═══════════════════════════════════════════════════════ */
+    if (isAuthenticated && !isRecruiter) {
+        return (
+            <div className="min-h-screen bg-slate-50 font-sans">
+                {Header}
+                <main className="max-w-lg mx-auto px-4 py-16 animate-fade-in">
+                    <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-10 text-center shadow-sm">
+                        <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <Shield className="w-8 h-8 text-amber-500" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-slate-900 mb-3">Recruiter Access Only</h2>
+                        <p className="text-slate-500 leading-relaxed mb-6">
+                            You&apos;re signed in as a <strong>candidate</strong>. Only recruiters can view detailed candidate profiles. 
+                            If you&apos;re a recruiter, please create a recruiter account.
+                        </p>
+                        <Link
+                            href={roleSelectUrl}
+                            className="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200/40 hover:-translate-y-0.5 mb-3"
+                        >
+                            <Search className="w-4 h-4" />
+                            Switch to Recruiter Account
+                        </Link>
+                        <p className="text-xs text-slate-400 mt-2">
+                            Your account role will be updated to Recruiter.
                         </p>
                     </div>
                 </main>

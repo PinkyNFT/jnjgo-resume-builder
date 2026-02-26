@@ -14,6 +14,7 @@ import { getProjects, saveProject, deleteProject, createNewProject, getUserProfi
 import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/dataMigration';
 import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2, Sparkles, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import AppNavbar from '../../../components/navigation/AppNavbar';
 import { DashboardSkeleton } from '../../../components/navigation/Skeletons';
 
@@ -385,11 +386,24 @@ export default function Page() {
   const t = useTranslations('Dashboard');
   const tCommon = useTranslations('Common');
   const locale = useLocale();
+  const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const [step, setStep] = useState<Step>('dashboard');
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Redirect recruiters to their own dashboard
+  useEffect(() => {
+    if (sessionStatus === 'authenticated' && session?.user?.role === 'recruiter') {
+      router.replace(`/${locale}/recruiter/dashboard`);
+    }
+    // Redirect users without a role to role selection
+    if (sessionStatus === 'authenticated' && !session?.user?.role) {
+      router.replace(`/${locale}/auth/select-role?callbackUrl=/dashboard`);
+    }
+  }, [sessionStatus, session, router, locale]);
 
   // Temp storage for setup data before project creation
   const [setupData, setSetupData] = useState<{ role: RoleType, importData?: ImportData } | null>(null);
@@ -615,7 +629,6 @@ export default function Page() {
     }
   };
 
-  const { data: session } = useSession();
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Check admin status

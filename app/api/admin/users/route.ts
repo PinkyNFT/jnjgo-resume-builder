@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { requireAdmin, requireSuperAdmin, logAdminAction, getClientIp, AdminContext } from '@/lib/admin-auth';
 import { AdminUserModel } from '@/lib/admin-models';
 import { UserProfileModel, ProjectModel } from '@/lib/models';
+import clientPromise from '@/lib/mongodb-client';
 
 /**
  * GET /api/admin/users
@@ -33,6 +34,22 @@ export async function GET(request: NextRequest) {
         const [users, totalCount] = await Promise.all([
             UserProfileModel.aggregate([
                 { $match: matchStage },
+                // Deduplicate by email: group by email, keep the most recently updated entry
+                {
+                    $sort: { updatedAt: -1 }
+                },
+                {
+                    $group: {
+                        _id: '$email',
+                        userId: { $first: '$userId' },
+                        fullName: { $first: '$fullName' },
+                        email: { $first: '$email' },
+                        location: { $first: '$location' },
+                        createdAt: { $first: '$createdAt' },
+                        updatedAt: { $first: '$updatedAt' },
+                        duplicateCount: { $sum: 1 }
+                    }
+                },
                 { $sort: { updatedAt: -1 } },
                 { $skip: (page - 1) * limit },
                 { $limit: limit },
@@ -70,6 +87,20 @@ export async function GET(request: NextRequest) {
                         as: 'adminInfo'
                     }
                 },
+                // Lookup user role from NextAuth users collection
+                {
+                    $addFields: {
+                        userIdObj: { $toObjectId: '$userId' }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'userIdObj',
+                        foreignField: '_id',
+                        as: 'authUser'
+                    }
+                },
                 {
                     $project: {
                         userId: 1,
@@ -78,13 +109,20 @@ export async function GET(request: NextRequest) {
                         location: 1,
                         createdAt: 1,
                         updatedAt: 1,
+                        duplicateCount: 1,
                         projectStats: { $arrayElemAt: ['$projectStats', 0] },
                         isAdmin: { $gt: [{ $size: '$adminInfo' }, 0] },
-                        adminRole: { $arrayElemAt: ['$adminInfo.role', 0] }
+                        adminRole: { $arrayElemAt: ['$adminInfo.role', 0] },
+                        userRole: { $ifNull: [{ $arrayElemAt: ['$authUser.role', 0] }, null] }
                     }
                 }
             ]),
-            UserProfileModel.countDocuments(matchStage)
+            // Deduplicated count
+            UserProfileModel.aggregate([
+                { $match: matchStage },
+                { $group: { _id: '$email' } },
+                { $count: 'total' }
+            ]).then(result => result[0]?.total || 0)
         ]);
 
         return NextResponse.json({
@@ -107,8 +145,8 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/admin/users
- * Grant or revoke admin role for a user
- * Body: { userId: string, email: string, name: string, action: 'grant_admin' | 'revoke_admin' | 'grant_super_admin' }
+ * Grant or revoke admin role, or change user role (candidate/recruiter)
+ * Body: { userId: string, email: string, name: string, action: 'grant_admin' | 'revoke_admin' | 'grant_super_admin' | 'change_user_role', role?: string }
  */
 export async function POST(request: NextRequest) {
     const admin = await requireSuperAdmin(request);
@@ -117,7 +155,7 @@ export async function POST(request: NextRequest) {
     try {
         await connectToDatabase();
 
-        const { userId, email, name, action } = await request.json();
+        const { userId, email, name, action, role: newUserRole } = await request.json();
 
         if (!userId || !email || !action) {
             return NextResponse.json(
@@ -131,6 +169,41 @@ export async function POST(request: NextRequest) {
                 { error: 'Cannot revoke your own admin access' },
                 { status: 400 }
             );
+        }
+
+        // Change user role (candidate/recruiter)
+        if (action === 'change_user_role') {
+            const validRoles = ['candidate', 'recruiter'];
+            if (!newUserRole || !validRoles.includes(newUserRole)) {
+                return NextResponse.json(
+                    { error: 'Valid role (candidate or recruiter) is required' },
+                    { status: 400 }
+                );
+            }
+
+            const client = await clientPromise;
+            const db = client.db();
+            const { ObjectId } = await import('mongodb');
+
+            const result = await db.collection('users').updateOne(
+                { _id: new ObjectId(userId) },
+                { $set: { role: newUserRole } }
+            );
+
+            if (result.matchedCount === 0) {
+                return NextResponse.json(
+                    { error: 'User not found in auth system' },
+                    { status: 404 }
+                );
+            }
+
+            logAdminAction(admin as AdminContext, 'user.role_change', `user:${userId}`, {
+                action: 'change_user_role',
+                targetEmail: email,
+                newRole: newUserRole
+            }, getClientIp(request));
+
+            return NextResponse.json({ success: true, message: `User role changed to ${newUserRole} for ${email}` }, { status: 200 });
         }
 
         if (action === 'grant_admin' || action === 'grant_super_admin') {

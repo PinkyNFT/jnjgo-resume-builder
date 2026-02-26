@@ -1,5 +1,23 @@
 export type RoleType = 'consultant' | 'senior_engineer' | 'general';
 export type ProjectStatus = 'draft' | 'imported' | 'interviewing' | 'generated' | 'completed';
+export type UserRole = 'candidate' | 'recruiter';
+
+// --- Recruiter Profile ---
+
+export interface RecruiterProfile {
+    id?: string;
+    userId: string;
+    companyName: string;
+    jobTitle: string;
+    phone?: string;
+    companyWebsite?: string;
+    companySize?: 'startup' | 'small' | 'medium' | 'large' | 'enterprise';
+    industry?: string;
+    bio?: string;
+    onboardingCompleted: boolean;
+    createdAt?: number;
+    updatedAt?: number;
+}
 
 // --- JNJGO Recruiter-Only Extended Types ---
 
@@ -19,6 +37,7 @@ export interface CandidatePrivateProfile {
     dealBreakers?: string[];
     interviewAvailability?: string;
     jobChangeReasonSummary?: string;
+    highlightedProjectId?: string | null;
     visibilityFlags?: {
         isRecruiterOnly: boolean;
     };

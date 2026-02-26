@@ -11,7 +11,8 @@
 		"newProject": "新規プロジェクト",
 		"recentActivity": "最近のアクティビティ",
 		"viewAll": "すべて表示",
-		"backToDashboard": "ダッシュボードに戻る"
+		"backToDashboard": "ダッシュボードに戻る",
+		"recruiterDashboard": "リクルーターダッシュボード"
 	},
 	"Common": {
 		"cancel": "キャンセル",
