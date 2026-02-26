@@ -2,128 +2,133 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { requireAdmin, requireSuperAdmin, logAdminAction, getClientIp, AdminContext } from '@/lib/admin-auth';
 import { AdminUserModel } from '@/lib/admin-models';
-import { UserProfileModel, ProjectModel } from '@/lib/models';
 import clientPromise from '@/lib/mongodb-client';
 
 /**
  * GET /api/admin/users
  * Returns all users with their project counts
  * Query params: ?page=1&limit=20&search=email
+ * 
+ * Queries the NextAuth `users` collection as the primary source so that
+ * all registered users are shown, even those who haven't created a profile yet.
  */
 export async function GET(request: NextRequest) {
     const admin = await requireAdmin(request);
     if (admin instanceof NextResponse) return admin;
 
     try {
-        await connectToDatabase();
+        const client = await clientPromise;
+        const db = client.db();
+        const usersCollection = db.collection('users');
 
         const { searchParams } = new URL(request.url);
         const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
         const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20')));
         const search = searchParams.get('search') || '';
 
-        // Build the aggregation pipeline for user profiles with project stats
+        // Match stage: search against name/email in the NextAuth users collection
         const matchStage: Record<string, unknown> = {};
         if (search) {
             matchStage.$or = [
-                { fullName: { $regex: search, $options: 'i' } },
+                { name: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } }
             ];
         }
 
-        const [users, totalCount] = await Promise.all([
-            UserProfileModel.aggregate([
-                { $match: matchStage },
-                // Deduplicate by email: group by email, keep the most recently updated entry
-                {
-                    $sort: { updatedAt: -1 }
-                },
-                {
-                    $group: {
-                        _id: '$email',
-                        userId: { $first: '$userId' },
-                        fullName: { $first: '$fullName' },
-                        email: { $first: '$email' },
-                        location: { $first: '$location' },
-                        createdAt: { $first: '$createdAt' },
-                        updatedAt: { $first: '$updatedAt' },
-                        duplicateCount: { $sum: 1 }
-                    }
-                },
-                { $sort: { updatedAt: -1 } },
-                { $skip: (page - 1) * limit },
-                { $limit: limit },
-                {
-                    $lookup: {
-                        from: 'projects',
-                        localField: 'userId',
-                        foreignField: 'userId',
-                        pipeline: [
-                            {
-                                $group: {
-                                    _id: null,
-                                    count: { $sum: 1 },
-                                    completed: {
-                                        $sum: {
-                                            $cond: [
-                                                { $in: ['$status', ['completed', 'generated']] },
-                                                1,
-                                                0
-                                            ]
-                                        }
-                                    },
-                                    lastActivity: { $max: '$updatedAt' }
-                                }
-                            }
-                        ],
-                        as: 'projectStats'
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'adminUsers',
-                        localField: 'userId',
-                        foreignField: 'userId',
-                        as: 'adminInfo'
-                    }
-                },
-                // Lookup user role from NextAuth users collection
-                {
-                    $addFields: {
-                        userIdObj: { $toObjectId: '$userId' }
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'users',
-                        localField: 'userIdObj',
-                        foreignField: '_id',
-                        as: 'authUser'
-                    }
-                },
-                {
-                    $project: {
-                        userId: 1,
-                        fullName: 1,
-                        email: 1,
-                        location: 1,
-                        createdAt: 1,
-                        updatedAt: 1,
-                        duplicateCount: 1,
-                        projectStats: { $arrayElemAt: ['$projectStats', 0] },
-                        isAdmin: { $gt: [{ $size: '$adminInfo' }, 0] },
-                        adminRole: { $arrayElemAt: ['$adminInfo.role', 0] },
-                        userRole: { $ifNull: [{ $arrayElemAt: ['$authUser.role', 0] }, null] }
-                    }
+        const pipeline: object[] = [
+            { $match: matchStage },
+            // Convert _id to string for joining with other collections
+            {
+                $addFields: {
+                    userIdStr: { $toString: '$_id' }
                 }
-            ]),
-            // Deduplicated count
-            UserProfileModel.aggregate([
-                { $match: matchStage },
-                { $group: { _id: '$email' } },
-                { $count: 'total' }
-            ]).then(result => result[0]?.total || 0)
+            },
+            // Lookup profile data from userProfiles
+            {
+                $lookup: {
+                    from: 'userProfiles',
+                    localField: 'userIdStr',
+                    foreignField: 'userId',
+                    pipeline: [
+                        { $sort: { updatedAt: -1 } },
+                        { $limit: 1 }
+                    ],
+                    as: 'profile'
+                }
+            },
+            // Lookup project stats
+            {
+                $lookup: {
+                    from: 'projects',
+                    localField: 'userIdStr',
+                    foreignField: 'userId',
+                    pipeline: [
+                        {
+                            $group: {
+                                _id: null,
+                                count: { $sum: 1 },
+                                completed: {
+                                    $sum: {
+                                        $cond: [
+                                            { $in: ['$status', ['completed', 'generated']] },
+                                            1,
+                                            0
+                                        ]
+                                    }
+                                },
+                                lastActivity: { $max: '$updatedAt' }
+                            }
+                        }
+                    ],
+                    as: 'projectStats'
+                }
+            },
+            // Lookup admin info
+            {
+                $lookup: {
+                    from: 'adminUsers',
+                    localField: 'userIdStr',
+                    foreignField: 'userId',
+                    as: 'adminInfo'
+                }
+            },
+            // Project final shape
+            {
+                $project: {
+                    userId: '$userIdStr',
+                    fullName: {
+                        $ifNull: [
+                            { $arrayElemAt: ['$profile.fullName', 0] },
+                            '$name'
+                        ]
+                    },
+                    email: 1,
+                    location: { $ifNull: [{ $arrayElemAt: ['$profile.location', 0] }, ''] },
+                    createdAt: { $ifNull: [{ $arrayElemAt: ['$profile.createdAt', 0] }, '$_id'] },
+                    updatedAt: { $ifNull: [{ $arrayElemAt: ['$profile.updatedAt', 0] }, null] },
+                    duplicateCount: { $size: '$profile' },
+                    projectStats: { $arrayElemAt: ['$projectStats', 0] },
+                    isAdmin: { $gt: [{ $size: '$adminInfo' }, 0] },
+                    adminRole: { $arrayElemAt: ['$adminInfo.role', 0] },
+                    userRole: { $ifNull: ['$role', null] }
+                }
+            },
+            { $sort: { updatedAt: -1, email: 1 } },
+            { $skip: (page - 1) * limit },
+            { $limit: limit }
+        ];
+
+        const countPipeline: object[] = [
+            { $match: matchStage },
+            { $count: 'total' }
+        ];
+
+        const [users, countResult] = await Promise.all([
+            usersCollection.aggregate(pipeline).toArray(),
+            usersCollection.aggregate(countPipeline).toArray()
         ]);
+
+        const totalCount = countResult[0]?.total || 0;
 
         return NextResponse.json({
             users,
