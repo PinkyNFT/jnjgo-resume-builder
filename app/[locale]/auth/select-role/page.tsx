@@ -109,8 +109,8 @@ function SelectRoleContent() {
                         onClick={() => setSelectedRole('candidate')}
                         disabled={isSubmitting}
                         className={`group relative text-left p-6 rounded-2xl border-2 transition-all duration-300 ${selectedRole === 'candidate'
-                                ? 'border-indigo-600 bg-white shadow-xl shadow-indigo-100/50 ring-4 ring-indigo-50'
-                                : 'border-slate-200 bg-white hover:border-indigo-300 hover:shadow-lg hover:-translate-y-0.5'
+                            ? 'border-indigo-600 bg-white shadow-xl shadow-indigo-100/50 ring-4 ring-indigo-50'
+                            : 'border-slate-200 bg-white hover:border-indigo-300 hover:shadow-lg hover:-translate-y-0.5'
                             } disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                         {selectedRole === 'candidate' && (
@@ -119,8 +119,8 @@ function SelectRoleContent() {
                             </div>
                         )}
                         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-all duration-300 ${selectedRole === 'candidate'
-                                ? 'bg-indigo-600 shadow-lg shadow-indigo-200/50'
-                                : 'bg-indigo-50 group-hover:bg-indigo-100'
+                            ? 'bg-indigo-600 shadow-lg shadow-indigo-200/50'
+                            : 'bg-indigo-50 group-hover:bg-indigo-100'
                             }`}>
                             <FileText className={`w-7 h-7 ${selectedRole === 'candidate' ? 'text-white' : 'text-indigo-600'}`} />
                         </div>
@@ -143,8 +143,8 @@ function SelectRoleContent() {
                         onClick={() => setSelectedRole('recruiter')}
                         disabled={isSubmitting}
                         className={`group relative text-left p-6 rounded-2xl border-2 transition-all duration-300 ${selectedRole === 'recruiter'
-                                ? 'border-emerald-600 bg-white shadow-xl shadow-emerald-100/50 ring-4 ring-emerald-50'
-                                : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-lg hover:-translate-y-0.5'
+                            ? 'border-emerald-600 bg-white shadow-xl shadow-emerald-100/50 ring-4 ring-emerald-50'
+                            : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-lg hover:-translate-y-0.5'
                             } disabled:opacity-60 disabled:cursor-not-allowed`}
                     >
                         {selectedRole === 'recruiter' && (
@@ -153,8 +153,8 @@ function SelectRoleContent() {
                             </div>
                         )}
                         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-all duration-300 ${selectedRole === 'recruiter'
-                                ? 'bg-emerald-600 shadow-lg shadow-emerald-200/50'
-                                : 'bg-emerald-50 group-hover:bg-emerald-100'
+                            ? 'bg-emerald-600 shadow-lg shadow-emerald-200/50'
+                            : 'bg-emerald-50 group-hover:bg-emerald-100'
                             }`}>
                             <Search className={`w-7 h-7 ${selectedRole === 'recruiter' ? 'text-white' : 'text-emerald-600'}`} />
                         </div>
@@ -175,8 +175,13 @@ function SelectRoleContent() {
 
                 {/* Error */}
                 {error && (
-                    <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 text-center">
-                        {error}
+                    <div className="mb-8 p-4 rounded-2xl bg-red-50/80 border border-red-200 text-sm text-red-700 flex items-start gap-3 animate-[fade-in_0.3s_ease-out]">
+                        <div className="p-1 min-w-fit bg-red-100 rounded-full">
+                            <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <p className="leading-relaxed font-medium">{error}</p>
                     </div>
                 )}
 
@@ -186,10 +191,10 @@ function SelectRoleContent() {
                         onClick={handleSelectRole}
                         disabled={!selectedRole || isSubmitting}
                         className={`inline-flex items-center justify-center gap-2 px-10 py-4 font-bold text-lg rounded-2xl transition-all duration-300 ${selectedRole
-                                ? selectedRole === 'recruiter'
-                                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xl shadow-emerald-200/40 hover:-translate-y-0.5'
-                                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-200/40 hover:-translate-y-0.5'
-                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            ? selectedRole === 'recruiter'
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xl shadow-emerald-200/40 hover:-translate-y-0.5'
+                                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-200/40 hover:-translate-y-0.5'
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                             } disabled:cursor-not-allowed disabled:hover:translate-y-0`}
                     >
                         {isSubmitting ? (
@@ -206,8 +211,8 @@ function SelectRoleContent() {
                     </button>
                     <p className="mt-4 text-xs text-slate-400">
                         {session?.user?.role
-                            ? `You are currently a ${session.user.role}. Selecting a different role will update your account.`
-                            : 'Choose the role that best describes you. You can change it later.'}
+                            ? `You are currently a ${session.user.role}. Your role cannot be changed.`
+                            : 'Choose the role that best describes you. This choice is permanent and cannot be changed later.'}
                     </p>
                 </div>
             </div>
