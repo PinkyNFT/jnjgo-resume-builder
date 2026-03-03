@@ -315,8 +315,16 @@ export default async function CandidateLandingPage({ params }: { params: Promise
                         </div>
                         <h2 className="text-2xl font-bold text-slate-900 mb-3">Recruiter Access Only</h2>
                         <p className="text-slate-500 leading-relaxed mb-6">
-                            You&apos;re signed in as a <strong>candidate</strong>. Only recruiters can view detailed candidate profiles.
-                            If you&apos;re a recruiter, please create a recruiter account.
+                            {(session?.user as any)?.role === 'pending_recruiter' ? (
+                                <>
+                                    Your recruiter account is <strong>pending approval</strong>. Once administrators approve your account, you will be able to view candidate details.
+                                </>
+                            ) : (
+                                <>
+                                    You&apos;re signed in as a <strong>candidate</strong>. Only recruiters can view detailed candidate profiles.
+                                    If you&apos;re a recruiter, please create a recruiter account.
+                                </>
+                            )}
                         </p>
                         <Link
                             href={roleSelectUrl}

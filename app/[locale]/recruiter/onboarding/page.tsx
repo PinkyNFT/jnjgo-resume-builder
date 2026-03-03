@@ -51,9 +51,9 @@ function OnboardingContent() {
         }
     }, [status, router]);
 
-    // Check if user is a recruiter; redirect if not
+    // Check if user is a recruiter or pending_recruiter; redirect if not
     useEffect(() => {
-        if (session?.user?.role && session.user.role !== 'recruiter') {
+        if (session?.user?.role && session.user.role !== 'recruiter' && session.user.role !== 'pending_recruiter') {
             router.push('/dashboard');
         }
     }, [session, router]);
@@ -87,8 +87,12 @@ function OnboardingContent() {
                 throw new Error(data.error || 'Failed to save profile');
             }
 
-            // Navigate to callback or recruiter dashboard
-            router.push(callbackUrl || '/recruiter/dashboard');
+            // Navigate to pending approval if they are still pending, otherwise dashboard
+            if (session?.user?.role === 'pending_recruiter') {
+                router.push('/auth/pending-approval');
+            } else {
+                router.push(callbackUrl || '/recruiter/dashboard');
+            }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Something went wrong');
             setIsSubmitting(false);
@@ -258,8 +262,8 @@ function OnboardingContent() {
                                             key={size.value}
                                             onClick={() => setCompanySize(size.value)}
                                             className={`p-2.5 rounded-xl text-center border-2 transition-all duration-200 ${companySize === size.value
-                                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                                                    : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200 hover:bg-white'
+                                                ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                                : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200 hover:bg-white'
                                                 }`}
                                         >
                                             <div className="text-xs font-bold">{size.label}</div>
@@ -280,8 +284,8 @@ function OnboardingContent() {
                                             key={ind}
                                             onClick={() => setIndustry(ind)}
                                             className={`px-3.5 py-2 rounded-lg text-xs font-semibold border transition-all duration-200 ${industry === ind
-                                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                                                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                                                ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                                                 }`}
                                         >
                                             {ind}

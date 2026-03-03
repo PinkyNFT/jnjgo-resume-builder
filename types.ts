@@ -1,6 +1,6 @@
 export type RoleType = 'consultant' | 'senior_engineer' | 'general';
 export type ProjectStatus = 'draft' | 'imported' | 'interviewing' | 'generated' | 'completed';
-export type UserRole = 'candidate' | 'recruiter';
+export type UserRole = 'candidate' | 'recruiter' | 'pending_recruiter';
 
 // --- Recruiter Profile ---
 

@@ -34,6 +34,7 @@ export const authOptions: NextAuthOptions = {
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            allowDangerousEmailAccountLinking: true,
             httpOptions: {
                 timeout: 15000, // 15s — default 3500ms is too short for high-latency networks
             },

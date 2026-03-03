@@ -85,8 +85,13 @@ export default function RecruiterDashboardPage() {
 
         if (status === 'authenticated') {
             // Check role
+            // Check role - only fully approved recruiters can access dashboard
             if (session?.user?.role !== 'recruiter') {
-                router.push('/dashboard');
+                if (session?.user?.role === 'pending_recruiter') {
+                    router.push('/auth/pending-approval');
+                } else {
+                    router.push('/dashboard');
+                }
                 return;
             }
 

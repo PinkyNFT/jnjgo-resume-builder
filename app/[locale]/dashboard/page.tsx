@@ -396,12 +396,15 @@ export default function Page() {
 
   // Redirect recruiters to their own dashboard
   useEffect(() => {
-    if (sessionStatus === 'authenticated' && session?.user?.role === 'recruiter') {
-      router.replace(`/${locale}/recruiter/dashboard`);
-    }
-    // Redirect users without a role to role selection
-    if (sessionStatus === 'authenticated' && !session?.user?.role) {
-      router.replace(`/${locale}/auth/select-role?callbackUrl=/dashboard`);
+    if (sessionStatus === 'authenticated') {
+      if (session?.user?.role === 'recruiter') {
+        router.replace(`/${locale}/recruiter/dashboard`);
+      } else if (session?.user?.role === 'pending_recruiter') {
+        router.replace(`/${locale}/auth/pending-approval`);
+      } else if (!session?.user?.role) {
+        // Redirect users without a role to role selection
+        router.replace(`/${locale}/auth/select-role?callbackUrl=/dashboard`);
+      }
     }
   }, [sessionStatus, session, router, locale]);
 

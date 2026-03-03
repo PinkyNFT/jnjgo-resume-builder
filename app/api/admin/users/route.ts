@@ -83,6 +83,15 @@ export async function GET(request: NextRequest) {
                     as: 'projectStats'
                 }
             },
+            // Lookup recruiter profile
+            {
+                $lookup: {
+                    from: 'recruiterProfiles',
+                    localField: 'userIdStr',
+                    foreignField: 'userId',
+                    as: 'recruiterDetails'
+                }
+            },
             // Lookup admin info
             {
                 $lookup: {
@@ -110,7 +119,8 @@ export async function GET(request: NextRequest) {
                     projectStats: { $arrayElemAt: ['$projectStats', 0] },
                     isAdmin: { $gt: [{ $size: '$adminInfo' }, 0] },
                     adminRole: { $arrayElemAt: ['$adminInfo.role', 0] },
-                    userRole: { $ifNull: ['$role', null] }
+                    userRole: { $ifNull: ['$role', null] },
+                    recruiterProfile: { $arrayElemAt: ['$recruiterDetails', 0] }
                 }
             },
             { $sort: { updatedAt: -1, email: 1 } },
@@ -176,9 +186,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Change user role (candidate/recruiter)
+        // Change user role (candidate/recruiter/pending_recruiter)
         if (action === 'change_user_role') {
-            const validRoles = ['candidate', 'recruiter'];
+            const validRoles = ['candidate', 'recruiter', 'pending_recruiter'];
             if (!newUserRole || !validRoles.includes(newUserRole)) {
                 return NextResponse.json(
                     { error: 'Valid role (candidate or recruiter) is required' },

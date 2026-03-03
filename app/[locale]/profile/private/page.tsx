@@ -12,6 +12,12 @@ export default async function PrivateProfilePage() {
         redirect('/');
     }
 
+    if ((session?.user as any)?.role === 'pending_recruiter') {
+        redirect('/auth/pending-approval');
+    } else if ((session?.user as any)?.role === 'recruiter') {
+        redirect('/recruiter/dashboard');
+    }
+
     return (
         <AppShell>
             <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 animate-[fade-in_0.4s_ease-out]">

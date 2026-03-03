@@ -4,6 +4,7 @@ import { authOptions } from '../../../../lib/auth';
 import clientPromise from '../../../../lib/mongodb-client';
 import { ObjectId } from 'mongodb';
 import { UserRole } from '../../../../types';
+import { getAdminSetting } from '../../../../lib/admin-settings-reader';
 
 const VALID_ROLES: UserRole[] = ['candidate', 'recruiter'];
 
@@ -89,13 +90,17 @@ export async function POST(req: Request) {
             }
         }
 
+        // Check verification setting
+        const requireVerification = await getAdminSetting('require_recruiter_verification', false);
+        const finalRole = (role === 'recruiter' && requireVerification) ? 'pending_recruiter' : role;
+
         // Set the role
         await db.collection('users').updateOne(
             { _id: new ObjectId(session.user.id) },
-            { $set: { role, roleSetAt: new Date() } }
+            { $set: { role: finalRole, roleSetAt: new Date(), requestedRole: role } }
         );
 
-        return NextResponse.json({ role, success: true, changed: false });
+        return NextResponse.json({ role: finalRole, success: true, changed: false });
     } catch (error) {
         console.error('Error setting role:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

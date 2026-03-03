@@ -13,6 +13,20 @@ function SignInContent() {
     const isRecruiterIntent = intent === 'recruiter';
     const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
 
+    const errorParam = searchParams.get('error');
+
+    // Map NextAuth errors to user-friendly messages
+    const getErrorMessage = (error: string) => {
+        switch (error) {
+            case 'OAuthAccountNotLinked':
+                return 'To confirm your identity, sign in with the same provider you used originally.';
+            case 'AccessDenied':
+                return 'You do not have permission to sign in.';
+            default:
+                return 'An error occurred during sign in. Please try again.';
+        }
+    };
+
     const handleSignIn = (provider: string) => {
         setLoadingProvider(provider);
         // After OAuth, redirect to select-role page if no callbackUrl that suggests existing flow
@@ -187,6 +201,18 @@ function SignInContent() {
                                 }
                             </p>
                         </div>
+
+                        {errorParam && (
+                            <div className="p-4 rounded-xl bg-red-50 border border-red-100 flex items-start gap-3 text-left">
+                                <div className="p-1 bg-red-100 rounded-lg shrink-0 mt-0.5">
+                                    <Ban className="w-4 h-4 text-red-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-semibold text-red-900">Sign in failed</h3>
+                                    <p className="text-sm text-red-700 mt-0.5">{getErrorMessage(errorParam)}</p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Sign in buttons */}
                         <div className="space-y-3">

@@ -27,6 +27,10 @@ function SelectRoleContent() {
     // If user already has the matching role and there's no intent to change, redirect
     useEffect(() => {
         if (session?.user?.role && !intent) {
+            if (session.user.role === 'pending_recruiter') {
+                router.push('/recruiter/onboarding'); // Must complete onboarding first
+                return;
+            }
             const dest = session.user.role === 'recruiter'
                 ? (callbackUrl || '/recruiter/dashboard')
                 : (callbackUrl || '/dashboard');
@@ -48,16 +52,18 @@ function SelectRoleContent() {
             });
 
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Failed to set role');
+                const errorData = await res.json();
+                throw new Error(errorData.error || 'Failed to set role');
             }
+
+            const data = await res.json();
 
             // Refresh the session to pick up the new role
             await update();
 
             // Route to appropriate destination
-            if (selectedRole === 'recruiter') {
-                // Always go through onboarding for new recruiters
+            if (data.role === 'pending_recruiter' || selectedRole === 'recruiter') {
+                // Must go through onboarding
                 const onboardingUrl = callbackUrl
                     ? `/recruiter/onboarding?callbackUrl=${encodeURIComponent(callbackUrl)}`
                     : '/recruiter/onboarding';

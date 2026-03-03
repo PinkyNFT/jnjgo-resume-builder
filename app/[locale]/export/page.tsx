@@ -17,6 +17,10 @@ export default async function ExportPage({
         redirect('/');
     }
 
+    if ((session?.user as any)?.role === 'pending_recruiter' || (session?.user as any)?.role === 'recruiter') {
+        redirect('/dashboard');
+    }
+
     const { projectId } = await searchParams;
 
     // A projectId is required — export is always tied to a specific project.

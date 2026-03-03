@@ -25,7 +25,7 @@ export async function GET() {
             { projection: { role: 1 } }
         );
 
-        if (user?.role !== 'recruiter') {
+        if (user?.role !== 'recruiter' && user?.role !== 'pending_recruiter') {
             return NextResponse.json({ error: 'Recruiter access required' }, { status: 403 });
         }
 
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
             { projection: { role: 1 } }
         );
 
-        if (user?.role !== 'recruiter') {
+        if (user?.role !== 'recruiter' && user?.role !== 'pending_recruiter') {
             return NextResponse.json({ error: 'Recruiter access required' }, { status: 403 });
         }
 

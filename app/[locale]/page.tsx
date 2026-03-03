@@ -19,6 +19,8 @@ export default function LandingPage() {
     if (status === 'authenticated') {
       if (session?.user?.role === 'recruiter') {
         router.push('/recruiter/dashboard');
+      } else if (session?.user?.role === 'pending_recruiter') {
+        router.push('/auth/pending-approval');
       } else {
         router.push('/dashboard');
       }
