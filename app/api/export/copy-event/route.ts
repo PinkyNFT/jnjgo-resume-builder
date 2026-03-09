@@ -1,26 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../../lib/mongodb';
 import { getUserId } from '../../../../lib/auth-helpers';
-import mongoose from 'mongoose';
-
-/**
- * Export copy event schema — tracks when a user copies export output.
- * Spec ref: Section 5.1 export_events entity
- */
-const ExportEventSchema = new mongoose.Schema({
-    candidateUserId: { type: String, required: true, index: true },
-    projectId: { type: String, default: null },
-    siteKey: { type: String, required: true, index: true },
-    variant: { type: String, enum: ['short', 'standard', 'long'], required: true },
-    sectionKey: { type: String, default: null }, // null = copied all
-    linkIncluded: { type: Boolean, default: false },
-    charCount: { type: Number, default: 0 },
-    copiedAt: { type: Date, default: Date.now, index: true },
-});
-
-const ExportEvent =
-    mongoose.models.ExportEvent || mongoose.model('ExportEvent', ExportEventSchema);
-
+import { ExportEventModel as ExportEvent } from '../../../../lib/models';
 /**
  * POST /api/export/copy-event
  * Records a copy event for analytics (KPI: export usage rate, per-platform tracking).
@@ -32,7 +13,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
 
         const event = await ExportEvent.create({
-            candidateUserId: userId,
+            userId,
             projectId: body.projectId || null,
             siteKey: body.siteKey,
             variant: body.variant || 'standard',
@@ -61,7 +42,7 @@ export async function GET(request: NextRequest) {
         const userId = await getUserId(request);
         const projectId = request.nextUrl.searchParams.get('projectId');
 
-        const filter: Record<string, string> = { candidateUserId: userId };
+        const filter: Record<string, string> = { userId };
         if (projectId) filter.projectId = projectId;
 
         const events = await ExportEvent.find(filter)

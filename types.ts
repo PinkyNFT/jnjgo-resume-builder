@@ -59,6 +59,8 @@ export interface ExportEvent {
     projectId?: string | null;
     siteKey: string;
     variant?: 'short' | 'standard' | 'long';
+    sectionKey?: string | null;
+    charCount?: number;
     linkIncluded: boolean;
     copiedAt: number;
 }

@@ -290,6 +290,8 @@ const ExportEventSchema = new Schema<IExportEventDocument>({
     projectId: { type: String, default: null, index: true },
     siteKey: { type: String, required: true },
     variant: { type: String, enum: ['short', 'standard', 'long'] },
+    sectionKey: { type: String, default: null },
+    charCount: { type: Number, default: 0 },
     linkIncluded: { type: Boolean, required: true },
     copiedAt: { type: Date, default: Date.now }
 }, {
