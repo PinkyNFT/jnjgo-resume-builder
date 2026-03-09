@@ -45,14 +45,30 @@ export const authOptions: NextAuthOptions = {
         signIn: '/auth/signin',
     },
     session: {
-        strategy: "database",
+        strategy: "jwt",
         maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     callbacks: {
-        session({ session, user }) {
+        async signIn({ user, account, profile }) {
+            // Require verified email for Google (and others in the future)
+            // to safely use allowDangerousEmailAccountLinking
+            if (account?.provider === "google") {
+                return Boolean((profile as any)?.email_verified);
+            }
+            return true;
+        },
+        async jwt({ token, user }) {
+            // Initial sign in
+            if (user) {
+                token.id = user.id;
+                token.role = (user as any).role || null;
+            }
+            return token;
+        },
+        async session({ session, token }) {
             if (session.user) {
-                session.user.id = user.id;
-                session.user.role = (user as any).role || null;
+                session.user.id = token.id as string;
+                session.user.role = (token.role as UserRole | null) || null;
             }
             return session;
         },
