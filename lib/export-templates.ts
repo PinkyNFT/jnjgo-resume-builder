@@ -1,6 +1,6 @@
 import { ResumeData } from '../types';
 
-export type TemplateCategory = 'agency' | 'profile' | 'it';
+export type TemplateCategory = 'agency' | 'profile';
 export type ExportVariant = 'short' | 'standard' | 'long';
 
 export interface ExportPlatform {
@@ -11,14 +11,7 @@ export interface ExportPlatform {
 
 export const EXPORT_PLATFORMS: ExportPlatform[] = [
     { id: 'bizreach', name: 'BizReach', category: 'agency' },
-    { id: 'recruit_agent', name: 'Recruit Agent', category: 'agency' },
-    { id: 'duda', name: 'Duda', category: 'agency' },
     { id: 'linkedin', name: 'LinkedIn', category: 'profile' },
-    { id: 'green', name: 'Green', category: 'profile' },
-    { id: 'indeed', name: 'Indeed', category: 'profile' },
-    { id: 'levtech', name: 'LevTech', category: 'it' },
-    { id: 'geekly', name: 'Geekly', category: 'it' },
-    { id: 'yourtrust', name: 'YourTrust', category: 'it' },
 ];
 
 /**
@@ -80,25 +73,6 @@ function formatProfileTemplate(data: ResumeData, variant: ExportVariant): string
 }
 
 /**
- * Formats data for IT-specialized platforms (LevTech, etc.)
- * Focuses heavily on technical skills, projects, and environments.
- */
-function formatITTemplate(data: ResumeData, variant: ExportVariant): string {
-    let output = `＜サマリー＞\n${data.careerSummary || ''}\n\n`;
-
-    if (data.skills && data.skills.length > 0) {
-        output += `＜技術スタック・開発環境＞\n${data.skills.join(' / ')}\n\n`;
-    }
-
-    output += `＜プロジェクト・職務経歴＞\n`;
-    if (data.workExperience && data.workExperience.length > 0) {
-        output += data.workExperience.map(exp => formatExperience(exp, variant)).join('\n\n');
-    }
-
-    return output;
-}
-
-/**
  * Main switchboard function to generate the appropriate format.
  */
 export function generateExportText(data: ResumeData | undefined, category: TemplateCategory, variant: ExportVariant): string {
@@ -109,8 +83,6 @@ export function generateExportText(data: ResumeData | undefined, category: Templ
             return formatAgencyTemplate(data, variant);
         case 'profile':
             return formatProfileTemplate(data, variant);
-        case 'it':
-            return formatITTemplate(data, variant);
         default:
             return formatAgencyTemplate(data, variant);
     }

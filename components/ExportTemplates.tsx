@@ -29,7 +29,6 @@ import {
     Zap,
     AlertCircle,
     AlertTriangle,
-    Search,
     Link2,
     Link2Off,
     Loader2,
@@ -165,7 +164,6 @@ export const ExportTemplates: React.FC<ExportTemplatesProps> = ({
     const [linkEnabled, setLinkEnabled] = useState(false);
     const [copiedSection, setCopiedSection] = useState<string | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
     const [toastVisible, setToastVisible] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
     const toastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -294,21 +292,6 @@ export const ExportTemplates: React.FC<ExportTemplatesProps> = ({
         setRewrittenSections(new Map());
     }, [data]);
 
-    // Filter platforms by search query
-    const filteredPlatforms = useMemo(() => {
-        if (!searchQuery.trim()) return PLATFORM_LIST;
-        const q = searchQuery.toLowerCase();
-        return PLATFORM_LIST.filter(id => {
-            const cfg = PLATFORM_CONFIGS[id];
-            return (
-                id.includes(q) ||
-                t(cfg.nameKey).toLowerCase().includes(q) ||
-                cfg.category.includes(q) ||
-                cfg.templateCategory.includes(q)
-            );
-        });
-    }, [searchQuery, t]);
-
     // Copy success toast
     const showToast = useCallback((msg: string) => {
         setToastMessage(msg);
@@ -397,25 +380,13 @@ export const ExportTemplates: React.FC<ExportTemplatesProps> = ({
 
                 {isExpanded && (
                     <div className="border-t border-slate-100">
-                        {/* Search + Platform Grid */}
+                        {/* Platform Grid */}
                         <div className="p-4 space-y-3">
-                            {/* Search bar */}
-                            <div className="relative">
-                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                                <input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder={t('searchPlaceholder')}
-                                    className="w-full pl-8 pr-3 py-1.5 text-[11px] border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 bg-slate-50"
-                                />
-                            </div>
-
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                 {t('selectPlatform')}
                             </p>
-                            <div className="grid grid-cols-3 gap-2">
-                                {filteredPlatforms.map(platformId => {
+                            <div className="grid grid-cols-2 gap-2">
+                                {PLATFORM_LIST.map(platformId => {
                                     const pConfig = PLATFORM_CONFIGS[platformId];
                                     const isSelected = selectedPlatform === platformId;
                                     const isCopied = copiedSection === 'all-' + platformId;
@@ -463,11 +434,6 @@ export const ExportTemplates: React.FC<ExportTemplatesProps> = ({
                                         </div>
                                     );
                                 })}
-                                {filteredPlatforms.length === 0 && (
-                                    <p className="col-span-3 text-center text-[10px] text-slate-400 py-4">
-                                        {t('noResults')}
-                                    </p>
-                                )}
                             </div>
                         </div>
 
