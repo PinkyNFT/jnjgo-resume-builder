@@ -4,6 +4,7 @@ import { Message, RoleType, ImportData, ResumeData } from '@/types';
 import { GEMINI_MODEL } from '@/config/models';
 import { getSystemInstruction } from '@/lib/prompts';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
+import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -54,6 +55,10 @@ function detectAgentProgress(text: string): { completedSections: string[]; agent
 
 export async function POST(request: NextRequest) {
     try {
+        // Rate limit AI calls — these are the most expensive operations
+        const limited = applyRateLimit(request, 'chat', RATE_LIMITS.ai);
+        if (limited) return limited;
+
         if (!API_KEY) {
             return NextResponse.json(
                 { error: 'Server configuration error: API key not configured' },

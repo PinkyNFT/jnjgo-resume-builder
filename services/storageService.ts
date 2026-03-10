@@ -4,6 +4,13 @@ import { Project, ResumeData, RoleType, ImportData, UserProfile, INITIAL_RESUME_
 const API_BASE = '/api';
 const USER_ID_HEADER = 'x-user-id';
 
+// Track known project IDs to avoid PUT→404→POST pattern
+const knownProjectIds = new Set<string>();
+
+// Debounced save timers per project ID
+const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const SAVE_DEBOUNCE_MS = 800;
+
 // Get user ID from session or localStorage as fallback
 function getUserId(): string {
     if (typeof window === 'undefined') return 'anonymous';
@@ -77,6 +84,8 @@ export const getProjects = async (): Promise<Project[]> => {
     if (typeof window === 'undefined') return [];
     try {
         const data = await apiFetch<{ projects: Project[] }>('/projects');
+        // Populate known IDs to optimize save routing
+        for (const p of data.projects) knownProjectIds.add(p.id);
         return data.projects;
     } catch (error) {
         console.error('Error fetching projects:', error);
@@ -102,23 +111,53 @@ export const getProject = async (id: string): Promise<Project | undefined> => {
 export const saveProject = async (project: Project): Promise<void> => {
     if (typeof window === 'undefined') return;
     try {
-        // Try updating first (most saves are updates), fall back to create on 404
-        await apiFetch(`/projects/${project.id}`, {
-            method: 'PUT',
-            body: JSON.stringify(project),
-        });
-    } catch (error) {
-        if (error instanceof Error && error.message.startsWith('[404]')) {
-            // Project doesn't exist yet, create it
+        if (knownProjectIds.has(project.id)) {
+            // Known existing project — direct PUT, no 404 fallback needed
+            await apiFetch(`/projects/${project.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(project),
+            });
+        } else {
+            // New project — create it
             await apiFetch('/projects', {
                 method: 'POST',
                 body: JSON.stringify(project),
             });
-        } else {
-            console.error('Error saving project:', error);
-            throw error;
+            knownProjectIds.add(project.id);
         }
+    } catch (error) {
+        // Handle race condition: POST 409 means project exists
+        if (error instanceof Error && error.message.startsWith('[409]')) {
+            knownProjectIds.add(project.id);
+            await apiFetch(`/projects/${project.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(project),
+            });
+            return;
+        }
+        console.error('Error saving project:', error);
+        throw error;
     }
+};
+
+/**
+ * Debounced version of saveProject for auto-save scenarios.
+ * Coalesces rapid saves into a single API call.
+ */
+export const saveProjectDebounced = (project: Project): void => {
+    if (typeof window === 'undefined') return;
+
+    const existing = saveTimers.get(project.id);
+    if (existing) clearTimeout(existing);
+
+    saveTimers.set(project.id, setTimeout(async () => {
+        saveTimers.delete(project.id);
+        try {
+            await saveProject(project);
+        } catch (error) {
+            console.error('Debounced save failed:', error);
+        }
+    }, SAVE_DEBOUNCE_MS));
 };
 
 export const deleteProject = async (id: string): Promise<void> => {

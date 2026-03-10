@@ -10,7 +10,7 @@ import { ResumeEditor } from '../../../components/ResumeEditor';
 import { ResumeGeneratingView } from '../../../components/ResumeGeneratingView';
 import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from '../../../types';
 import { useParseResume, useAnalyzeImport } from '../../../hooks/useGemini';
-import { getProjects, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile, createVersion } from '../../../services/storageService';
+import { getProjects, getProject, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile, createVersion } from '../../../services/storageService';
 import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/dataMigration';
 import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2, Sparkles, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
@@ -486,9 +486,15 @@ export default function Page() {
     }
   };
 
-  const handleOpenProject = (project: Project) => {
-    setCurrentProject(project);
-    if (project.status === 'completed' || project.status === 'generated') {
+  const handleOpenProject = async (project: Project) => {
+    // Fetch full project data (with history & resume data) on demand
+    const fullProject = await getProject(project.id);
+    if (!fullProject) {
+      alert('Failed to load project. Please try again.');
+      return;
+    }
+    setCurrentProject(fullProject);
+    if (fullProject.status === 'completed' || fullProject.status === 'generated') {
       setStep('editor');
     } else {
       setStep('interview');

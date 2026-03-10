@@ -383,11 +383,12 @@ export const DEFAULT_SETTINGS = [
 ];
 
 export async function seedDefaultSettings(adminUserId: string): Promise<void> {
-    for (const setting of DEFAULT_SETTINGS) {
-        await AdminSettingsModel.findOneAndUpdate(
-            { key: setting.key },
-            { $setOnInsert: { ...setting, updatedBy: adminUserId } },
-            { upsert: true }
-        );
-    }
+    const ops = DEFAULT_SETTINGS.map(setting => ({
+        updateOne: {
+            filter: { key: setting.key },
+            update: { $setOnInsert: { ...setting, updatedBy: adminUserId } as Record<string, unknown> },
+            upsert: true,
+        },
+    }));
+    await AdminSettingsModel.bulkWrite(ops, { ordered: false });
 }

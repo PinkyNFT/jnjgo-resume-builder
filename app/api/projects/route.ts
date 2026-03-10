@@ -11,7 +11,9 @@ import {
 
 /**
  * GET /api/projects
- * Retrieves all projects for the user
+ * Retrieves all projects for the user.
+ * Uses field projection to exclude heavy fields (history, full data)
+ * from the listing endpoint. Individual project GET returns full data.
  */
 export async function GET(request: NextRequest) {
     try {
@@ -19,7 +21,9 @@ export async function GET(request: NextRequest) {
 
         const userId = await getUserId(request);
 
+        // Project listing only needs metadata — exclude heavy fields
         const projects = await ProjectModel.find({ userId })
+            .select('id title roleType updatedAt status evaluation importData data.fullName data.currentRole data.careerSummary data.skills')
             .sort({ updatedAt: -1 })
             .lean();
 
@@ -30,7 +34,7 @@ export async function GET(request: NextRequest) {
             roleType: proj.roleType,
             updatedAt: proj.updatedAt,
             status: proj.status,
-            history: proj.history || [],
+            history: [],
             importData: proj.importData,
             data: proj.data,
             evaluation: proj.evaluation

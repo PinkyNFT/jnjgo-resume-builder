@@ -44,6 +44,8 @@ export class ApiClient {
     private defaultHeaders: Record<string, string>;
     private timeout: number;
     private retries: number;
+    // In-flight request deduplication for GET requests
+    private inflightRequests = new Map<string, Promise<unknown>>();
 
     constructor(config: ApiClientConfig = {}) {
         this.baseUrl = config.baseUrl || '/api';
@@ -141,13 +143,25 @@ export class ApiClient {
     }
 
     /**
-     * GET request
+     * GET request with in-flight deduplication.
+     * Concurrent identical GET requests share a single network call.
      */
     async get<T>(endpoint: string, options?: RequestInit): Promise<T> {
-        return this.fetchWithRetry<T>(endpoint, {
+        const cacheKey = `GET:${endpoint}`;
+        const existing = this.inflightRequests.get(cacheKey);
+        if (existing) {
+            return existing as Promise<T>;
+        }
+
+        const promise = this.fetchWithRetry<T>(endpoint, {
             ...options,
             method: 'GET',
+        }).finally(() => {
+            this.inflightRequests.delete(cacheKey);
         });
+
+        this.inflightRequests.set(cacheKey, promise);
+        return promise;
     }
 
     /**

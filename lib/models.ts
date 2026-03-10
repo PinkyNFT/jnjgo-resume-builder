@@ -276,6 +276,10 @@ const CandidatePrivateProfileSchema = new Schema<ICandidatePrivateProfileDocumen
     collection: 'candidatePrivateProfiles'
 });
 
+// Compound indexes for recruiter candidate browsing
+CandidatePrivateProfileSchema.index({ status: 1, 'visibilityFlags.isRecruiterOnly': 1, updatedAt: -1 });
+CandidatePrivateProfileSchema.index({ highlightedProjectId: 1 });
+
 const CandidatePublicPageSchema = new Schema<ICandidatePublicPageDocument>({
     userId: { type: String, required: true, unique: true, index: true },
     pageSlug: { type: String, required: true, unique: true, index: true },
@@ -284,6 +288,9 @@ const CandidatePublicPageSchema = new Schema<ICandidatePublicPageDocument>({
     timestamps: { createdAt: true, updatedAt: false },
     collection: 'candidatePublicPages'
 });
+
+// Compound index for fetching active public pages by user batch
+CandidatePublicPageSchema.index({ userId: 1, isActive: 1 });
 
 const ExportEventSchema = new Schema<IExportEventDocument>({
     userId: { type: String, required: true, index: true },
@@ -297,6 +304,10 @@ const ExportEventSchema = new Schema<IExportEventDocument>({
 }, {
     collection: 'exportEvents'
 });
+
+// Compound indexes for analytics queries
+ExportEventSchema.index({ userId: 1, siteKey: 1, copiedAt: -1 });
+ExportEventSchema.index({ userId: 1, projectId: 1, copiedAt: -1 });
 
 const RecruiterProfileSchema = new Schema<IRecruiterProfileDocument>({
     userId: { type: String, required: true, unique: true, index: true },

@@ -11,11 +11,6 @@ interface MongooseCache {
     promise: Promise<typeof mongoose> | null;
 }
 
-/**
- * Global is used here to maintain a cached connection across hot reloads
- * in development. This prevents connections growing exponentially
- * during API Route usage.
- */
 declare global {
     var mongoose: MongooseCache | undefined;
 }
@@ -26,29 +21,45 @@ if (!global.mongoose) {
     global.mongoose = cached;
 }
 
+const MONGOOSE_OPTS: mongoose.ConnectOptions = {
+    bufferCommands: false,
+    maxPoolSize: 10,
+    minPoolSize: 2,
+    serverSelectionTimeoutMS: 15000,
+    socketTimeoutMS: 30000,
+    heartbeatFrequencyMS: 10000,
+    maxIdleTimeMS: 30000,
+    retryWrites: true,
+    retryReads: true,
+    compressors: ['zstd', 'snappy', 'zlib'],
+};
+
 /**
  * Establishes a connection to MongoDB using Mongoose.
- * Implements connection pooling and caching for optimal performance.
- * 
- * @returns Promise resolving to the Mongoose instance
+ * Uses a global singleton with connection pooling to prevent
+ * connection storms during hot reloads and serverless cold starts.
  */
 export async function connectToDatabase(): Promise<typeof mongoose> {
-    if (cached.conn) {
+    // Fast path: return existing connection without awaiting
+    if (cached.conn && cached.conn.connection.readyState === 1) {
         return cached.conn;
     }
 
     if (!cached.promise) {
-        const opts = {
-            bufferCommands: false,
-            maxPoolSize: 10,
-            minPoolSize: 2,
-            serverSelectionTimeoutMS: 30000,
-            socketTimeoutMS: 45000,
-        };
-
-        cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+        cached.promise = mongoose.connect(MONGODB_URI, MONGOOSE_OPTS).then((m) => {
             console.log('✅ MongoDB connected successfully');
-            return mongoose;
+
+            // Register connection event handlers once
+            m.connection.on('error', (err) => {
+                console.error('MongoDB connection error:', err);
+            });
+            m.connection.on('disconnected', () => {
+                console.warn('MongoDB disconnected, will reconnect on next request');
+                cached.conn = null;
+                cached.promise = null;
+            });
+
+            return m;
         }).catch((error) => {
             console.error('❌ MongoDB connection error:', error);
             cached.promise = null;
@@ -68,7 +79,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 
 /**
  * Gracefully closes the MongoDB connection.
- * Used primarily for cleanup in testing or shutdown scenarios.
+ * Used for cleanup in testing or shutdown scenarios.
  */
 export async function disconnectFromDatabase(): Promise<void> {
     if (cached.conn) {

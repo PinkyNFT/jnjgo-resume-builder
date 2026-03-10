@@ -8,15 +8,22 @@ import {
     UserProfileModel,
     ProjectModel,
 } from '../../../../lib/models';
+import { applyRateLimit, RATE_LIMITS } from '../../../../lib/rate-limit';
 
 /**
  * GET /api/recruiter/candidates
  * Returns all published candidate profiles that recruiters can browse.
  * Only accessible by authenticated recruiters.
  * Query params: ?page=1&limit=12&search=keyword
+ * 
+ * Search is performed at the DB level using $regex on orientation,
+ * desiredRoles, and aiObjectiveReview fields from the private profile.
  */
 export async function GET(request: NextRequest) {
     try {
+        const limited = applyRateLimit(request, 'recruiter-candidates', RATE_LIMITS.standard);
+        if (limited) return limited;
+
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -32,16 +39,40 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
         const limit = Math.min(20, Math.max(1, parseInt(searchParams.get('limit') || '12')));
-        const search = searchParams.get('search') || '';
+        const search = searchParams.get('search')?.trim() || '';
 
-        // Find all published private profiles
+        // Build match stage with optional search filter at DB level
         const matchStage: Record<string, unknown> = {
             status: 'published',
             'visibilityFlags.isRecruiterOnly': true,
         };
 
+        if (search) {
+            // Escape regex special chars for safe DB query
+            const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            matchStage.$or = [
+                { orientation: { $regex: escaped, $options: 'i' } },
+                { aiObjectiveReview: { $regex: escaped, $options: 'i' } },
+                { 'desiredRoles.role': { $regex: escaped, $options: 'i' } },
+                { jobChangeReasonSummary: { $regex: escaped, $options: 'i' } },
+            ];
+        }
+
+        // Use projection to exclude heavy fields we don't need for the listing
+        const profileProjection = {
+            userId: 1,
+            orientation: 1,
+            jobChangeIntent: 1,
+            aiObjectiveReview: 1,
+            desiredSalary: 1,
+            desiredRoles: 1,
+            highlightedProjectId: 1,
+            updatedAt: 1,
+        };
+
         const [profiles, totalCount] = await Promise.all([
             CandidatePrivateProfileModel.find(matchStage)
+                .select(profileProjection)
                 .sort({ updatedAt: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit)
@@ -49,25 +80,35 @@ export async function GET(request: NextRequest) {
             CandidatePrivateProfileModel.countDocuments(matchStage),
         ]);
 
+        if (profiles.length === 0) {
+            return NextResponse.json({
+                candidates: [],
+                pagination: { page, limit, total: totalCount, totalPages: Math.ceil(totalCount / limit) },
+            });
+        }
+
         // Get userIds from published profiles
         const userIds = profiles.map(p => p.userId);
 
-        // Fetch user profile info (name, location, etc.) and public page slugs in parallel
+        // Collect highlighted project IDs
+        const projectIds = profiles
+            .map(p => p.highlightedProjectId)
+            .filter((id): id is string => !!id);
+
+        // Fetch related data in parallel with projections
         const [userProfiles, publicPages, highlightedProjects] = await Promise.all([
-            UserProfileModel.find({ userId: { $in: userIds } }).lean(),
-            CandidatePublicPageModel.find({ userId: { $in: userIds }, isActive: true }).lean(),
-            // Fetch highlighted project resume data if any
-            (async () => {
-                const profilesWithHighlight = profiles.filter(p => p.highlightedProjectId);
-                if (profilesWithHighlight.length === 0) return [];
-                const projectIds = profilesWithHighlight
-                    .map(p => p.highlightedProjectId)
-                    .filter((id): id is string => !!id);
-                return ProjectModel.find(
+            UserProfileModel.find({ userId: { $in: userIds } })
+                .select('userId fullName location')
+                .lean(),
+            CandidatePublicPageModel.find({ userId: { $in: userIds }, isActive: true })
+                .select('userId pageSlug')
+                .lean(),
+            projectIds.length > 0
+                ? ProjectModel.find(
                     { id: { $in: projectIds } },
                     { 'data.fullName': 1, 'data.currentRole': 1, 'data.careerSummary': 1, 'data.skills': 1, 'data.contactInfo.location': 1, id: 1, userId: 1 }
-                ).lean();
-            })(),
+                ).lean()
+                : Promise.resolve([]),
         ]);
 
         // Build lookup maps
@@ -78,7 +119,7 @@ export async function GET(request: NextRequest) {
         );
 
         // Compose candidate cards
-        let candidates = profiles.map(profile => {
+        const candidates = profiles.map(profile => {
             const userProfile = userProfileMap.get(profile.userId);
             const publicPage = publicPageMap.get(profile.userId);
             const highlightedProject = profile.highlightedProjectId
@@ -87,16 +128,13 @@ export async function GET(request: NextRequest) {
 
             return {
                 userId: profile.userId,
-                // Basic info from user profile
                 fullName: userProfile?.fullName || highlightedProject?.data?.fullName || null,
                 location: userProfile?.location || highlightedProject?.data?.contactInfo?.location || null,
-                // From private profile
                 orientation: profile.orientation || null,
                 jobChangeIntent: profile.jobChangeIntent || null,
                 aiObjectiveReview: profile.aiObjectiveReview || null,
                 desiredSalary: profile.desiredSalary || null,
                 desiredRoles: profile.desiredRoles || [],
-                // Highlighted resume data (limited — just enough for card display)
                 highlightedResume: highlightedProject ? {
                     currentRole: highlightedProject.data?.currentRole || null,
                     careerSummary: highlightedProject.data?.careerSummary
@@ -104,7 +142,6 @@ export async function GET(request: NextRequest) {
                         : null,
                     skills: (highlightedProject.data?.skills || []).slice(0, 8),
                 } : null,
-                // Public page slug for linking
                 slug: publicPage?.pageSlug || null,
                 updatedAt: (profile as any).updatedAt instanceof Date
                     ? (profile as any).updatedAt.getTime()
@@ -112,30 +149,13 @@ export async function GET(request: NextRequest) {
             };
         });
 
-        // Apply search filter on composed data (name, roles, orientation, skills)
-        if (search) {
-            const searchLower = search.toLowerCase();
-            candidates = candidates.filter(c => {
-                const searchableText = [
-                    c.fullName,
-                    c.orientation,
-                    c.aiObjectiveReview,
-                    c.highlightedResume?.currentRole,
-                    c.highlightedResume?.careerSummary,
-                    ...(c.highlightedResume?.skills || []),
-                    ...(c.desiredRoles?.map((r: any) => r.role) || []),
-                ].filter(Boolean).join(' ').toLowerCase();
-                return searchableText.includes(searchLower);
-            });
-        }
-
         return NextResponse.json({
             candidates,
             pagination: {
                 page,
                 limit,
-                total: search ? candidates.length : totalCount,
-                totalPages: Math.ceil((search ? candidates.length : totalCount) / limit),
+                total: totalCount,
+                totalPages: Math.ceil(totalCount / limit),
             },
         });
     } catch (error) {
