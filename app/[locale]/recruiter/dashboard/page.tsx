@@ -101,7 +101,7 @@ export default function RecruiterDashboardPage() {
             fetch('/api/admin/check')
                 .then(res => res.json())
                 .then(data => setIsAdmin(data.isAdmin === true))
-                .catch(() => {});
+                .catch(() => { });
 
             // Load recruiter profile
             fetch('/api/recruiter/profile')
