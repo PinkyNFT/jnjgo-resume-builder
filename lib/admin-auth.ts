@@ -27,10 +27,27 @@ export async function requireAdmin(request: NextRequest): Promise<AdminContext |
 
     await connectToDatabase();
 
-    const adminUser = await AdminUserModel.findOne({
+    // Look up by userId first, then fall back to email to survive user-ID churn
+    // (e.g. account re-linking or role switching that creates a new user record).
+    let adminUser = await AdminUserModel.findOne({
         userId: session.user.id,
         isActive: true
     }).lean();
+
+    if (!adminUser) {
+        adminUser = await AdminUserModel.findOne({
+            email: session.user.email,
+            isActive: true
+        }).lean();
+
+        if (adminUser) {
+            // Auto-heal: update the stale userId so future lookups are fast
+            AdminUserModel.updateOne(
+                { _id: adminUser._id },
+                { $set: { userId: session.user.id } }
+            ).exec().catch(() => { /* ignore */ });
+        }
+    }
 
     if (!adminUser) {
         return NextResponse.json(
@@ -41,8 +58,8 @@ export async function requireAdmin(request: NextRequest): Promise<AdminContext |
 
     // Update last login timestamp (fire-and-forget, non-blocking)
     AdminUserModel.updateOne(
-        { userId: session.user.id },
-        { $set: { lastLogin: new Date() } }
+        { _id: adminUser._id },
+        { $set: { lastLogin: new Date(), userId: session.user.id } }
     ).exec().catch(() => { /* ignore */ });
 
     return {

@@ -53,6 +53,8 @@ export default function RecruiterDashboardPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
 
+    const [isAdmin, setIsAdmin] = useState(false);
+
     // Candidate browsing state
     const [candidates, setCandidates] = useState<CandidateCard[]>([]);
     const [candidatesLoading, setCandidatesLoading] = useState(true);
@@ -94,6 +96,12 @@ export default function RecruiterDashboardPage() {
                 }
                 return;
             }
+
+            // Check admin status
+            fetch('/api/admin/check')
+                .then(res => res.json())
+                .then(data => setIsAdmin(data.isAdmin === true))
+                .catch(() => {});
 
             // Load recruiter profile
             fetch('/api/recruiter/profile')
@@ -165,6 +173,15 @@ export default function RecruiterDashboardPage() {
                                     <BarChart3 className="w-4 h-4" />
                                     Dashboard
                                 </Link>
+                                {isAdmin && (
+                                    <Link
+                                        href={`/${locale}/admin`}
+                                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200"
+                                    >
+                                        <Shield className="w-4 h-4" />
+                                        Admin
+                                    </Link>
+                                )}
                             </div>
                         </div>
 
@@ -214,6 +231,16 @@ export default function RecruiterDashboardPage() {
                                             </div>
                                         </div>
                                         <div className="border-t border-slate-100 px-2 pt-1 pb-1">
+                                            {isAdmin && (
+                                                <Link
+                                                    href={`/${locale}/admin`}
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all duration-150"
+                                                >
+                                                    <Shield className="w-4 h-4" />
+                                                    Admin Dashboard
+                                                </Link>
+                                            )}
                                             <button
                                                 onClick={() => { setUserMenuOpen(false); signOut({ callbackUrl: '/' }); }}
                                                 className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-150"

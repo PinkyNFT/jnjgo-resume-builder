@@ -30,7 +30,17 @@ export async function GET(request: NextRequest) {
         const adminCount = await AdminUserModel.countDocuments();
 
         if (adminCount === 0 || (isAdminEmail && adminCount > 0)) {
-            const existingAdmin = await AdminUserModel.findOne({ userId: session.user.id });
+            const existingAdmin = await AdminUserModel.findOne({
+                $or: [{ userId: session.user.id }, { email: session.user.email }]
+            });
+
+            if (existingAdmin && existingAdmin.userId !== session.user.id) {
+                // Auto-heal stale userId
+                await AdminUserModel.updateOne(
+                    { _id: existingAdmin._id },
+                    { $set: { userId: session.user.id } }
+                );
+            }
 
             if (!existingAdmin) {
                 await AdminUserModel.create({
@@ -56,10 +66,26 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        const adminUser = await AdminUserModel.findOne({
+        let adminUser = await AdminUserModel.findOne({
             userId: session.user.id,
             isActive: true
         }).lean();
+
+        if (!adminUser) {
+            // Fallback: match by email to survive user-ID churn
+            adminUser = await AdminUserModel.findOne({
+                email: session.user.email,
+                isActive: true
+            }).lean();
+
+            if (adminUser) {
+                // Auto-heal stale userId
+                await AdminUserModel.updateOne(
+                    { _id: adminUser._id },
+                    { $set: { userId: session.user.id } }
+                );
+            }
+        }
 
         if (!adminUser) {
             return NextResponse.json({ isAdmin: false }, { status: 200 });

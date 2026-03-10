@@ -40,6 +40,7 @@ export async function GET(
 
         return NextResponse.json({ version: transformed }, { status: 200 });
     } catch (error) {
+        if (error instanceof NextResponse) return error;
         console.error('Error fetching version:', error);
         return NextResponse.json(
             { error: 'Failed to fetch version', details: error instanceof Error ? error.message : 'Unknown error' },
@@ -73,6 +74,7 @@ export async function DELETE(
 
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (error) {
+        if (error instanceof NextResponse) return error;
         console.error('Error deleting version:', error);
         return NextResponse.json(
             { error: 'Failed to delete version', details: error instanceof Error ? error.message : 'Unknown error' },
@@ -127,6 +129,7 @@ export async function PATCH(
 
         return NextResponse.json({ version: transformed }, { status: 200 });
     } catch (error) {
+        if (error instanceof NextResponse) return error;
         console.error('Error updating version:', error);
         return NextResponse.json(
             { error: 'Failed to update version', details: error instanceof Error ? error.message : 'Unknown error' },

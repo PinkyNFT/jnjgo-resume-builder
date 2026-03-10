@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, eventId: event._id }, { status: 201 });
     } catch (error) {
+        if (error instanceof NextResponse) return error;
         console.error('Error recording export event:', error);
         return NextResponse.json(
             { error: 'Failed to record export event' },
@@ -52,6 +53,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ events }, { status: 200 });
     } catch (error) {
+        if (error instanceof NextResponse) return error;
         console.error('Error fetching export events:', error);
         return NextResponse.json(
             { error: 'Failed to fetch export events' },

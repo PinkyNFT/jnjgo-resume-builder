@@ -57,11 +57,26 @@ export const authOptions: NextAuthOptions = {
             }
             return true;
         },
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger }) {
             // Initial sign in
             if (user) {
                 token.id = user.id;
                 token.role = (user as any).role || null;
+            }
+            // Re-read role from DB when the client calls update() (e.g. after role selection)
+            if (trigger === 'update' && token.id) {
+                const client = await clientPromise;
+                const db = client.db();
+                const { ObjectId } = await import('mongodb');
+                try {
+                    const dbUser = await db.collection('users').findOne(
+                        { _id: new ObjectId(token.id as string) },
+                        { projection: { role: 1 } }
+                    );
+                    token.role = dbUser?.role || null;
+                } catch {
+                    // keep existing token.role on error
+                }
             }
             return token;
         },

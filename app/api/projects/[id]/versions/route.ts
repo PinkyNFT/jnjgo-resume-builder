@@ -40,6 +40,7 @@ export async function GET(
 
         return NextResponse.json({ versions: transformed }, { status: 200 });
     } catch (error) {
+        if (error instanceof NextResponse) return error;
         console.error('Error fetching versions:', error);
         return NextResponse.json(
             { error: 'Failed to fetch versions', details: error instanceof Error ? error.message : 'Unknown error' },
@@ -124,6 +125,7 @@ export async function POST(
 
         return NextResponse.json({ version: transformed }, { status: 201 });
     } catch (error) {
+        if (error instanceof NextResponse) return error;
         console.error('Error creating version:', error);
         return NextResponse.json(
             { error: 'Failed to create version', details: error instanceof Error ? error.message : 'Unknown error' },

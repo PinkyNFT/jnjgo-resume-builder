@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ projects: transformedProjects }, { status: 200 });
     } catch (error) {
+        if (error instanceof NextResponse) return error;
         console.error('Error fetching projects:', error);
         return NextResponse.json(
             { error: 'Failed to fetch projects', details: error instanceof Error ? error.message : 'Unknown error' },
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ project: transformedProject }, { status: 201 });
     } catch (error) {
+        if (error instanceof NextResponse) return error;
         console.error('Error creating project:', error);
 
         // Handle duplicate key error

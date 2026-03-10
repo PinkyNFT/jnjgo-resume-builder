@@ -3,8 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useSession } from 'next-auth/react';
-import LanguageSwitcher from '../../../components/LanguageSwitcher';
-import { AuthButton } from '../../../components/AuthButton';
 import { InterviewView } from '../../../components/InterviewView';
 import { ResumeEditor } from '../../../components/ResumeEditor';
 import { ResumeGeneratingView } from '../../../components/ResumeGeneratingView';
