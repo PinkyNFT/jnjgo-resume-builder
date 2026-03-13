@@ -406,21 +406,19 @@ export default function RecruiterDashboardPage() {
                         <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
                             <button
                                 onClick={() => setActiveTab('browse')}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                                    activeTab === 'browse'
+                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'browse'
                                         ? 'bg-white text-slate-900 shadow-sm'
                                         : 'text-slate-500 hover:text-slate-700'
-                                }`}
+                                    }`}
                             >
                                 Browse All
                             </button>
                             <button
                                 onClick={() => { setActiveTab('saved'); if (savedCandidates.length === 0 && !savedLoading) fetchSavedCandidates(); }}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${
-                                    activeTab === 'saved'
+                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'saved'
                                         ? 'bg-white text-slate-900 shadow-sm'
                                         : 'text-slate-500 hover:text-slate-700'
-                                }`}
+                                    }`}
                             >
                                 <BookmarkCheck className="w-3.5 h-3.5" />
                                 Saved
@@ -433,23 +431,23 @@ export default function RecruiterDashboardPage() {
                         </div>
                         {activeTab === 'browse' && (
                             <form onSubmit={handleCandidateSearch} className="flex gap-2 w-full sm:w-auto">
-                            <div className="relative flex-1 sm:w-64">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <input
-                                    type="text"
-                                    value={candidateSearchInput}
-                                    onChange={e => setCandidateSearchInput(e.target.value)}
-                                    placeholder="Search by name, role, skills..."
-                                    className="w-full pl-10 pr-4 py-2.5 text-sm text-slate-800 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                className="px-4 py-2.5 text-sm font-medium bg-slate-900 text-white rounded-xl hover:bg-emerald-600 transition-colors shrink-0"
-                            >
-                                Search
-                            </button>
-                        </form>
+                                <div className="relative flex-1 sm:w-64">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        value={candidateSearchInput}
+                                        onChange={e => setCandidateSearchInput(e.target.value)}
+                                        placeholder="Search by name, role, skills..."
+                                        className="w-full pl-10 pr-4 py-2.5 text-sm text-slate-800 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2.5 text-sm font-medium bg-slate-900 text-white rounded-xl hover:bg-emerald-600 transition-colors shrink-0"
+                                >
+                                    Search
+                                </button>
+                            </form>
                         )}
                     </div>
 
