@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ResumePreviewCard } from "../../../components/ResumePreviewCard";
+import RecruiterActions from "../../../components/recruiter/RecruiterActions";
+import SimilarCandidates from "../../../components/recruiter/SimilarCandidates";
 
 /* ─── Helpers ────────────────────────────────────────────── */
 
@@ -202,6 +204,15 @@ export default async function CandidateLandingPage({ params }: { params: Promise
                                     )}
                                 </div>
                             </div>
+
+                            {/* Recruiter Action Buttons */}
+                            <div className="pt-4 border-t border-slate-100 mt-4">
+                                <RecruiterActions
+                                    candidateSlug={slug}
+                                    candidateName={candidateUserProfile?.fullName || undefined}
+                                    candidateRole={highlightedResume?.currentRole || undefined}
+                                />
+                            </div>
                         </div>
 
                         {/* ── Full Resume Section ── */}
@@ -288,6 +299,14 @@ export default async function CandidateLandingPage({ params }: { params: Promise
                                 )}
                             </div>
                         </div>
+                    </div>
+
+                    {/* ── Similar Candidates (Exploration Path) ── */}
+                    <div className="mt-8">
+                        <SimilarCandidates
+                            currentSlug={slug}
+                            orientation={privateProfile.orientation || undefined}
+                        />
                     </div>
 
                     {/* Trust footer */}

@@ -65,6 +65,18 @@ export interface ExportEvent {
     copiedAt: number;
 }
 
+export type RecruiterActionType = 'save' | 'unsave' | 'contact_request';
+
+export interface RecruiterAction {
+    id?: string;
+    recruiterId: string;
+    candidateUserId: string;
+    candidatePageSlug: string;
+    actionType: RecruiterActionType;
+    message?: string;
+    createdAt?: number;
+}
+
 
 export interface Message {
     role: 'user' | 'model';

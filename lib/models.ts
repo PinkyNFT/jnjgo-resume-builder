@@ -13,7 +13,8 @@ import {
     CandidatePrivateProfile,
     CandidatePublicPage,
     ExportEvent,
-    RecruiterProfile
+    RecruiterProfile,
+    RecruiterAction,
 } from '../types';
 
 // ===== INTERFACES FOR MONGOOSE DOCUMENTS =====
@@ -62,6 +63,11 @@ export interface IRecruiterProfileDocument extends Omit<Document, '_id'>, Omit<R
     userId: string;
     createdAt: Date;
     updatedAt: Date;
+}
+
+export interface IRecruiterActionDocument extends Omit<Document, '_id'>, Omit<RecruiterAction, 'id' | 'createdAt'> {
+    _id: Types.ObjectId;
+    createdAt: Date;
 }
 
 // ===== SCHEMAS =====
@@ -324,6 +330,21 @@ const RecruiterProfileSchema = new Schema<IRecruiterProfileDocument>({
     collection: 'recruiterProfiles'
 });
 
+const RecruiterActionSchema = new Schema<IRecruiterActionDocument>({
+    recruiterId: { type: String, required: true, index: true },
+    candidateUserId: { type: String, required: true },
+    candidatePageSlug: { type: String, required: true },
+    actionType: { type: String, enum: ['save', 'unsave', 'contact_request'], required: true },
+    message: { type: String },
+}, {
+    timestamps: { createdAt: true, updatedAt: false },
+    collection: 'recruiterActions'
+});
+
+// Indexes for recruiter actions
+RecruiterActionSchema.index({ recruiterId: 1, candidateUserId: 1, actionType: 1 });
+RecruiterActionSchema.index({ candidateUserId: 1, actionType: 1, createdAt: -1 });
+
 // ===== MODELS =====
 
 export const UserProfileModel: Model<IUserProfileDocument> =
@@ -346,3 +367,6 @@ export const ExportEventModel: Model<IExportEventDocument> =
 
 export const RecruiterProfileModel: Model<IRecruiterProfileDocument> =
     mongoose.models.RecruiterProfile || mongoose.model<IRecruiterProfileDocument>('RecruiterProfile', RecruiterProfileSchema);
+
+export const RecruiterActionModel: Model<IRecruiterActionDocument> =
+    mongoose.models.RecruiterAction || mongoose.model<IRecruiterActionDocument>('RecruiterAction', RecruiterActionSchema);
