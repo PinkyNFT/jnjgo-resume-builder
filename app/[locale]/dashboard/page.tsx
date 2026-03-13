@@ -10,11 +10,12 @@ import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from 
 import { useParseResume, useAnalyzeImport } from '../../../hooks/useGemini';
 import { getProjects, getProject, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile, createVersion } from '../../../services/storageService';
 import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/dataMigration';
-import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, Upload, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2, Sparkles, ArrowUpRight } from 'lucide-react';
+import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, UploadCloud, File, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2, Sparkles, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AppNavbar from '../../../components/navigation/AppNavbar';
 import { DashboardSkeleton } from '../../../components/navigation/Skeletons';
+import Dropzone from 'react-dropzone';
 
 // --- Sub-Components ---
 
@@ -184,6 +185,8 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
   const [role, setRole] = useState<RoleType>('consultant');
   const [importText, setImportText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const analyzeImportMutation = useAnalyzeImport();
 
   const handleStart = async () => {
@@ -234,12 +237,87 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide items-center gap-2">
-            <Upload className="w-4 h-4" /> {t('importTitle')}
+          <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide flex items-center gap-2">
+            <UploadCloud className="w-4 h-4" /> {t('importTitle')}
           </label>
           <p className="text-sm text-slate-500 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
-            {t('importDesc')}
+            {t('importDesc')} You can upload a PDF/Word file or paste text directly.
           </p>
+
+          <Dropzone
+            onDrop={async (acceptedFiles) => {
+              if (acceptedFiles.length === 0) return;
+              const file = acceptedFiles[0];
+              setIsUploading(true);
+              setUploadError('');
+
+              try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/api/extract-file', {
+                  method: 'POST',
+                  body: formData,
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                  throw new Error(result.error || 'Failed to extract text from file.');
+                }
+
+                if (result.text) {
+                  setImportText(result.text);
+                }
+              } catch (err: any) {
+                setUploadError(err.message || 'An error occurred while uploading. Please ensure your file is a valid PDF or DOCX under 5MB.');
+                console.error('File upload error:', err);
+              } finally {
+                setIsUploading(false);
+              }
+            }}
+            accept={{
+              'application/pdf': ['.pdf'],
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+              'application/msword': ['.doc']
+            }}
+            maxSize={5 * 1024 * 1024} // 5MB limit
+            multiple={false}
+          >
+            {({ getRootProps, getInputProps, isDragActive, isDragReject }) => (
+              <div
+                {...getRootProps()}
+                className={`w-full mb-4 p-6 rounded-xl border-2 border-dashed text-center cursor-pointer transition-colors ${isDragActive ? 'border-indigo-500 bg-indigo-50 text-indigo-700' :
+                    isDragReject ? 'border-red-500 bg-red-50 text-red-700' :
+                      'border-slate-300 hover:border-slate-400 bg-slate-50/50 hover:bg-slate-100/50 text-slate-500'
+                  }`}
+              >
+                <input {...getInputProps()} />
+                {isUploading ? (
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                    <p className="text-sm font-semibold text-slate-700">Extracting text...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <File className={`w-8 h-8 ${isDragActive ? 'text-indigo-500' : 'text-slate-400'}`} />
+                    <p className="text-sm font-semibold">
+                      {isDragActive ? "Drop the file here" : "Drag & drop a PDF or Word file here, or click to select"}
+                    </p>
+                    <p className="text-xs opacity-75">Maximum size: 5MB</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </Dropzone>
+
+          {uploadError && (
+            <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm font-medium rounded-lg border border-red-200 flex items-start gap-2">
+              <Shield className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+              <span>{uploadError}</span>
+            </div>
+          )}
+
           <textarea
             className="w-full h-48 p-4 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-400 bg-slate-50/50 focus:bg-white resize-none"
             placeholder={t('importPlaceholder')}

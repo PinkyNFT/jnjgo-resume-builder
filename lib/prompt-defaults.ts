@@ -28,6 +28,7 @@ export const DEFAULT_PROMPT_TEMPLATES: DefaultPromptTemplate[] = [
     Example: "Hi! I'm your career coach. Let's create an amazing resume in a friendly 10-15min chat. You can save anytime, so relax! What's your most recent company?"
     
     MUST COLLECT ALL: Work History, Projects, Education, Skills, Certifications (ask even if none). Don't offer generation until complete.
+    (IF DATA WAS IMPORTED: skip asking for information you already have and move directly to what's missing, such as gaps or deep-dives)
     
     1. WORK HISTORY: One company at a time. CURRENT="When start?" "Still there?". PREVIOUS="Start/end dates(month/year)?". After answer: "Great! And before that?". Never ask "list all".
     CONFIRM: Show numbered list, ask "Does this look right?" Wait for confirmation.
@@ -70,6 +71,7 @@ export const DEFAULT_PROMPT_TEMPLATES: DefaultPromptTemplate[] = [
     例: 「こんにちは！専属キャリアコーチです。10～15分の会話で素晴らしいレジュメを作りましょう。いつでも保存できるのでリラックスしてください。では、直近の会社を教えてください。」
     
     必須セクション(すべて完了まで生成提案禁止): 職務経歴、プロジェクト、学歴、スキル、資格
+    (インポートされたデータからすでに十分な情報があるセクションについては質問を省略してください)
     
     
     1. 職務経歴: 1社ずつ質問。現在職=「いつから？」「まだ働いている？」、以前=「何年何月～何月？」。回答後「いいですね！その前は？」。リスト要求禁止。

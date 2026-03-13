@@ -90,6 +90,12 @@ function detectTopicFromConversation(
 ): boolean {
     const modelText = modelMessages.map(m => m.text.toLowerCase()).join(' ');
 
+    // Helper to check if importData contains info for a topic
+    const hasImportedTopic = (keywords: RegExp) => {
+        if (!importData || !importData.sourceText) return false;
+        return keywords.test(importData.sourceText.toLowerCase());
+    };
+
     switch (topic) {
         case 'work': {
             const agentAsked = /company|employer|position|role|where.*work|most recent|current.*job|会社|勤務|役職|直近/.test(modelText);
@@ -97,7 +103,7 @@ function detectTopicFromConversation(
                 m.text.length > 15 &&
                 /compan|work|position|role|job|employ|manager|developer|engineer|analyst|director|lead/i.test(m.text)
             );
-            return (agentAsked && userAnswered) || !!importData;
+            return (agentAsked && userAnswered) || hasImportedTopic(/experience|work history|employment|career|職歴|経歴/i);
         }
         case 'details': {
             const agentAsked = /responsibilit|achievement|project|team\s*size|impact|challenge|tell.*more|deep.*dive|contribution|責任|実績|プロジェクト|チーム.*規模|詳しく/.test(modelText);
@@ -108,7 +114,7 @@ function detectTopicFromConversation(
             const userAnswered = userMessages.some(m =>
                 /degree|university|college|school|bachelor|master|phd|diploma|bootcamp|self.?taught|no.*degree|graduat|enrolled|studied|major/i.test(m.text.toLowerCase())
             );
-            return agentAsked && userAnswered;
+            return (agentAsked && userAnswered) || hasImportedTopic(/education|university|college|degree|bachelor|master|phd|学歴|大学|卒業/i);
         }
         case 'skills': {
             const agentAsked = /skills?|technical|tools|technologies|programming|key.*tools|スキル|技術|ツール/.test(modelText);
@@ -117,10 +123,11 @@ function detectTopicFromConversation(
             ) || userMessages.some(m =>
                 m.text.length > 20 && /skill|tool|tech|proficien/i.test(m.text.toLowerCase())
             );
-            return agentAsked && userAnswered;
+            return (agentAsked && userAnswered) || hasImportedTopic(/skills|technologies|tools|languages|frameworks|スキル|技術/i);
         }
         case 'certifications': {
-            return /certification|certified|professional cert|do you have any.*cert|資格|認定/.test(modelText);
+            const agentAsked = /certification|certified|professional cert|do you have any.*cert|資格|認定/.test(modelText);
+            return agentAsked || hasImportedTopic(/certification|certified|license|資格|認定/i);
         }
         case 'gaps': {
             return /gap|between.*position|career break|what were you doing|between.*and|ギャップ|空白/.test(modelText)

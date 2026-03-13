@@ -99,20 +99,24 @@ export const getSystemInstruction = async (roleType: RoleType, importData?: Impo
   const importContext = importData
     ? (isJa ? `
       コンテキスト: ユーザーはすでにレジュメを提供しています。
-      インポートされたサマリー: "${importData.parsedSummary.substring(0, 500)}..."
+      インポートされたレジュメ全体:
+      "${importData.sourceText.substring(0, 10000)}"
       
       指示: 
-      1. まずタイムラインを確認してください。ポジション間に${gapDays}日以上のギャップがないか探してください。
+      1. インポートされた情報の中に、基本情報、職務経歴、学歴、スキルなどの必須項目がすでに存在する場合は、それらを再度質問しないでください。既存のデータを尊重してください。
+      2. まずタイムラインを確認してください。ポジション間に${gapDays}日以上のギャップがないか探してください。
       2. 検出された各ギャップについて、1つだけ質問してください：「[ポジションA終了]から[ポジションB開始]の間は何をしていましたか？」
       3. どのような説明でも受け入れ、次のギャップに進んでください。
       4. 高レベルの意思決定を示す2-3の「代表的なプロジェクト」を特定してください。
       5. それらのプロジェクトを深掘りしてください。
     ` : `
-      CONTEXT: The user has already provided a resume. 
-      IMPORTED SUMMARY: "${importData.parsedSummary.substring(0, 500)}..."
+      CONTEXT: The user has already provided a complete resume. 
+      IMPORTED RESUME: 
+      "${importData.sourceText.substring(0, 10000)}"
       
       INSTRUCTION: 
-      1. Confirm the timeline first. Look for ANY gaps of ${gapDays}+ days between positions.
+      1. CRITICAL: Do NOT ask for basic information (work history, education, skills) that is already present in the imported resume. Acknowledge what you have and move on.
+      2. Confirm the timeline first. Look for ANY gaps of ${gapDays}+ days between positions.
       2. For each gap detected, ask ONE question: "What were you doing between [end of Position A] and [start of Position B]?"
       3. Accept any explanation and move to next gap if any.
       4. Identify 2-3 "Representative Projects" that show high-level decision making.
