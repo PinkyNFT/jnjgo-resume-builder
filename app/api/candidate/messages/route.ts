@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
         }
 
         const { actionId, message } = await request.json().catch(() => ({}));
-        
+
         if (!actionId || !message || typeof message !== 'string' || message.trim().length === 0) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }

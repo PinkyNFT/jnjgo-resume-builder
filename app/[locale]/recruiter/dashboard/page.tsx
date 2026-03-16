@@ -6,9 +6,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import {
-    Search, Building2, Users, ExternalLink, Settings, LogOut,
+    Search, Building2, Users, LogOut,
     Loader2, ChevronDown, Sparkles, Shield, Eye, TrendingUp,
-    Zap, ArrowRight, UserCircle, Bell, BookmarkCheck, BarChart3,
+    Zap, ArrowRight, BookmarkCheck, BarChart3,
     MapPin, DollarSign, Briefcase, Globe, Clock, ChevronLeft, ChevronRight, FileText,
     MailOpen, User, MessageSquare
 } from 'lucide-react';
@@ -546,8 +546,8 @@ export default function RecruiterDashboardPage() {
                             <button
                                 onClick={() => setActiveTab('browse')}
                                 className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'browse'
-                                        ? 'bg-white text-slate-900 shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-700'
+                                    ? 'bg-white text-slate-900 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
                                     }`}
                             >
                                 Browse All
@@ -555,8 +555,8 @@ export default function RecruiterDashboardPage() {
                             <button
                                 onClick={() => { setActiveTab('saved'); if (savedCandidates.length === 0 && !savedLoading) fetchSavedCandidates(); }}
                                 className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'saved'
-                                        ? 'bg-white text-slate-900 shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-700'
+                                    ? 'bg-white text-slate-900 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
                                     }`}
                             >
                                 <BookmarkCheck className="w-3.5 h-3.5" />
@@ -570,8 +570,8 @@ export default function RecruiterDashboardPage() {
                             <button
                                 onClick={() => { setActiveTab('contacts'); if (contacts.length === 0 && !contactsLoading) fetchContacts(); }}
                                 className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'contacts'
-                                        ? 'bg-white text-slate-900 shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-700'
+                                    ? 'bg-white text-slate-900 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
                                     }`}
                             >
                                 <MailOpen className="w-3.5 h-3.5" />
@@ -872,11 +872,10 @@ export default function RecruiterDashboardPage() {
                                         <button
                                             key={contact.id}
                                             onClick={() => handleOpenContact(contact)}
-                                            className={`w-full text-left p-4 rounded-2xl border transition-all duration-200 ${
-                                                selectedContact?.id === contact.id
-                                                    ? 'bg-emerald-50 border-emerald-200 shadow-sm'
-                                                    : 'bg-white border-slate-200 hover:border-slate-300'
-                                            }`}
+                                            className={`w-full text-left p-4 rounded-2xl border transition-all duration-200 ${selectedContact?.id === contact.id
+                                                ? 'bg-emerald-50 border-emerald-200 shadow-sm'
+                                                : 'bg-white border-slate-200 hover:border-slate-300'
+                                                }`}
                                         >
                                             <div className="flex items-start justify-between mb-1">
                                                 <div className="flex items-center gap-2">
@@ -938,11 +937,10 @@ export default function RecruiterDashboardPage() {
                                             ) : (
                                                 threadReplies.map(reply => (
                                                     <div key={reply.id} className={`flex ${reply.isFromCandidate ? 'justify-start' : 'justify-end'}`}>
-                                                        <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
-                                                            reply.isFromCandidate
-                                                                ? 'bg-slate-100 text-slate-800 rounded-tl-sm'
-                                                                : 'bg-emerald-600 text-white rounded-tr-sm'
-                                                        }`}>
+                                                        <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${reply.isFromCandidate
+                                                            ? 'bg-slate-100 text-slate-800 rounded-tl-sm'
+                                                            : 'bg-emerald-600 text-white rounded-tr-sm'
+                                                            }`}>
                                                             <p className="whitespace-pre-wrap">{reply.message}</p>
                                                             <span className={`block text-[10px] mt-2 ${reply.isFromCandidate ? 'text-slate-400' : 'text-emerald-200 text-right'}`}>
                                                                 {new Date(reply.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
