@@ -91,6 +91,7 @@ export default function RecruiterDashboardPage() {
 
     // Recruiter stats
     const [recruiterStats, setRecruiterStats] = useState<{ contactsSent: number; savedCount: number } | null>(null);
+    const [profilesViewed, setProfilesViewed] = useState<number | null>(null);
 
     // Contacts state
     const [contacts, setContacts] = useState<ContactRequest[]>([]);
@@ -175,6 +176,19 @@ export default function RecruiterDashboardPage() {
                 .then(data => setIsAdmin(data.isAdmin === true))
                 .catch(() => { });
 
+            // Claim anonymous page views (one-time per session)
+            if (!sessionStorage.getItem('jnjgo_pv_claimed')) {
+                const anonId = localStorage.getItem('jnjgo_anon_id');
+                if (anonId) {
+                    sessionStorage.setItem('jnjgo_pv_claimed', '1');
+                    fetch('/api/recruiter/page-views', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ anonymousId: anonId }),
+                    }).catch(() => { });
+                }
+            }
+
             // Load recruiter profile
             fetch('/api/recruiter/profile')
                 .then(res => res.json())
@@ -197,6 +211,13 @@ export default function RecruiterDashboardPage() {
                         .then(res => res.json())
                         .then(data => {
                             if (!data.error) setRecruiterStats(data);
+                        })
+                        .catch(() => { });
+                    // Fetch profiles viewed count
+                    fetch('/api/recruiter/page-views')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (!data.error) setProfilesViewed(data.profilesViewed ?? 0);
                         })
                         .catch(() => { });
                 })
@@ -446,7 +467,7 @@ export default function RecruiterDashboardPage() {
                 {/* Stats Row */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                        { label: 'Profiles Viewed', value: '—', icon: Eye, color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
+                        { label: 'Profiles Viewed', value: profilesViewed !== null ? String(profilesViewed) : '—', icon: Eye, color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
                         { label: 'Saved Candidates', value: String(recruiterStats?.savedCount ?? savedCount ?? '—'), icon: BookmarkCheck, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
                         { label: 'Active Candidates', value: String(candidatePagination.total || '—'), icon: Users, color: 'bg-violet-50 text-violet-600', border: 'border-violet-100' },
                         { label: 'Scouts Sent', value: String(recruiterStats?.contactsSent ?? '—'), icon: TrendingUp, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },

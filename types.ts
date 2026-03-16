@@ -78,6 +78,24 @@ export interface RecruiterAction {
     createdAt?: number;
 }
 
+// --- Recruiter Page View Tracking ---
+
+export interface RecruiterPageView {
+    id?: string;
+    userId: string | null;
+    anonymousId: string;
+    candidatePageSlug: string;
+    candidateUserId: string;
+    source: {
+        ref?: string;
+        site?: string;
+        utm_campaign?: string;
+        utm_medium?: string;
+    };
+    viewedAt: number;
+    isAuthenticated: boolean;
+}
+
 export interface CandidateReply {
     id?: string;
     actionId: string;

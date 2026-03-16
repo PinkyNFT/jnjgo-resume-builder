@@ -15,6 +15,7 @@ import {
     ExportEvent,
     RecruiterProfile,
     RecruiterAction,
+    RecruiterPageView,
 } from '../types';
 
 // ===== INTERFACES FOR MONGOOSE DOCUMENTS =====
@@ -68,6 +69,11 @@ export interface IRecruiterProfileDocument extends Omit<Document, '_id'>, Omit<R
 export interface IRecruiterActionDocument extends Omit<Document, '_id'>, Omit<RecruiterAction, 'id' | 'createdAt'> {
     _id: Types.ObjectId;
     createdAt: Date;
+}
+
+export interface IRecruiterPageViewDocument extends Omit<Document, '_id'>, Omit<RecruiterPageView, 'id' | 'viewedAt'> {
+    _id: Types.ObjectId;
+    viewedAt: Date;
 }
 
 // ===== SCHEMAS =====
@@ -297,6 +303,8 @@ const CandidatePublicPageSchema = new Schema<ICandidatePublicPageDocument>({
 
 // Compound index for fetching active public pages by user batch
 CandidatePublicPageSchema.index({ userId: 1, isActive: 1 });
+// Compound index for slug lookups (page-view tracking, candidate page)
+CandidatePublicPageSchema.index({ pageSlug: 1, isActive: 1 });
 
 const ExportEventSchema = new Schema<IExportEventDocument>({
     userId: { type: String, required: true, index: true },
@@ -382,6 +390,31 @@ CandidateReplySchema.index({ actionId: 1, createdAt: 1 });
 // Candidate's sent reply history
 CandidateReplySchema.index({ candidateUserId: 1, createdAt: -1 });
 
+// ===== RECRUITER PAGE VIEW =====
+
+const RecruiterPageViewSchema = new Schema<IRecruiterPageViewDocument>({
+    userId: { type: String, default: null },
+    anonymousId: { type: String, required: true },
+    candidatePageSlug: { type: String, required: true },
+    candidateUserId: { type: String, required: true },
+    source: {
+        ref: { type: String },
+        site: { type: String },
+        utm_campaign: { type: String },
+        utm_medium: { type: String },
+    },
+    isAuthenticated: { type: Boolean, default: false },
+    viewedAt: { type: Date, default: Date.now },
+}, {
+    collection: 'recruiterPageViews'
+});
+
+RecruiterPageViewSchema.index({ candidatePageSlug: 1, viewedAt: -1 });
+RecruiterPageViewSchema.index({ userId: 1, candidateUserId: 1 }); // For unique profile count aggregation
+RecruiterPageViewSchema.index({ anonymousId: 1, userId: 1 }); // Compound for claim operation
+RecruiterPageViewSchema.index({ candidateUserId: 1, viewedAt: -1 });
+RecruiterPageViewSchema.index({ viewedAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 365 }); // TTL: 1 year retention
+
 // ===== MODELS =====
 
 export const UserProfileModel: Model<IUserProfileDocument> =
@@ -410,3 +443,6 @@ export const RecruiterActionModel: Model<IRecruiterActionDocument> =
 
 export const CandidateReplyModel: Model<ICandidateReplyDocument> =
     mongoose.models.CandidateReply || mongoose.model<ICandidateReplyDocument>('CandidateReply', CandidateReplySchema);
+
+export const RecruiterPageViewModel: Model<IRecruiterPageViewDocument> =
+    mongoose.models.RecruiterPageView || mongoose.model<IRecruiterPageViewDocument>('RecruiterPageView', RecruiterPageViewSchema);
