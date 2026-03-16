@@ -44,13 +44,13 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
 
     // Fetch unread message count for the badge
     useEffect(() => {
-        if (status === 'authenticated' && (session?.user as any)?.role !== 'recruiter') {
+        if (status === 'authenticated') {
             fetch('/api/candidate/messages?page=1&limit=1')
                 .then(res => res.json())
                 .then(data => setUnreadMessages(data.unreadCount ?? 0))
                 .catch(() => { });
         }
-    }, [status, session]);
+    }, [status]);
 
     // Close user menu on outside click
     useEffect(() => {

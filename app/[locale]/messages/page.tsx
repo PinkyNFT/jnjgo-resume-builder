@@ -48,7 +48,7 @@ function timeAgo(timestamp: number): string {
 }
 
 export default function MessagesPage() {
-    const { data: session, status } = useSession();
+    const { status } = useSession();
     const router = useRouter();
     const locale = useLocale();
 
@@ -67,10 +67,7 @@ export default function MessagesPage() {
         if (status === 'unauthenticated') {
             router.push('/auth/signin');
         }
-        if (status === 'authenticated' && (session?.user as any)?.role === 'recruiter') {
-            router.push(`/${locale}/recruiter/dashboard`);
-        }
-    }, [status, session, router, locale]);
+    }, [status, router]);
 
     const fetchMessages = useCallback(async (page = 1) => {
         setLoading(true);

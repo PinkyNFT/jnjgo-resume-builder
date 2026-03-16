@@ -343,8 +343,8 @@ export default function RecruiterDashboardPage() {
                                     Dashboard
                                 </Link>
                                 <button
-                                    onClick={() => { setActiveTab('contacts'); if (contacts.length === 0 && !contactsLoading) fetchContacts(); }}
-                                    className="relative inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200"
+                                    onClick={() => { setActiveTab('contacts'); if (contacts.length === 0 && !contactsLoading) fetchContacts(); document.getElementById('recruiter-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                                    className={`relative inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'contacts' ? 'bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-100/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
                                 >
                                     <div className="relative">
                                         <MessageSquare className="w-4 h-4" />
@@ -580,7 +580,7 @@ export default function RecruiterDashboardPage() {
                 </div>
 
                 {/* ── Candidate Profiles Browser ── */}
-                <div className="space-y-5">
+                <div id="recruiter-tabs" className="space-y-5 scroll-mt-20">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
                             <button

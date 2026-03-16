@@ -21,12 +21,6 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Only candidates can access their inbox
-        const role = (session.user as any).role;
-        if (role === 'recruiter') {
-            return NextResponse.json({ error: 'This endpoint is for candidates only.' }, { status: 403 });
-        }
-
         await connectToDatabase();
 
         const { searchParams } = new URL(request.url);
@@ -145,11 +139,6 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const role = (session.user as any).role;
-        if (role === 'recruiter') {
-            return NextResponse.json({ error: 'This endpoint is for candidates only.' }, { status: 403 });
-        }
-
         await connectToDatabase();
 
         const { messageId } = await request.json().catch(() => ({}));
@@ -194,11 +183,6 @@ export async function POST(request: NextRequest) {
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const role = (session.user as any).role;
-        if (role === 'recruiter') {
-            return NextResponse.json({ error: 'This endpoint is for candidates only.' }, { status: 403 });
         }
 
         const { actionId, message } = await request.json().catch(() => ({}));
