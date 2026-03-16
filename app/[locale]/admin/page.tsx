@@ -5,17 +5,18 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     Settings, FileText, Users, Shield, BarChart3,
-    ArrowLeft, Loader2, AlertTriangle, RefreshCw
+    ArrowLeft, Loader2, AlertTriangle, RefreshCw, TrendingUp
 } from 'lucide-react';
 import { AdminOverview } from '@/components/admin/AdminOverview';
 import { AdminSettings } from '@/components/admin/AdminSettings';
 import { AdminPrompts } from '@/components/admin/AdminPrompts';
 import { AdminUsers } from '@/components/admin/AdminUsers';
 import { AdminAuditLog } from '@/components/admin/AdminAuditLog';
+import AdminFunnel from '@/components/admin/AdminFunnel';
 import AppShell from '@/components/navigation/AppShell';
 import { AdminSkeleton } from '@/components/navigation/Skeletons';
 
-type AdminTab = 'overview' | 'settings' | 'prompts' | 'users' | 'audit';
+type AdminTab = 'overview' | 'funnel' | 'settings' | 'prompts' | 'users' | 'audit';
 
 export default function AdminDashboardPage() {
     const { data: session, status } = useSession();
@@ -72,6 +73,7 @@ export default function AdminDashboardPage() {
 
     const tabs: { id: AdminTab; label: string; icon: React.ElementType }[] = [
         { id: 'overview', label: 'Overview', icon: BarChart3 },
+        { id: 'funnel', label: 'Funnel', icon: TrendingUp },
         { id: 'prompts', label: 'Prompts', icon: FileText },
         { id: 'settings', label: 'Settings', icon: Settings },
         { id: 'users', label: 'Users', icon: Users },
@@ -146,6 +148,7 @@ export default function AdminDashboardPage() {
             {/* Tab Content */}
             <div className="max-w-7xl mx-auto px-6 py-6">
                 {activeTab === 'overview' && <AdminOverview />}
+                {activeTab === 'funnel' && <AdminFunnel />}
                 {activeTab === 'settings' && <AdminSettings />}
                 {activeTab === 'prompts' && <AdminPrompts />}
                 {activeTab === 'users' && <AdminUsers adminRole={adminRole} />}

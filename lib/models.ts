@@ -322,6 +322,8 @@ const ExportEventSchema = new Schema<IExportEventDocument>({
 // Compound indexes for analytics queries
 ExportEventSchema.index({ userId: 1, siteKey: 1, copiedAt: -1 });
 ExportEventSchema.index({ userId: 1, projectId: 1, copiedAt: -1 });
+// Single-field index for admin-wide timeline aggregations (no userId filter)
+ExportEventSchema.index({ copiedAt: -1 });
 
 const RecruiterProfileSchema = new Schema<IRecruiterProfileDocument>({
     userId: { type: String, required: true, unique: true, index: true },
