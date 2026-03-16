@@ -336,6 +336,7 @@ const RecruiterActionSchema = new Schema<IRecruiterActionDocument>({
     candidatePageSlug: { type: String, required: true },
     actionType: { type: String, enum: ['save', 'unsave', 'contact_request'], required: true },
     message: { type: String },
+    isReadByCandidate: { type: Boolean, default: false },
 }, {
     timestamps: { createdAt: true, updatedAt: false },
     collection: 'recruiterActions'
@@ -344,6 +345,42 @@ const RecruiterActionSchema = new Schema<IRecruiterActionDocument>({
 // Indexes for recruiter actions
 RecruiterActionSchema.index({ recruiterId: 1, candidateUserId: 1, actionType: 1 });
 RecruiterActionSchema.index({ candidateUserId: 1, actionType: 1, createdAt: -1 });
+RecruiterActionSchema.index({ candidateUserId: 1, actionType: 1, isReadByCandidate: 1 });
+
+// ===== CANDIDATE REPLY =====
+
+export interface ICandidateReplyDocument extends Omit<Document, '_id'> {
+    actionId: string;          // References the RecruiterAction _id (contact_request)
+    recruiterId: string;       // Denormalized for fast recruiter-side queries
+    candidateUserId: string;   // Denormalized for fast candidate-side queries
+    message: string;
+    isFromCandidate: boolean;  // True if sent by candidate, False if sent by recruiter
+    isReadByRecruiter: boolean;
+    isReadByCandidate: boolean;
+    createdAt: Date;
+}
+
+const CandidateReplySchema = new Schema<ICandidateReplyDocument>({
+    actionId: { type: String, required: true },
+    recruiterId: { type: String, required: true },
+    candidateUserId: { type: String, required: true },
+    message: { type: String, required: true, maxlength: 3000 },
+    isFromCandidate: { type: Boolean, default: true },
+    isReadByRecruiter: { type: Boolean, default: false },
+    isReadByCandidate: { type: Boolean, default: false },
+}, {
+    timestamps: { createdAt: true, updatedAt: false },
+    collection: 'candidateReplies'
+});
+
+// Fast lookup for recruiter's unread replies
+CandidateReplySchema.index({ recruiterId: 1, isReadByRecruiter: 1, isFromCandidate: 1, createdAt: -1 });
+// Fast lookup for candidate's unread replies
+CandidateReplySchema.index({ candidateUserId: 1, isReadByCandidate: 1, isFromCandidate: 1, createdAt: -1 });
+// Fast lookup for all replies on an action thread
+CandidateReplySchema.index({ actionId: 1, createdAt: 1 });
+// Candidate's sent reply history
+CandidateReplySchema.index({ candidateUserId: 1, createdAt: -1 });
 
 // ===== MODELS =====
 
@@ -370,3 +407,6 @@ export const RecruiterProfileModel: Model<IRecruiterProfileDocument> =
 
 export const RecruiterActionModel: Model<IRecruiterActionDocument> =
     mongoose.models.RecruiterAction || mongoose.model<IRecruiterActionDocument>('RecruiterAction', RecruiterActionSchema);
+
+export const CandidateReplyModel: Model<ICandidateReplyDocument> =
+    mongoose.models.CandidateReply || mongoose.model<ICandidateReplyDocument>('CandidateReply', CandidateReplySchema);

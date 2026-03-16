@@ -17,6 +17,7 @@ import {
     X,
     Loader2,
     Sparkles,
+    MessageSquare,
 } from 'lucide-react';
 
 interface AppNavbarProps {
@@ -39,6 +40,17 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
     const [mobileOpen, setMobileOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
+    const [unreadMessages, setUnreadMessages] = useState(0);
+
+    // Fetch unread message count for the badge
+    useEffect(() => {
+        if (status === 'authenticated' && (session?.user as any)?.role !== 'recruiter') {
+            fetch('/api/candidate/messages?page=1&limit=1')
+                .then(res => res.json())
+                .then(data => setUnreadMessages(data.unreadCount ?? 0))
+                .catch(() => { });
+        }
+    }, [status, session]);
 
     // Close user menu on outside click
     useEffect(() => {
@@ -107,6 +119,33 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
                                             </Link>
                                         );
                                     })}
+
+                                    {/* Messages link with unread badge */}
+                                    {(() => {
+                                        const active = isActive('/messages');
+                                        return (
+                                            <Link
+                                                href={getLocalizedHref('/messages')}
+                                                className={`
+                          relative inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-200
+                          ${active ? 'bg-indigo-50 text-indigo-700 shadow-sm shadow-indigo-100/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}
+                        `}
+                                            >
+                                                <div className="relative">
+                                                    <MessageSquare className={`w-4 h-4 transition-transform duration-200 ${active ? 'scale-110' : ''}`} />
+                                                    {unreadMessages > 0 && (
+                                                        <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                                                            {unreadMessages > 9 ? '9+' : unreadMessages}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                Messages
+                                                {active && (
+                                                    <span className="absolute -bottom-[13px] left-1/2 -translate-x-1/2 w-6 h-0.5 bg-indigo-600 rounded-full" />
+                                                )}
+                                            </Link>
+                                        );
+                                    })()}
 
                                     {isAdmin && (
                                         <Link
@@ -194,6 +233,24 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
                                                     <UserCircle className="w-4 h-4" />
                                                     {t('profile')}
                                                 </Link>
+                                                <Link
+                                                    href={getLocalizedHref('/messages')}
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                    className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 ${isActive('/messages') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+                                                >
+                                                    <div className="relative w-4 h-4">
+                                                        <MessageSquare className="w-4 h-4" />
+                                                        {unreadMessages > 0 && (
+                                                            <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-red-500 text-white text-[7px] font-bold rounded-full flex items-center justify-center">
+                                                                {unreadMessages > 9 ? '9+' : unreadMessages}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    Messages
+                                                    {unreadMessages > 0 && (
+                                                        <span className="ml-auto text-[10px] font-bold text-red-500">{unreadMessages} new</span>
+                                                    )}
+                                                </Link>
                                                 {isAdmin && (
                                                     <Link
                                                         href={getLocalizedHref('/admin')}
@@ -266,6 +323,28 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
                                     </Link>
                                 );
                             })}
+                            {/* Messages in mobile drawer */}
+                            <Link
+                                href={getLocalizedHref('/messages')}
+                                className={`
+                    flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200
+                    ${isActive('/messages') ? 'bg-indigo-50 text-indigo-700 shadow-sm shadow-indigo-100/50' : 'text-slate-600 hover:bg-slate-50 active:bg-slate-100'}
+                  `}
+                            >
+                                <div className="relative">
+                                    <MessageSquare className="w-5 h-5" />
+                                    {unreadMessages > 0 && (
+                                        <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                                            {unreadMessages > 9 ? '9+' : unreadMessages}
+                                        </span>
+                                    )}
+                                </div>
+                                Messages
+                                {unreadMessages > 0 && (
+                                    <span className="ml-auto text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{unreadMessages} new</span>
+                                )}
+                                {isActive('/messages') && !unreadMessages && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-600" />}
+                            </Link>
                             {isAdmin && (
                                 <Link
                                     href={getLocalizedHref('/admin')}
@@ -310,6 +389,30 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
                                 </Link>
                             );
                         })}
+                        {/* Messages in bottom bar */}
+                        {(() => {
+                            const active = isActive('/messages');
+                            return (
+                                <Link
+                                    href={getLocalizedHref('/messages')}
+                                    className={`
+                    flex flex-col items-center gap-0.5 px-4 py-2 rounded-xl text-[11px] font-semibold transition-all duration-200 min-w-16 active:scale-95
+                    ${active ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}
+                  `}
+                                >
+                                    <div className="relative">
+                                        <MessageSquare className={`w-5 h-5 transition-all duration-200 ${active ? 'text-indigo-600 scale-110' : ''}`} />
+                                        {unreadMessages > 0 && (
+                                            <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                                                {unreadMessages > 9 ? '9+' : unreadMessages}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span>Messages</span>
+                                    {active && !unreadMessages && <span className="w-1 h-1 rounded-full bg-indigo-600 mt-0.5" />}
+                                </Link>
+                            );
+                        })()}
                         {isAdmin && (
                             <Link
                                 href={getLocalizedHref('/admin')}

@@ -74,6 +74,19 @@ export interface RecruiterAction {
     candidatePageSlug: string;
     actionType: RecruiterActionType;
     message?: string;
+    isReadByCandidate?: boolean;
+    createdAt?: number;
+}
+
+export interface CandidateReply {
+    id?: string;
+    actionId: string;
+    recruiterId: string;
+    candidateUserId: string;
+    message: string;
+    isFromCandidate?: boolean;
+    isReadByRecruiter?: boolean;
+    isReadByCandidate?: boolean;
     createdAt?: number;
 }
 

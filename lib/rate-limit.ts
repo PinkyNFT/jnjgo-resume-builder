@@ -41,6 +41,8 @@ export const RATE_LIMITS = {
     admin: { limit: 30, windowSeconds: 60 } as RateLimitConfig,
     /** Write-heavy endpoints (saves, creates) */
     write: { limit: 30, windowSeconds: 60 } as RateLimitConfig,
+    /** Strict limits for candidate/recruiter messaging to prevent spam */
+    reply: { limit: 10, windowSeconds: 60 } as RateLimitConfig,
 } as const;
 
 /**

@@ -2,14 +2,15 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import {
     Search, Building2, Users, ExternalLink, Settings, LogOut,
     Loader2, ChevronDown, Sparkles, Shield, Eye, TrendingUp,
     Zap, ArrowRight, UserCircle, Bell, BookmarkCheck, BarChart3,
-    MapPin, DollarSign, Briefcase, Globe, Clock, ChevronLeft, ChevronRight, FileText
+    MapPin, DollarSign, Briefcase, Globe, Clock, ChevronLeft, ChevronRight, FileText,
+    MailOpen, User, MessageSquare
 } from 'lucide-react';
 import LanguageSwitcher from '../../../../components/LanguageSwitcher';
 import { RecruiterProfile } from '../../../../types';
@@ -45,9 +46,25 @@ interface CandidateCard {
     updatedAt: number;
 }
 
+interface ContactRequest {
+    id: string;
+    candidatePageSlug: string;
+    message: string;
+    createdAt: number;
+    unreadReplies: number;
+}
+
+interface ReplyMessage {
+    id: string;
+    message: string;
+    isFromCandidate: boolean;
+    createdAt: number;
+}
+
 export default function RecruiterDashboardPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const locale = useLocale();
     const [profile, setProfile] = useState<RecruiterProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -62,11 +79,28 @@ export default function RecruiterDashboardPage() {
     const [candidateSearchInput, setCandidateSearchInput] = useState('');
     const [candidatePagination, setCandidatePagination] = useState({ page: 1, limit: 12, total: 0, totalPages: 0 });
 
+    // Tabs
+    const tabParam = searchParams.get('tab');
+    const initialTab = tabParam === 'saved' ? 'saved' : tabParam === 'contacts' ? 'contacts' : 'browse';
+    const [activeTab, setActiveTab] = useState<'browse' | 'saved' | 'contacts'>(initialTab);
+
     // Saved candidates state
-    const [activeTab, setActiveTab] = useState<'browse' | 'saved'>('browse');
     const [savedCandidates, setSavedCandidates] = useState<CandidateCard[]>([]);
     const [savedLoading, setSavedLoading] = useState(false);
     const [savedCount, setSavedCount] = useState(0);
+
+    // Recruiter stats
+    const [recruiterStats, setRecruiterStats] = useState<{ contactsSent: number; savedCount: number } | null>(null);
+
+    // Contacts state
+    const [contacts, setContacts] = useState<ContactRequest[]>([]);
+    const [contactsLoading, setContactsLoading] = useState(false);
+    const [selectedContact, setSelectedContact] = useState<ContactRequest | null>(null);
+    const [threadReplies, setThreadReplies] = useState<ReplyMessage[]>([]);
+    const [threadLoading, setThreadLoading] = useState(false);
+    const [replyText, setReplyText] = useState('');
+    const [isReplying, setIsReplying] = useState(false);
+    const [totalUnreadReplies, setTotalUnreadReplies] = useState(0);
 
     const fetchCandidates = useCallback(async (page = 1, searchQuery = '') => {
         setCandidatesLoading(true);
@@ -98,6 +132,22 @@ export default function RecruiterDashboardPage() {
             setSavedCandidates([]);
         } finally {
             setSavedLoading(false);
+        }
+    }, []);
+
+    const fetchContacts = useCallback(async () => {
+        setContactsLoading(true);
+        try {
+            const res = await fetch('/api/recruiter/actions?type=contacts');
+            if (!res.ok) throw new Error('Failed to fetch');
+            const data = await res.json();
+            const contactsList = data.contacts || [];
+            setContacts(contactsList);
+            setTotalUnreadReplies(contactsList.reduce((sum: number, c: ContactRequest) => sum + c.unreadReplies, 0));
+        } catch {
+            setContacts([]);
+        } finally {
+            setContactsLoading(false);
         }
     }, []);
 
@@ -141,15 +191,90 @@ export default function RecruiterDashboardPage() {
                     // Load candidates after profile is ready
                     fetchCandidates();
                     fetchSavedCandidates();
+                    fetchContacts();
+                    // Fetch recruiter stats
+                    fetch('/api/recruiter/actions?type=stats')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (!data.error) setRecruiterStats(data);
+                        })
+                        .catch(() => { });
                 })
                 .catch(() => setIsLoading(false));
         }
-    }, [status, session, router, fetchCandidates, fetchSavedCandidates]);
+    }, [status, session, router, fetchCandidates, fetchSavedCandidates, fetchContacts]);
 
     const handleCandidateSearch = (e: React.FormEvent) => {
         e.preventDefault();
         setCandidateSearch(candidateSearchInput);
         fetchCandidates(1, candidateSearchInput);
+    };
+
+    const handleOpenContact = async (contact: ContactRequest) => {
+        setSelectedContact(contact);
+        setThreadReplies([]);
+        setReplyText('');
+        setThreadLoading(true);
+
+        try {
+            const res = await fetch(`/api/recruiter/actions?actionId=${contact.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setThreadReplies(data.replies || []);
+            }
+        } catch {
+            // fail silently
+        } finally {
+            setThreadLoading(false);
+        }
+
+        // Mark replies as read if there were any unread
+        if (contact.unreadReplies > 0) {
+            try {
+                await fetch('/api/recruiter/actions', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ actionId: contact.id })
+                });
+
+                // Optimistically clear the unread badge
+                setContacts(prev => prev.map(c =>
+                    c.id === contact.id ? { ...c, unreadReplies: 0 } : c
+                ));
+                setTotalUnreadReplies(prev => Math.max(0, prev - contact.unreadReplies));
+            } catch {
+                // fail silently
+            }
+        }
+    };
+
+    const handleSendReply = async () => {
+        if (!selectedContact || !replyText.trim() || isReplying) return;
+        setIsReplying(true);
+
+        try {
+            const res = await fetch('/api/recruiter/actions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    actionId: selectedContact.id,
+                    message: replyText.trim(),
+                }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to send reply');
+            }
+
+            const data = await res.json();
+            setThreadReplies(prev => [...prev, data.reply]);
+            setReplyText('');
+        } catch (error: any) {
+            alert(error.message);
+        } finally {
+            setIsReplying(false);
+        }
     };
 
     const formatSalaryShort = (val?: number) =>
@@ -196,6 +321,20 @@ export default function RecruiterDashboardPage() {
                                     <BarChart3 className="w-4 h-4" />
                                     Dashboard
                                 </Link>
+                                <button
+                                    onClick={() => { setActiveTab('contacts'); if (contacts.length === 0 && !contactsLoading) fetchContacts(); }}
+                                    className="relative inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200"
+                                >
+                                    <div className="relative">
+                                        <MessageSquare className="w-4 h-4" />
+                                        {totalUnreadReplies > 0 && (
+                                            <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                                                {totalUnreadReplies > 9 ? '9+' : totalUnreadReplies}
+                                            </span>
+                                        )}
+                                    </div>
+                                    Messages
+                                </button>
                                 {isAdmin && (
                                     <Link
                                         href={`/${locale}/admin`}
@@ -308,9 +447,9 @@ export default function RecruiterDashboardPage() {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
                         { label: 'Profiles Viewed', value: '—', icon: Eye, color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
-                        { label: 'Saved Candidates', value: String(savedCount || '—'), icon: BookmarkCheck, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
+                        { label: 'Saved Candidates', value: String(recruiterStats?.savedCount ?? savedCount ?? '—'), icon: BookmarkCheck, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
                         { label: 'Active Candidates', value: String(candidatePagination.total || '—'), icon: Users, color: 'bg-violet-50 text-violet-600', border: 'border-violet-100' },
-                        { label: 'Response Rate', value: '—', icon: TrendingUp, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
+                        { label: 'Scouts Sent', value: String(recruiterStats?.contactsSent ?? '—'), icon: TrendingUp, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
                     ].map((stat, i) => (
                         <div key={i} className={`group bg-white rounded-xl border ${stat.border} p-5 flex items-center gap-4`}>
                             <div className={`w-11 h-11 rounded-xl ${stat.color} flex items-center justify-center shrink-0`}>
@@ -425,6 +564,21 @@ export default function RecruiterDashboardPage() {
                                 {savedCount > 0 && (
                                     <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full">
                                         {savedCount}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => { setActiveTab('contacts'); if (contacts.length === 0 && !contactsLoading) fetchContacts(); }}
+                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'contacts'
+                                        ? 'bg-white text-slate-900 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700'
+                                    }`}
+                            >
+                                <MailOpen className="w-3.5 h-3.5" />
+                                Sent Scouts
+                                {contacts.reduce((sum, c) => sum + c.unreadReplies, 0) > 0 && (
+                                    <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-red-100 text-red-700 rounded-full">
+                                        {contacts.reduce((sum, c) => sum + c.unreadReplies, 0)}
                                     </span>
                                 )}
                             </button>
@@ -699,6 +853,144 @@ export default function RecruiterDashboardPage() {
                             )}
                         </>
                     ))}
+
+                    {/* ── Sent Scouts & Replies Tab ── */}
+                    {activeTab === 'contacts' && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
+                            {/* Inbox List */}
+                            <div className="md:col-span-1 space-y-2">
+                                {contactsLoading ? (
+                                    <div className="flex justify-center py-10">
+                                        <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                                    </div>
+                                ) : contacts.length === 0 ? (
+                                    <div className="text-center py-10 bg-white rounded-2xl border border-slate-200">
+                                        <p className="text-sm text-slate-400">No scouts sent yet.</p>
+                                    </div>
+                                ) : (
+                                    contacts.map(contact => (
+                                        <button
+                                            key={contact.id}
+                                            onClick={() => handleOpenContact(contact)}
+                                            className={`w-full text-left p-4 rounded-2xl border transition-all duration-200 ${
+                                                selectedContact?.id === contact.id
+                                                    ? 'bg-emerald-50 border-emerald-200 shadow-sm'
+                                                    : 'bg-white border-slate-200 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            <div className="flex items-start justify-between mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-bold text-slate-800 truncate max-w-[140px]">
+                                                        {contact.candidatePageSlug}
+                                                    </span>
+                                                    {contact.unreadReplies > 0 && (
+                                                        <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                                                    )}
+                                                </div>
+                                                <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                                                    {new Date(contact.createdAt).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 truncate">
+                                                {contact.message.slice(0, 70)}...
+                                            </p>
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Thread View */}
+                            <div className="md:col-span-2">
+                                {selectedContact ? (
+                                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[500px]">
+                                        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                                                    <User className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-slate-900 text-sm">
+                                                        Candidate: {selectedContact.candidatePageSlug}
+                                                    </h3>
+                                                    <Link href={`/${locale}/c/${selectedContact.candidatePageSlug}`} className="text-[10px] text-emerald-600 hover:underline font-semibold flex items-center gap-1">
+                                                        View Profile <ArrowRight className="w-3 h-3" />
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
+                                            {/* Original Scout Message */}
+                                            <div className="flex justify-end">
+                                                <div className="max-w-[85%] bg-emerald-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 text-sm shadow-sm">
+                                                    <p className="whitespace-pre-wrap">{selectedContact.message}</p>
+                                                    <span className="block text-[10px] mt-2 text-emerald-200 text-right">
+                                                        {new Date(selectedContact.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Thread Replies */}
+                                            {threadLoading ? (
+                                                <div className="flex justify-center py-4">
+                                                    <Loader2 className="w-5 h-5 animate-spin text-slate-300" />
+                                                </div>
+                                            ) : (
+                                                threadReplies.map(reply => (
+                                                    <div key={reply.id} className={`flex ${reply.isFromCandidate ? 'justify-start' : 'justify-end'}`}>
+                                                        <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                                                            reply.isFromCandidate
+                                                                ? 'bg-slate-100 text-slate-800 rounded-tl-sm'
+                                                                : 'bg-emerald-600 text-white rounded-tr-sm'
+                                                        }`}>
+                                                            <p className="whitespace-pre-wrap">{reply.message}</p>
+                                                            <span className={`block text-[10px] mt-2 ${reply.isFromCandidate ? 'text-slate-400' : 'text-emerald-200 text-right'}`}>
+                                                                {new Date(reply.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+
+                                        {/* Reply Composer */}
+                                        <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 relative">
+                                            <textarea
+                                                value={replyText}
+                                                onChange={(e) => setReplyText(e.target.value)}
+                                                placeholder="Type your reply..."
+                                                className="w-full h-[80px] bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none shadow-sm pb-10"
+                                                maxLength={3000}
+                                            />
+                                            <div className="absolute bottom-5 right-6 flex items-center gap-3">
+                                                <span className="text-[10px] font-medium text-slate-400">
+                                                    {replyText.length}/3000
+                                                </span>
+                                                <button
+                                                    onClick={handleSendReply}
+                                                    disabled={isReplying || !replyText.trim()}
+                                                    className="px-4 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md group flex items-center gap-1.5"
+                                                >
+                                                    {isReplying ? (
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    ) : (
+                                                        <>Send <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" /></>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm h-[500px] flex flex-col items-center justify-center text-center px-6">
+                                        <MailOpen className="w-12 h-12 text-slate-200 mb-4" />
+                                        <p className="text-sm font-medium text-slate-400">
+                                            Select a contact history to view your scout message and any candidate replies.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

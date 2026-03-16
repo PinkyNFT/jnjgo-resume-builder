@@ -8,6 +8,7 @@ import {
     CandidatePrivateProfileModel,
     UserProfileModel,
     ProjectModel,
+    CandidateReplyModel,
 } from '../../../../lib/models';
 import { applyRateLimit, RATE_LIMITS } from '../../../../lib/rate-limit';
 import { RecruiterActionType } from '../../../../types';
@@ -33,7 +34,51 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { candidatePageSlug, actionType, message } = body;
+        const { candidatePageSlug, actionType, message, actionId } = body;
+
+        // ── Recruiter reply to an existing thread ──
+        if (actionId && message && !candidatePageSlug) {
+            if (typeof message !== 'string' || message.trim().length === 0) {
+                return NextResponse.json({ error: 'Message is required', code: 'MESSAGE_REQUIRED' }, { status: 400 });
+            }
+            if (message.length > 3000) {
+                return NextResponse.json({ error: 'Message exceeds maximum length', code: 'MESSAGE_TOO_LONG' }, { status: 400 });
+            }
+
+            await connectToDatabase();
+            const recruiterId = session.user.id;
+
+            // Verify the recruiter owns this action thread
+            const action = await RecruiterActionModel.findOne({
+                _id: actionId,
+                recruiterId,
+                actionType: 'contact_request',
+            }).lean();
+
+            if (!action) {
+                return NextResponse.json({ error: 'Thread not found or unauthorized' }, { status: 404 });
+            }
+
+            const reply = await CandidateReplyModel.create({
+                actionId: (action as any)._id.toString(),
+                recruiterId,
+                candidateUserId: action.candidateUserId,
+                message: message.trim(),
+                isFromCandidate: false,
+                isReadByRecruiter: true,
+                isReadByCandidate: false,
+            });
+
+            return NextResponse.json({
+                success: true,
+                reply: {
+                    id: reply._id.toString(),
+                    message: reply.message,
+                    isFromCandidate: false,
+                    createdAt: reply.createdAt instanceof Date ? reply.createdAt.getTime() : reply.createdAt,
+                },
+            }, { status: 201 });
+        }
 
         if (!candidatePageSlug || typeof candidatePageSlug !== 'string') {
             return NextResponse.json({ error: 'candidatePageSlug is required', code: 'MISSING_SLUG' }, { status: 400 });
@@ -170,6 +215,42 @@ export async function GET(request: NextRequest) {
                 isSaved: !!isSaved,
                 hasContacted: !!contactRequest,
                 lastContactedAt: contactRequest?.createdAt || null,
+                contactActionId: contactRequest?._id?.toString() || null,
+            });
+        }
+
+        // If actionId is provided, fetch the reply thread
+        const actionId = searchParams.get('actionId');
+        if (actionId) {
+            const replies = await CandidateReplyModel.find({
+                actionId,
+                recruiterId // ensure they own this thread
+            })
+                .sort({ createdAt: 1 })
+                .lean();
+
+            return NextResponse.json({
+                replies: replies.map(r => ({
+                    id: (r as any)._id?.toString(),
+                    message: r.message,
+                    isFromCandidate: r.isFromCandidate !== false,
+                    createdAt: (r as any).createdAt instanceof Date
+                        ? (r as any).createdAt.getTime()
+                        : (r as any).createdAt
+                }))
+            }, { headers: { 'Cache-Control': 'private, max-age=5, stale-while-revalidate=30' } });
+        }
+
+        // Return stats summary for the recruiter dashboard
+        if (type === 'stats') {
+            const [contactsSent, totalSaves, totalUnsaves] = await Promise.all([
+                RecruiterActionModel.countDocuments({ recruiterId, actionType: 'contact_request' }),
+                RecruiterActionModel.countDocuments({ recruiterId, actionType: 'save' }),
+                RecruiterActionModel.countDocuments({ recruiterId, actionType: 'unsave' }),
+            ]);
+            return NextResponse.json({
+                contactsSent,
+                savedCount: Math.max(0, totalSaves - totalUnsaves),
             });
         }
 
@@ -262,19 +343,79 @@ export async function GET(request: NextRequest) {
                 actionType: 'contact_request',
             }).sort({ createdAt: -1 }).limit(50).lean();
 
+            const actionIds = contacts.map(c => c._id);
+
+            // Count unread replies for each contact
+            const unreadCounts = await CandidateReplyModel.aggregate([
+                { $match: { actionId: { $in: actionIds.map(id => id.toString()) }, isReadByRecruiter: false } },
+                { $group: { _id: '$actionId', count: { $sum: 1 } } }
+            ]);
+
+            const countMap = new Map(unreadCounts.map(u => [u._id, u.count]));
+
             return NextResponse.json({
                 contacts: contacts.map(c => ({
                     id: c._id.toString(),
                     candidatePageSlug: c.candidatePageSlug,
                     message: c.message,
-                    createdAt: c.createdAt,
+                    createdAt: c.createdAt instanceof Date ? c.createdAt.getTime() : c.createdAt,
+                    unreadReplies: countMap.get(c._id.toString()) || 0
                 })),
-            });
+            }, { headers: { 'Cache-Control': 'private, max-age=10, stale-while-revalidate=60' } });
         }
 
         return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 });
     } catch (error) {
         console.error('[GET /api/recruiter/actions] Error:', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+}
+
+/**
+ * PATCH /api/recruiter/actions
+ * Marks candidate replies on a specific contact thread as read by the recruiter.
+ */
+export async function PATCH(request: NextRequest) {
+    try {
+        const limited = applyRateLimit(request, 'recruiter-actions-write', RATE_LIMITS.write);
+        if (limited) return limited;
+
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        if ((session.user as any).role !== 'recruiter') {
+            return NextResponse.json({ error: 'Recruiter access required' }, { status: 403 });
+        }
+
+        await connectToDatabase();
+
+        const { actionId } = await request.json().catch(() => ({}));
+
+        if (!actionId || typeof actionId !== 'string') {
+            return NextResponse.json({ error: 'actionId is required' }, { status: 400 });
+        }
+
+        const recruiterId = session.user.id;
+
+        // Verify the recruiter actually owns this action thread
+        const action = await RecruiterActionModel.findOne({
+            _id: actionId,
+            recruiterId,
+        }).lean();
+
+        if (!action) {
+            return NextResponse.json({ error: 'Action not found or unauthorized' }, { status: 404 });
+        }
+
+        const result = await CandidateReplyModel.updateMany(
+            { actionId, recruiterId, isReadByRecruiter: false },
+            { $set: { isReadByRecruiter: true } }
+        );
+
+        return NextResponse.json({ updatedCount: result.modifiedCount });
+    } catch (error) {
+        console.error('[PATCH /api/recruiter/actions] Error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

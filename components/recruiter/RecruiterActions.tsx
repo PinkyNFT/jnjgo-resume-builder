@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import {
     Bookmark, BookmarkCheck, MessageSquare, Send, X, Loader2,
-    CheckCircle2, AlertCircle, Sparkles, Shield, User
+    CheckCircle2, AlertCircle, Sparkles, Shield, User, Inbox
 } from 'lucide-react';
 
 interface RecruiterActionsProps {
@@ -14,6 +16,8 @@ interface RecruiterActionsProps {
 }
 
 export default function RecruiterActions({ candidateSlug, candidateName, candidateRole }: RecruiterActionsProps) {
+    const params = useParams();
+    const locale = params.locale as string || 'en';
     const [isSaved, setIsSaved] = useState(false);
     const [hasContacted, setHasContacted] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -163,6 +167,16 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                         <MessageSquare className="w-4 h-4" />
                         {hasContacted ? 'Send Another Message' : 'Contact Candidate'}
                     </button>
+
+                    {hasContacted && (
+                        <Link
+                            href={`/${locale}/recruiter/dashboard?tab=contacts`}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:-translate-y-0.5 shadow-sm"
+                        >
+                            <Inbox className="w-4 h-4" />
+                            Open Inbox
+                        </Link>
+                    )}
                 </div>
 
                 {/* Inline error toast */}
