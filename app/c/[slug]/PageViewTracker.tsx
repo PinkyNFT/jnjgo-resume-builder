@@ -52,7 +52,7 @@ export default function PageViewTracker({ slug }: PageViewTrackerProps) {
                     headers: { 'Content-Type': 'application/json' },
                     body: payload,
                     keepalive: true,
-                }).catch(() => {});
+                }).catch(() => { });
             }
         } catch {
             // Tracking is best-effort, fail silently

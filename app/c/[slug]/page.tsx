@@ -92,62 +92,62 @@ export default async function CandidateLandingPage({ params }: { params: Promise
     /* ─── Shared header ─── */
     const Header = (
         <>
-        <PageViewTracker slug={slug} />
-        <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-20">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
-                            <span className="text-white text-xs font-black">JN</span>
+            <PageViewTracker slug={slug} />
+            <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-20">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
+                                <span className="text-white text-xs font-black">JN</span>
+                            </div>
+                            <span className="font-black text-slate-900 tracking-tight text-lg">JNJGO</span>
                         </div>
-                        <span className="font-black text-slate-900 tracking-tight text-lg">JNJGO</span>
+                        {/* Back to dashboard for authenticated users */}
+                        {isAuthenticated && (
+                            <>
+                                <div className="w-px h-6 bg-slate-200 hidden sm:block" />
+                                <Link
+                                    href={isRecruiter ? '/recruiter/dashboard' : '/dashboard'}
+                                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-900 transition-all duration-200 hover:-translate-x-0.5 group"
+                                >
+                                    <ArrowLeft className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                    <span className="hidden sm:inline">{isRecruiter ? 'Dashboard' : 'My Dashboard'}</span>
+                                </Link>
+                            </>
+                        )}
                     </div>
-                    {/* Back to dashboard for authenticated users */}
-                    {isAuthenticated && (
-                        <>
-                            <div className="w-px h-6 bg-slate-200 hidden sm:block" />
-                            <Link
-                                href={isRecruiter ? '/recruiter/dashboard' : '/dashboard'}
-                                className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-900 transition-all duration-200 hover:-translate-x-0.5 group"
-                            >
-                                <ArrowLeft className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                <span className="hidden sm:inline">{isRecruiter ? 'Dashboard' : 'My Dashboard'}</span>
-                            </Link>
-                        </>
-                    )}
-                </div>
-                <div className="flex items-center gap-3">
-                    {isAuthenticated ? (
-                        isRecruiter ? (
-                            <div className="flex items-center gap-2.5">
-                                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
-                                    <CheckCircle2 className="w-3 h-3" />
-                                    Recruiter Access
-                                </span>
-                            </div>
+                    <div className="flex items-center gap-3">
+                        {isAuthenticated ? (
+                            isRecruiter ? (
+                                <div className="flex items-center gap-2.5">
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        Recruiter Access
+                                    </span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2.5">
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
+                                        <Clock className="w-3 h-3" />
+                                        Candidate Account
+                                    </span>
+                                </div>
+                            )
                         ) : (
-                            <div className="flex items-center gap-2.5">
-                                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
-                                    <Clock className="w-3 h-3" />
-                                    Candidate Account
-                                </span>
-                            </div>
-                        )
-                    ) : (
-                        <>
-                            <span className="text-xs font-medium text-slate-400 hidden sm:block">Recruiter Access</span>
-                            <Link
-                                href={signInUrl}
-                                className="text-sm font-bold bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-all shadow-sm hover:shadow-lg hover:-translate-y-0.5 flex items-center gap-2"
-                            >
-                                Sign In
-                                <ArrowRight className="w-3.5 h-3.5" />
-                            </Link>
-                        </>
-                    )}
+                            <>
+                                <span className="text-xs font-medium text-slate-400 hidden sm:block">Recruiter Access</span>
+                                <Link
+                                    href={signInUrl}
+                                    className="text-sm font-bold bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-all shadow-sm hover:shadow-lg hover:-translate-y-0.5 flex items-center gap-2"
+                                >
+                                    Sign In
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                </Link>
+                            </>
+                        )}
+                    </div>
                 </div>
-            </div>
-        </header>
+            </header>
         </>
     );
 
