@@ -13,9 +13,10 @@ interface RecruiterActionsProps {
     candidateSlug: string;
     candidateName?: string;
     candidateRole?: string;
+    recruiterType?: 'in_house' | 'agency';
 }
 
-export default function RecruiterActions({ candidateSlug, candidateName, candidateRole }: RecruiterActionsProps) {
+export default function RecruiterActions({ candidateSlug, candidateName, candidateRole, recruiterType }: RecruiterActionsProps) {
     const params = useParams();
     const locale = params.locale as string || 'en';
     const [isSaved, setIsSaved] = useState(false);
@@ -233,7 +234,17 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                                                 </div>
                                                 <div>
                                                     <h3 className="text-lg font-bold text-slate-900">Scout Candidate</h3>
-                                                    <p className="text-xs text-slate-500">Send a direct scouting message</p>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <p className="text-xs text-slate-500">Send a direct scouting message</p>
+                                                        {recruiterType && (
+                                                            <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${recruiterType === 'in_house'
+                                                                ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                                                : 'bg-amber-50 text-amber-600 border border-amber-200'
+                                                                }`}>
+                                                                {recruiterType === 'in_house' ? 'In-House' : 'Agency'}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 

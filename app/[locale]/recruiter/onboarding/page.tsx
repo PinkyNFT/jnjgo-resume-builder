@@ -40,6 +40,7 @@ function OnboardingContent() {
     // Form state
     const [companyName, setCompanyName] = useState('');
     const [jobTitle, setJobTitle] = useState('');
+    const [recruiterType, setRecruiterType] = useState<'in_house' | 'agency' | ''>('');
     const [phone, setPhone] = useState('');
     const [companyWebsite, setCompanyWebsite] = useState('');
     const [companySize, setCompanySize] = useState('');
@@ -74,6 +75,7 @@ function OnboardingContent() {
                 body: JSON.stringify({
                     companyName: companyName.trim(),
                     jobTitle: jobTitle.trim(),
+                    recruiterType: recruiterType || undefined,
                     phone: phone.trim() || undefined,
                     companyWebsite: companyWebsite.trim() || undefined,
                     companySize: companySize || undefined,
@@ -172,6 +174,39 @@ function OnboardingContent() {
                                         placeholder="e.g. Senior Talent Acquisition Manager"
                                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all placeholder:text-slate-300"
                                     />
+                                </div>
+                            </div>
+
+                            {/* Recruiter Type */}
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                    Recruiter Type <span className="text-slate-300 normal-case">(optional)</span>
+                                </label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setRecruiterType(recruiterType === 'in_house' ? '' : 'in_house')}
+                                        className={`p-4 rounded-xl text-left border-2 transition-all duration-200 ${recruiterType === 'in_house'
+                                            ? 'border-emerald-500 bg-emerald-50'
+                                            : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-white'
+                                            }`}
+                                    >
+                                        <Building2 className={`w-5 h-5 mb-2 ${recruiterType === 'in_house' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                        <div className={`text-sm font-bold ${recruiterType === 'in_house' ? 'text-emerald-700' : 'text-slate-700'}`}>In-House</div>
+                                        <div className="text-[10px] text-slate-400 mt-0.5">Hiring for your own company</div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setRecruiterType(recruiterType === 'agency' ? '' : 'agency')}
+                                        className={`p-4 rounded-xl text-left border-2 transition-all duration-200 ${recruiterType === 'agency'
+                                            ? 'border-emerald-500 bg-emerald-50'
+                                            : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-white'
+                                            }`}
+                                    >
+                                        <Users className={`w-5 h-5 mb-2 ${recruiterType === 'agency' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                        <div className={`text-sm font-bold ${recruiterType === 'agency' ? 'text-emerald-700' : 'text-slate-700'}`}>Agency / Staffing</div>
+                                        <div className="text-[10px] text-slate-400 mt-0.5">Recruiting for client companies</div>
+                                    </button>
                                 </div>
                             </div>
 

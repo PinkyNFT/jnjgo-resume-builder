@@ -83,7 +83,7 @@ export async function POST(req: Request) {
 
         // Sanitize input
         const data: Record<string, any> = {};
-        const allowedFields = ['companyName', 'jobTitle', 'phone', 'companyWebsite', 'companySize', 'industry', 'bio', 'onboardingCompleted'];
+        const allowedFields = ['companyName', 'jobTitle', 'phone', 'companyWebsite', 'companySize', 'recruiterType', 'industry', 'bio', 'onboardingCompleted'];
         for (const field of allowedFields) {
             if (raw[field] !== undefined) {
                 data[field] = raw[field];

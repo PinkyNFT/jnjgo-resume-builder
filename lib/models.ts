@@ -332,6 +332,7 @@ const RecruiterProfileSchema = new Schema<IRecruiterProfileDocument>({
     phone: { type: String },
     companyWebsite: { type: String },
     companySize: { type: String, enum: ['startup', 'small', 'medium', 'large', 'enterprise'] },
+    recruiterType: { type: String, enum: ['in_house', 'agency'] },
     industry: { type: String },
     bio: { type: String },
     onboardingCompleted: { type: Boolean, default: false }

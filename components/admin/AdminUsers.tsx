@@ -29,6 +29,7 @@ interface UserData {
     recruiterProfile?: {
         companyName: string;
         jobTitle: string;
+        recruiterType?: string;
         industry?: string;
         companyWebsite?: string;
         companySize?: string;
@@ -148,6 +149,20 @@ function RecruiterReviewModal({
                                 <div className="p-3.5 rounded-xl bg-slate-50/50 border border-slate-200">
                                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Position</span>
                                     <span className="block text-sm font-bold text-slate-900">{profile.jobTitle || '—'}</span>
+                                </div>
+
+                                <div className="p-3.5 rounded-xl bg-slate-50/50 border border-slate-200">
+                                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Recruiter Type</span>
+                                    {profile.recruiterType ? (
+                                        <span className={`inline-flex items-center text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${profile.recruiterType === 'in_house'
+                                            ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                            : 'bg-amber-50 text-amber-600 border border-amber-200'
+                                            }`}>
+                                            {profile.recruiterType === 'in_house' ? 'In-House' : 'Agency'}
+                                        </span>
+                                    ) : (
+                                        <span className="text-sm font-bold text-slate-400">—</span>
+                                    )}
                                 </div>
 
                                 <div className="p-3.5 rounded-xl bg-slate-50/50 border border-slate-200">
@@ -583,13 +598,21 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
                                                         {user.email}
                                                     </p>
                                                     {user.recruiterProfile && (
-                                                        <div className="flex items-center gap-2 mt-1.5">
+                                                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                                             <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
                                                                 {user.recruiterProfile.jobTitle}
                                                             </span>
                                                             <span className="text-[11px] text-slate-400">
                                                                 at {user.recruiterProfile.companyName}
                                                             </span>
+                                                            {user.recruiterProfile.recruiterType && (
+                                                                <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${user.recruiterProfile.recruiterType === 'in_house'
+                                                                    ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                                                    : 'bg-amber-50 text-amber-600 border border-amber-200'
+                                                                    }`}>
+                                                                    {user.recruiterProfile.recruiterType === 'in_house' ? 'In-House' : 'Agency'}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../lib/auth";
 import { connectToDatabase } from "../../../lib/mongodb";
-import { CandidatePublicPageModel, CandidatePrivateProfileModel, ProjectModel, UserProfileModel } from "../../../lib/models";
+import { CandidatePublicPageModel, CandidatePrivateProfileModel, ProjectModel, UserProfileModel, RecruiterProfileModel } from "../../../lib/models";
 import {
     Lock, Sparkles, Building2, TrendingUp, Eye, ArrowRight, Shield,
     DollarSign, Ban, CalendarCheck, Globe, Briefcase, Zap,
@@ -85,6 +85,15 @@ export default async function CandidateLandingPage({ params }: { params: Promise
     const session = await getServerSession(authOptions);
     const isAuthenticated = !!session?.user;
     const isRecruiter = (session?.user as any)?.role === 'recruiter';
+
+    let recruiterType: 'in_house' | 'agency' | undefined;
+    if (isRecruiter && session?.user?.id) {
+        const recruiterProfile = await RecruiterProfileModel.findOne(
+            { userId: session.user.id },
+            { recruiterType: 1 }
+        ).lean();
+        recruiterType = (recruiterProfile as any)?.recruiterType ?? undefined;
+    }
 
     const signInUrl = `/auth/signin?intent=recruiter&callbackUrl=${encodeURIComponent(`/c/${slug}`)}`;
     const roleSelectUrl = `/auth/select-role?intent=recruiter&callbackUrl=${encodeURIComponent(`/c/${slug}`)}`;
@@ -215,6 +224,7 @@ export default async function CandidateLandingPage({ params }: { params: Promise
                                     candidateSlug={slug}
                                     candidateName={candidateUserProfile?.fullName || undefined}
                                     candidateRole={highlightedResume?.currentRole || undefined}
+                                    recruiterType={recruiterType}
                                 />
                             </div>
                         </div>

@@ -459,6 +459,14 @@ export default function RecruiterDashboardPage() {
                             </h1>
                             <p className="text-slate-400 text-sm">
                                 {profile?.companyName} · {profile?.jobTitle}
+                                {profile?.recruiterType && (
+                                    <span className={`ml-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${profile.recruiterType === 'in_house'
+                                        ? 'bg-blue-500/15 text-blue-300 border border-blue-500/20'
+                                        : 'bg-amber-500/15 text-amber-300 border border-amber-500/20'
+                                        }`}>
+                                        {profile.recruiterType === 'in_house' ? 'In-House' : 'Agency'}
+                                    </span>
+                                )}
                             </p>
                         </div>
                     </div>
@@ -543,6 +551,17 @@ export default function RecruiterDashboardPage() {
                                     <span className="text-slate-500">Title</span>
                                     <span className="font-semibold text-slate-800">{profile?.jobTitle || '—'}</span>
                                 </div>
+                                {profile?.recruiterType && (
+                                    <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
+                                        <span className="text-slate-500">Type</span>
+                                        <span className={`text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${profile.recruiterType === 'in_house'
+                                            ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                            : 'bg-amber-50 text-amber-600 border border-amber-200'
+                                            }`}>
+                                            {profile.recruiterType === 'in_house' ? 'In-House' : 'Agency'}
+                                        </span>
+                                    </div>
+                                )}
                                 {profile?.industry && (
                                     <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
                                         <span className="text-slate-500">Industry</span>

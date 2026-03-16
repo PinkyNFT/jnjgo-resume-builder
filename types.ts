@@ -12,6 +12,7 @@ export interface RecruiterProfile {
     phone?: string;
     companyWebsite?: string;
     companySize?: 'startup' | 'small' | 'medium' | 'large' | 'enterprise';
+    recruiterType?: 'in_house' | 'agency';
     industry?: string;
     bio?: string;
     onboardingCompleted: boolean;
