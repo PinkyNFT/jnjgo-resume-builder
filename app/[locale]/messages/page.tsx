@@ -370,8 +370,8 @@ export default function MessagesPage() {
                                             threadReplies.map((reply) => (
                                                 <div key={reply.id} className={`flex ${reply.isFromCandidate ? 'justify-end' : 'justify-start'}`}>
                                                     <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${reply.isFromCandidate
-                                                            ? 'bg-indigo-600 text-white rounded-tr-sm'
-                                                            : 'bg-slate-100 text-slate-800 rounded-tl-sm'
+                                                        ? 'bg-indigo-600 text-white rounded-tr-sm'
+                                                        : 'bg-slate-100 text-slate-800 rounded-tl-sm'
                                                         }`}>
                                                         <p className="whitespace-pre-wrap">{reply.message}</p>
                                                         <span className={`block text-[10px] mt-1 text-right ${reply.isFromCandidate ? 'text-indigo-200' : 'text-slate-400'}`}>
