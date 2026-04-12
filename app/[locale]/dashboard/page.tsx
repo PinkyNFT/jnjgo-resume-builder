@@ -13,6 +13,8 @@ import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/da
 import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, UploadCloud, File, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2, Sparkles, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from '../../../lib/toast';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import AppNavbar from '../../../components/navigation/AppNavbar';
 import { DashboardSkeleton } from '../../../components/navigation/Skeletons';
 import Dropzone from 'react-dropzone';
@@ -196,7 +198,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
         const data = await analyzeImportMutation.mutateAsync({ text: importText, locale });
         onComplete(role, data);
       } catch {
-        alert("Import failed, starting blank.");
+        toast.warning("Couldn't read the imported file — starting fresh.");
         onComplete(role, undefined);
       } finally {
         setIsAnalyzing(false);
@@ -357,7 +359,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
       onComplete(profile);
     } catch (error) {
       console.error('Failed to save profile:', error);
-      alert('Failed to save profile. Please try again.');
+      toast.error('Failed to save profile. Please try again.');
     }
   };
 
@@ -486,6 +488,8 @@ export default function Page() {
 
   // Temp storage for setup data before project creation
   const [setupData, setSetupData] = useState<{ role: RoleType, importData?: ImportData } | null>(null);
+  // Delete confirmation state
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Initialize the parse resume mutation at the component level
   const parseResumeMutation = useParseResume();
@@ -558,7 +562,7 @@ export default function Page() {
       setStep('interview');
     } catch (error) {
       console.error('Failed to create project:', error);
-      alert('Failed to create project. Please try again.');
+      toast.error('Failed to create project. Please try again.');
     }
   };
 
@@ -566,7 +570,7 @@ export default function Page() {
     // Fetch full project data (with history & resume data) on demand
     const fullProject = await getProject(project.id);
     if (!fullProject) {
-      alert('Failed to load project. Please try again.');
+      toast.error('Failed to load project. Please try again.');
       return;
     }
     setCurrentProject(fullProject);
@@ -577,16 +581,21 @@ export default function Page() {
     }
   };
 
-  const handleDeleteProject = async (id: string) => {
-    if (!confirm(tCommon('confirmDelete'))) {
-      return;
-    }
+  const handleDeleteProject = (id: string) => {
+    setConfirmDeleteId(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteId) return;
+    const id = confirmDeleteId;
+    setConfirmDeleteId(null);
     try {
       await deleteProject(id);
       setProjects(prev => prev.filter(p => p.id !== id));
+      toast.success('Resume deleted.');
     } catch (error) {
       console.error('Failed to delete project:', error);
-      alert('Failed to delete project. Please try again.');
+      toast.error('Failed to delete project. Please try again.');
     }
   };
 
@@ -680,7 +689,7 @@ export default function Page() {
         setCurrentProject(updatedProject);
       } catch (error) {
         console.error('Failed to update project:', error);
-        alert('Failed to save changes. Please try again.');
+        toast.error('Failed to save changes. Please try again.');
       }
     }
   };
@@ -710,7 +719,7 @@ export default function Page() {
       setStep('interview');
     } catch (error) {
       console.error('Failed to resume interview:', error);
-      alert('Failed to resume interview. Please try again.');
+      toast.error('Failed to resume interview. Please try again.');
     }
   };
 
@@ -906,6 +915,18 @@ export default function Page() {
           )}
         </>
       )}
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        isOpen={confirmDeleteId !== null}
+        title="Delete this resume?"
+        message="This action cannot be undone. All interview history and resume data will be permanently removed."
+        confirmLabel="Delete"
+        cancelLabel="Keep it"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

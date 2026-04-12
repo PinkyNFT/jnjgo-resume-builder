@@ -8,6 +8,7 @@ import { evaluateResume } from '../services/geminiService';
 import { saveProject, createVersion } from '../services/storageService';
 import { VersionHistory } from './VersionHistory';
 import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2, MessageSquare, Eye, X, RotateCcw, Share2 } from 'lucide-react';
+import { toast } from '../lib/toast';
 import { TimelineChart, TimelineChartItem } from './TimelineChart';
 import { parsePeriod } from '../utils/dateParser';
 import { insertGapsInTimeline } from '../utils/timelineGenerator';
@@ -134,7 +135,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             );
         } catch (e) {
             console.error(e);
-            alert("Evaluation failed.");
+            toast.error('Evaluation failed. Please try again.');
         } finally {
             setIsEvaluating(false);
         }
@@ -192,11 +193,11 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                 data,
                 evaluation
             );
-            alert(t('saved') || "Saved!");
+            toast.success(t('saved') || 'Resume saved!');
             onBack();
         } catch (error) {
             console.error('Failed to save project:', error);
-            alert('Failed to save project. Please try again.');
+            toast.error('Failed to save project. Please try again.');
         }
     };
 

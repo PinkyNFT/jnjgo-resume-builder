@@ -9,6 +9,7 @@ import {
     Clock, Building2, Globe, Phone, AlertTriangle, Eye,
     Filter, Sparkles
 } from 'lucide-react';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface UserData {
     userId: string;
@@ -301,6 +302,9 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
     // Toast state
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+    // Confirm dialog state
+    const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
+
     const isSuperAdmin = adminRole === 'super_admin';
 
     const pendingCount = users.filter(u => u.userRole === 'pending_recruiter').length;
@@ -333,62 +337,59 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
         fetchUsers(1, searchInput);
     };
 
-    const handleAdminAction = async (user: UserData, action: 'grant_admin' | 'revoke_admin' | 'grant_super_admin') => {
-        if (!confirm(`Are you sure you want to ${action.replace('_', ' ')} for ${user.email}?`)) return;
-
-        setActionLoading(prev => ({ ...prev, [user.userId]: true }));
-        try {
-            const res = await fetch('/api/admin/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.userId,
-                    email: user.email,
-                    name: user.fullName,
-                    action
-                })
-            });
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Failed');
-            }
-            fetchUsers(pagination.page, search);
-            setToast({ message: `Admin role updated for ${user.fullName || user.email}`, type: 'success' });
-        } catch (err: any) {
-            setToast({ message: err.message || 'Failed to update user', type: 'error' });
-        } finally {
-            setActionLoading(prev => ({ ...prev, [user.userId]: false }));
-        }
+    const handleAdminAction = (user: UserData, action: 'grant_admin' | 'revoke_admin' | 'grant_super_admin') => {
+        setPendingConfirm({
+            message: `Are you sure you want to ${action.replace(/_/g, ' ')} for ${user.email}?`,
+            onConfirm: async () => {
+                setPendingConfirm(null);
+                setActionLoading(prev => ({ ...prev, [user.userId]: true }));
+                try {
+                    const res = await fetch('/api/admin/users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: user.userId, email: user.email, name: user.fullName, action })
+                    });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error || 'Failed');
+                    }
+                    fetchUsers(pagination.page, search);
+                    setToast({ message: `Admin role updated for ${user.fullName || user.email}`, type: 'success' });
+                } catch (err: any) {
+                    setToast({ message: err.message || 'Failed to update user', type: 'error' });
+                } finally {
+                    setActionLoading(prev => ({ ...prev, [user.userId]: false }));
+                }
+            },
+        });
     };
 
-    const handleUserRoleChange = async (user: UserData, newRole: 'candidate' | 'recruiter' | 'pending_recruiter') => {
+    const handleUserRoleChange = (user: UserData, newRole: 'candidate' | 'recruiter' | 'pending_recruiter') => {
         if (user.userRole === newRole) return;
-        if (!confirm(`Change ${user.email}'s role to ${newRole}?`)) return;
-
-        setActionLoading(prev => ({ ...prev, [`role_${user.userId}`]: true }));
-        try {
-            const res = await fetch('/api/admin/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.userId,
-                    email: user.email,
-                    name: user.fullName,
-                    action: 'change_user_role',
-                    role: newRole
-                })
-            });
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Failed');
-            }
-            fetchUsers(pagination.page, search);
-            setToast({ message: `Role updated to ${newRole} for ${user.fullName || user.email}`, type: 'success' });
-        } catch (err: any) {
-            setToast({ message: err.message || 'Failed to change user role', type: 'error' });
-        } finally {
-            setActionLoading(prev => ({ ...prev, [`role_${user.userId}`]: false }));
-        }
+        setPendingConfirm({
+            message: `Change ${user.email}'s role to "${newRole}"?`,
+            onConfirm: async () => {
+                setPendingConfirm(null);
+                setActionLoading(prev => ({ ...prev, [`role_${user.userId}`]: true }));
+                try {
+                    const res = await fetch('/api/admin/users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: user.userId, email: user.email, name: user.fullName, action: 'change_user_role', role: newRole })
+                    });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error || 'Failed');
+                    }
+                    fetchUsers(pagination.page, search);
+                    setToast({ message: `Role updated to ${newRole} for ${user.fullName || user.email}`, type: 'success' });
+                } catch (err: any) {
+                    setToast({ message: err.message || 'Failed to change user role', type: 'error' });
+                } finally {
+                    setActionLoading(prev => ({ ...prev, [`role_${user.userId}`]: false }));
+                }
+            },
+        });
     };
 
     const handleModalApprove = async () => {
@@ -420,34 +421,33 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
         }
     };
 
-    const handleModalReject = async () => {
+    const handleModalReject = () => {
         if (!reviewUser) return;
-        if (!confirm(`Reject ${reviewUser.fullName || reviewUser.email}'s recruiter application? Their role will be reset to candidate.`)) return;
-        setModalLoading(true);
-        try {
-            const res = await fetch('/api/admin/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: reviewUser.userId,
-                    email: reviewUser.email,
-                    name: reviewUser.fullName,
-                    action: 'change_user_role',
-                    role: 'candidate'
-                })
-            });
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Failed');
-            }
-            setToast({ message: `${reviewUser.fullName || reviewUser.email}'s application has been rejected.`, type: 'success' });
-            setReviewUser(null);
-            fetchUsers(pagination.page, search);
-        } catch (err: any) {
-            setToast({ message: err.message || 'Failed to reject', type: 'error' });
-        } finally {
-            setModalLoading(false);
-        }
+        setPendingConfirm({
+            message: `Reject ${reviewUser.fullName || reviewUser.email}'s recruiter application? Their role will be reset to candidate.`,
+            onConfirm: async () => {
+                setPendingConfirm(null);
+                setModalLoading(true);
+                try {
+                    const res = await fetch('/api/admin/users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: reviewUser.userId, email: reviewUser.email, name: reviewUser.fullName, action: 'change_user_role', role: 'candidate' })
+                    });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error || 'Failed');
+                    }
+                    setToast({ message: `${reviewUser.fullName || reviewUser.email}'s application has been rejected.`, type: 'success' });
+                    setReviewUser(null);
+                    fetchUsers(pagination.page, search);
+                } catch (err: any) {
+                    setToast({ message: err.message || 'Failed to reject', type: 'error' });
+                } finally {
+                    setModalLoading(false);
+                }
+            },
+        });
     };
 
     const getRoleBadge = (user: UserData) => {
@@ -753,6 +753,18 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
                     onDismiss={() => setToast(null)}
                 />
             )}
+
+            {/* Confirm dialog */}
+            <ConfirmDialog
+                isOpen={pendingConfirm !== null}
+                title="Confirm action"
+                message={pendingConfirm?.message ?? ''}
+                confirmLabel="Confirm"
+                cancelLabel="Cancel"
+                variant="warning"
+                onConfirm={() => pendingConfirm?.onConfirm()}
+                onCancel={() => setPendingConfirm(null)}
+            />
         </div>
     );
 }

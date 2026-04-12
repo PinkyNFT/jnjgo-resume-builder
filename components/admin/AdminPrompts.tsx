@@ -6,6 +6,7 @@ import {
     AlertTriangle, Info, ChevronDown, RotateCcw, History, GitCompare,
     Clock, ChevronRight, X
 } from 'lucide-react';
+import { toast } from '../../lib/toast';
 
 // ===== TYPES =====
 
@@ -200,7 +201,7 @@ export function AdminPrompts() {
             setTimeout(() => setSaved(prev => ({ ...prev, [slug]: false })), 2000);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Failed to save prompt';
-            alert(msg);
+            toast.error(msg);
         } finally {
             setSaving(prev => ({ ...prev, [slug]: false }));
         }
@@ -228,7 +229,7 @@ export function AdminPrompts() {
             await fetchComparisons();
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Failed to create prompt';
-            alert(msg);
+            toast.error(msg);
         } finally {
             setCreating(false);
         }
@@ -244,7 +245,7 @@ export function AdminPrompts() {
             if (!res.ok) throw new Error('Failed');
             await fetchComparisons();
         } catch {
-            alert('Failed to toggle prompt status');
+            toast.error('Failed to toggle prompt status');
         }
     };
 
@@ -267,7 +268,7 @@ export function AdminPrompts() {
             setConfirmReset(null);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Failed to reset prompt';
-            alert(msg);
+            toast.error(msg);
         } finally {
             setResetting(prev => ({ ...prev, [slug]: false }));
         }

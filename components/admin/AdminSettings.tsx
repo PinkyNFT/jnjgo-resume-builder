@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Loader2, Save, Check, RotateCcw, Info } from 'lucide-react';
+import { toast } from '../../lib/toast';
 
 interface Setting {
     _id: string;
@@ -67,7 +68,7 @@ export function AdminSettings() {
             setSaved(prev => ({ ...prev, [key]: true }));
             setTimeout(() => setSaved(prev => ({ ...prev, [key]: false })), 2000);
         } catch (err: any) {
-            alert(err.message || 'Failed to save setting');
+            toast.error(err.message || 'Failed to save setting');
         } finally {
             setSaving(prev => ({ ...prev, [key]: false }));
         }

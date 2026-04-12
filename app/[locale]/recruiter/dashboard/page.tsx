@@ -12,6 +12,7 @@ import {
     MapPin, DollarSign, Briefcase, Globe, Clock, ChevronLeft, ChevronRight, FileText,
     MailOpen, User, MessageSquare
 } from 'lucide-react';
+import { toast } from '../../../../lib/toast';
 import LanguageSwitcher from '../../../../components/LanguageSwitcher';
 import { RecruiterProfile } from '../../../../types';
 
@@ -292,7 +293,7 @@ export default function RecruiterDashboardPage() {
             setThreadReplies(prev => [...prev, data.reply]);
             setReplyText('');
         } catch (error: any) {
-            alert(error.message);
+            toast.error(error.message || 'Failed to send reply.');
         } finally {
             setIsReplying(false);
         }

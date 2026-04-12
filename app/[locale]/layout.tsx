@@ -5,6 +5,7 @@ import { Providers } from "../providers";
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import PageTransition from '../../components/navigation/PageTransition';
+import { Toaster } from '../../components/ui/Toaster';
 
 const inter = Inter({
   variable: "--font-inter",
@@ -35,6 +36,7 @@ export default async function RootLayout({
             <PageTransition>
               {children}
             </PageTransition>
+            <Toaster />
           </Providers>
         </NextIntlClientProvider>
       </body>

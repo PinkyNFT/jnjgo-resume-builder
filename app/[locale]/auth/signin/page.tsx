@@ -161,8 +161,8 @@ function SignInContent() {
                     <div className="border-t border-white/10 pt-6">
                         <p className="text-slate-500 text-sm italic">
                             {isRecruiterIntent
-                                ? '&quot;The best hires start with the best information.&quot;'
-                                : '&quot;Stop telling stories; start showing impact.&quot;'
+                                ? '"The best hires start with the best information."'
+                                : '"Stop telling stories; start showing impact."'
                             }
                         </p>
                     </div>

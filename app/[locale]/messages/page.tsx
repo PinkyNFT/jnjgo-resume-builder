@@ -9,6 +9,7 @@ import {
     MessageSquare, Loader2, Building2, Clock, CheckCheck,
     ArrowLeft, Inbox, ChevronLeft, ChevronRight, User, Sparkles,
 } from 'lucide-react';
+import { toast } from '../../../lib/toast';
 
 interface ScoutMessage {
     id: string;
@@ -152,7 +153,7 @@ export default function MessagesPage() {
             setThreadReplies(prev => [...prev, data.reply]);
             setReplyText('');
         } catch (error: any) {
-            alert(error.message);
+            toast.error(error.message || 'Failed to send reply.');
         } finally {
             setIsReplying(false);
         }
