@@ -7,14 +7,23 @@ import {
     Settings, FileText, Users, Shield, BarChart3,
     ArrowLeft, Loader2, AlertTriangle, RefreshCw, TrendingUp
 } from 'lucide-react';
-import { AdminOverview } from '@/components/admin/AdminOverview';
-import { AdminSettings } from '@/components/admin/AdminSettings';
-import { AdminPrompts } from '@/components/admin/AdminPrompts';
-import { AdminUsers } from '@/components/admin/AdminUsers';
-import { AdminAuditLog } from '@/components/admin/AdminAuditLog';
-import AdminFunnel from '@/components/admin/AdminFunnel';
+import dynamic from 'next/dynamic';
 import AppShell from '@/components/navigation/AppShell';
 import { AdminSkeleton } from '@/components/navigation/Skeletons';
+
+// Tab components are only needed one at a time — load each on first activation.
+const tabLoader = () => (
+  <div className="flex items-center justify-center py-24">
+    <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+  </div>
+);
+
+const AdminOverview  = dynamic(() => import('@/components/admin/AdminOverview').then(m => ({ default: m.AdminOverview })),   { ssr: false, loading: tabLoader });
+const AdminFunnel    = dynamic(() => import('@/components/admin/AdminFunnel'),                                                { ssr: false, loading: tabLoader });
+const AdminPrompts   = dynamic(() => import('@/components/admin/AdminPrompts').then(m => ({ default: m.AdminPrompts })),     { ssr: false, loading: tabLoader });
+const AdminSettings  = dynamic(() => import('@/components/admin/AdminSettings').then(m => ({ default: m.AdminSettings })),   { ssr: false, loading: tabLoader });
+const AdminUsers     = dynamic(() => import('@/components/admin/AdminUsers').then(m => ({ default: m.AdminUsers })),         { ssr: false, loading: tabLoader });
+const AdminAuditLog  = dynamic(() => import('@/components/admin/AdminAuditLog').then(m => ({ default: m.AdminAuditLog })),   { ssr: false, loading: tabLoader });
 
 type AdminTab = 'overview' | 'funnel' | 'settings' | 'prompts' | 'users' | 'audit';
 

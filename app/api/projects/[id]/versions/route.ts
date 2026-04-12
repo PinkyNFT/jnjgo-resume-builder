@@ -92,24 +92,21 @@ export async function POST(
             createdAt: now,
         });
 
-        // Enforce max versions: prune oldest auto-versions if over limit
-        const totalCount = await ResumeVersionModel.countDocuments({ userId, projectId });
+        // Enforce max versions: prune oldest auto-versions if over limit.
+        // Run count + candidate-fetch in parallel to save one round-trip.
+        const [totalCount, oldAutoVersions] = await Promise.all([
+            ResumeVersionModel.countDocuments({ userId, projectId }),
+            ResumeVersionModel.find({ userId, projectId, trigger: { $ne: 'manual' } })
+                .sort({ createdAt: 1 })
+                .select('_id')
+                .lean(),
+        ]);
+
         if (totalCount > MAX_VERSIONS_PER_PROJECT) {
             const excess = totalCount - MAX_VERSIONS_PER_PROJECT;
-            // Find oldest auto-versions (not manual) to prune
-            const oldAutoVersions = await ResumeVersionModel.find({
-                userId,
-                projectId,
-                trigger: { $ne: 'manual' },
-            })
-                .sort({ createdAt: 1 })
-                .limit(excess)
-                .select('_id');
-
-            if (oldAutoVersions.length > 0) {
-                await ResumeVersionModel.deleteMany({
-                    _id: { $in: oldAutoVersions.map(v => v._id) },
-                });
+            const toDelete = oldAutoVersions.slice(0, excess).map(v => v._id);
+            if (toDelete.length > 0) {
+                await ResumeVersionModel.deleteMany({ _id: { $in: toDelete } });
             }
         }
 

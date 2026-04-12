@@ -1,16 +1,30 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useTranslations, useLocale } from 'next-intl';
 import { useSession } from 'next-auth/react';
-import { InterviewView } from '../../../components/InterviewView';
-import { ResumeEditor } from '../../../components/ResumeEditor';
-import { ResumeGeneratingView } from '../../../components/ResumeGeneratingView';
+import { Loader2 as DynLoader } from 'lucide-react';
+
+// Lazily loaded — only pulled into the bundle when the user actually reaches
+// that step. Keeps the initial dashboard chunk small.
+const InterviewView = dynamic(
+  () => import('../../../components/InterviewView').then(m => ({ default: m.InterviewView })),
+  { ssr: false, loading: () => <div className="flex items-center justify-center h-64"><DynLoader className="w-8 h-8 animate-spin text-indigo-400" /></div> }
+);
+const ResumeEditor = dynamic(
+  () => import('../../../components/ResumeEditor').then(m => ({ default: m.ResumeEditor })),
+  { ssr: false, loading: () => <div className="flex items-center justify-center h-64"><DynLoader className="w-8 h-8 animate-spin text-indigo-400" /></div> }
+);
+const ResumeGeneratingView = dynamic(
+  () => import('../../../components/ResumeGeneratingView').then(m => ({ default: m.ResumeGeneratingView })),
+  { ssr: false, loading: () => <div className="flex items-center justify-center h-64"><DynLoader className="w-8 h-8 animate-spin text-indigo-400" /></div> }
+);
 import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from '../../../types';
 import { useParseResume, useAnalyzeImport } from '../../../hooks/useGemini';
 import { getProjects, getProject, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile, createVersion } from '../../../services/storageService';
 import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/dataMigration';
-import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, UploadCloud, File, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2, Sparkles, ArrowUpRight } from 'lucide-react';
+import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, UploadCloud, File, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from '../../../lib/toast';

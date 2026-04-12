@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_API_KEY: process.env.NEXT_PUBLIC_API_KEY,
   },
+  images: {
+    remotePatterns: [
+      {
+        // Google OAuth profile images (e.g. lh3.googleusercontent.com)
+        protocol: 'https',
+        hostname: '*.googleusercontent.com',
+      },
+    ],
+  },
   async headers() {
     return [
       {
