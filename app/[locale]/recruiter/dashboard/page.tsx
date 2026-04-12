@@ -9,8 +9,8 @@ import {
     Search, Building2, Users, LogOut,
     Loader2, ChevronDown, Sparkles, Shield, Eye, TrendingUp,
     Zap, ArrowRight, BookmarkCheck, BarChart3,
-    MapPin, DollarSign, Briefcase, Globe, Clock, ChevronLeft, ChevronRight, FileText,
-    MailOpen, User, MessageSquare
+    MapPin, DollarSign, Briefcase, Globe, Clock, ChevronLeft, ChevronRight,
+    MailOpen, User, MessageSquare, History
 } from 'lucide-react';
 import { toast } from '../../../../lib/toast';
 import LanguageSwitcher from '../../../../components/LanguageSwitcher';
@@ -82,8 +82,8 @@ export default function RecruiterDashboardPage() {
 
     // Tabs
     const tabParam = searchParams.get('tab');
-    const initialTab = tabParam === 'saved' ? 'saved' : tabParam === 'contacts' ? 'contacts' : 'browse';
-    const [activeTab, setActiveTab] = useState<'browse' | 'saved' | 'contacts'>(initialTab);
+    const initialTab = tabParam === 'saved' ? 'saved' : tabParam === 'contacts' ? 'contacts' : tabParam === 'recently_viewed' ? 'recently_viewed' : 'browse';
+    const [activeTab, setActiveTab] = useState<'browse' | 'saved' | 'contacts' | 'recently_viewed'>(initialTab);
 
     // Saved candidates state
     const [savedCandidates, setSavedCandidates] = useState<CandidateCard[]>([]);
@@ -93,6 +93,10 @@ export default function RecruiterDashboardPage() {
     // Recruiter stats
     const [recruiterStats, setRecruiterStats] = useState<{ contactsSent: number; savedCount: number } | null>(null);
     const [profilesViewed, setProfilesViewed] = useState<number | null>(null);
+
+    // Recently viewed state
+    const [recentlyViewed, setRecentlyViewed] = useState<CandidateCard[]>([]);
+    const [recentlyViewedLoading, setRecentlyViewedLoading] = useState(false);
 
     // Contacts state
     const [contacts, setContacts] = useState<ContactRequest[]>([]);
@@ -134,6 +138,20 @@ export default function RecruiterDashboardPage() {
             setSavedCandidates([]);
         } finally {
             setSavedLoading(false);
+        }
+    }, []);
+
+    const fetchRecentlyViewed = useCallback(async () => {
+        setRecentlyViewedLoading(true);
+        try {
+            const res = await fetch('/api/recruiter/page-views?type=recent&limit=12');
+            if (!res.ok) throw new Error('Failed to fetch');
+            const data = await res.json();
+            setRecentlyViewed(data.candidates || []);
+        } catch {
+            setRecentlyViewed([]);
+        } finally {
+            setRecentlyViewedLoading(false);
         }
     }, []);
 
@@ -623,6 +641,16 @@ export default function RecruiterDashboardPage() {
                                     </span>
                                 )}
                             </button>
+                            <button
+                                onClick={() => { setActiveTab('recently_viewed'); if (recentlyViewed.length === 0 && !recentlyViewedLoading) fetchRecentlyViewed(); }}
+                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'recently_viewed'
+                                    ? 'bg-white text-slate-900 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
+                                    }`}
+                            >
+                                <History className="w-3.5 h-3.5" />
+                                Recently Viewed
+                            </button>
                         </div>
                         {activeTab === 'browse' && (
                             <form onSubmit={handleCandidateSearch} className="flex gap-2 w-full sm:w-auto">
@@ -1029,6 +1057,137 @@ export default function RecruiterDashboardPage() {
                                 )}
                             </div>
                         </div>
+                    )}
+
+                    {/* ── Recently Viewed Tab ── */}
+                    {activeTab === 'recently_viewed' && (
+                        recentlyViewedLoading ? (
+                            <div className="flex items-center justify-center py-20">
+                                <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                            </div>
+                        ) : recentlyViewed.length === 0 ? (
+                            <div className="bg-white rounded-2xl border border-slate-200/80 p-10 text-center">
+                                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <History className="w-8 h-8 text-slate-300" />
+                                </div>
+                                <h3 className="font-bold text-slate-700 mb-1">No profiles viewed yet</h3>
+                                <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">
+                                    Candidate profiles you visit will appear here so you can quickly revisit them.
+                                </p>
+                                <button
+                                    onClick={() => setActiveTab('browse')}
+                                    className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
+                                >
+                                    <Search className="w-4 h-4" />
+                                    Browse Candidates
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-4 animate-in fade-in duration-300">
+                                <p className="text-xs text-slate-400 font-medium">
+                                    Showing {recentlyViewed.length} recently viewed profile{recentlyViewed.length !== 1 ? 's' : ''} · sorted by most recent visit
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {recentlyViewed.map(candidate => {
+                                        const orientation = ORIENTATION_META[candidate.orientation || ''];
+                                        const intent = INTENT_META[candidate.jobChangeIntent || ''];
+                                        const OrientationIcon = orientation?.icon || Globe;
+                                        const salaryMin = formatSalaryShort(candidate.desiredSalary?.minimum);
+                                        const salaryMax = formatSalaryShort(candidate.desiredSalary?.target);
+                                        const viewedAt = (candidate as any).viewedAt
+                                            ? new Date((candidate as any).viewedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                                            : null;
+
+                                        return (
+                                            <div
+                                                key={candidate.userId}
+                                                className="group bg-white rounded-2xl border border-slate-200/80 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+                                            >
+                                                <div className="p-5">
+                                                    <div className="flex items-start justify-between mb-3">
+                                                        <div className="min-w-0 flex-1">
+                                                            <h3 className="font-bold text-slate-900 text-sm truncate">
+                                                                {candidate.fullName || 'Anonymous Candidate'}
+                                                            </h3>
+                                                            {candidate.highlightedResume?.currentRole && (
+                                                                <p className="text-xs text-slate-500 mt-0.5 truncate">{candidate.highlightedResume.currentRole}</p>
+                                                            )}
+                                                            {candidate.location && (
+                                                                <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                                                                    <MapPin className="w-3 h-3" />
+                                                                    {candidate.location}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                                                            {orientation && (
+                                                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${orientation.bg} ${orientation.color}`}>
+                                                                    <OrientationIcon className="w-2.5 h-2.5" />
+                                                                    {orientation.label}
+                                                                </span>
+                                                            )}
+                                                            {intent && (
+                                                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${intent.color}`}>
+                                                                    <Clock className="w-2.5 h-2.5" />
+                                                                    {intent.badge}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {candidate.aiObjectiveReview && (
+                                                        <p className="text-xs text-slate-600 leading-relaxed mb-3 line-clamp-2">{candidate.aiObjectiveReview}</p>
+                                                    )}
+
+                                                    {candidate.highlightedResume?.skills && candidate.highlightedResume.skills.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mb-3">
+                                                            {candidate.highlightedResume.skills.slice(0, 5).map((skill, i) => (
+                                                                <span key={i} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                                                                    {skill}
+                                                                </span>
+                                                            ))}
+                                                            {candidate.highlightedResume.skills.length > 5 && (
+                                                                <span className="text-[10px] text-slate-400 px-1">+{candidate.highlightedResume.skills.length - 5}</span>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {(salaryMin || salaryMax) && (
+                                                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                                            <DollarSign className="w-3 h-3 text-green-500" />
+                                                            <span className="font-medium text-slate-700">
+                                                                {salaryMin && salaryMax ? `${salaryMin} ~ ${salaryMax}` : salaryMin || salaryMax}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="border-t border-slate-100 px-5 py-3 bg-slate-50/50 flex items-center justify-between">
+                                                    {candidate.slug ? (
+                                                        <Link
+                                                            href={`/c/${candidate.slug}`}
+                                                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
+                                                        >
+                                                            <Eye className="w-3.5 h-3.5" />
+                                                            View Profile
+                                                            <ArrowRight className="w-3 h-3" />
+                                                        </Link>
+                                                    ) : (
+                                                        <span className="text-xs text-slate-400">Profile unavailable</span>
+                                                    )}
+                                                    {viewedAt && (
+                                                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                                            <History className="w-3 h-3" />
+                                                            {viewedAt}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )
                     )}
                 </div>
             </div>

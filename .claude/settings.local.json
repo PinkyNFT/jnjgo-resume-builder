@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(xargs grep:*)",
-      "Bash(xargs wc:*)"
+      "Bash(xargs wc:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 60 ./node_modules/.bin/tsc --noEmit)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(cmd /c \"cd /d d:\\\\Projects\\\\jnjgo-resume-builder && node_modules\\\\.bin\\\\tsc --noEmit 2>&1\")"
     ]
   }
 }

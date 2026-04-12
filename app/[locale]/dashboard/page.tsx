@@ -28,6 +28,7 @@ import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, UploadC
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from '../../../lib/toast';
+import JobMatchingSection from '../../../components/JobMatchingSection';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import AppNavbar from '../../../components/navigation/AppNavbar';
 import { DashboardSkeleton } from '../../../components/navigation/Skeletons';
@@ -870,6 +871,9 @@ export default function Page() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Job Matching — candidate-only, self-fetches private profile */}
+                    <JobMatchingSection locale={locale} />
                   </div>
                 )}
               </div>
