@@ -2,23 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import {
     Users, ArrowRight, Zap, TrendingUp, Briefcase, Globe, Clock,
-    DollarSign, MapPin, Loader2, Search
+    DollarSign, Loader2, Search
 } from 'lucide-react';
-
-const ORIENTATION_META: Record<string, { label: string; icon: typeof Zap; color: string; bg: string }> = {
-    'tech-driven': { label: 'Tech', icon: Zap, color: 'text-blue-600', bg: 'bg-blue-50' },
-    'business-driven': { label: 'Business', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    'management-driven': { label: 'Management', icon: Briefcase, color: 'text-violet-600', bg: 'bg-violet-50' },
-    'balanced': { label: 'Balanced', icon: Globe, color: 'text-amber-600', bg: 'bg-amber-50' },
-};
-
-const INTENT_META: Record<string, { badge: string; color: string }> = {
-    'now': { badge: 'Now', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-    'within_3_months': { badge: '3m', color: 'text-blue-700 bg-blue-50 border-blue-200' },
-    'open_to_offers': { badge: 'Passive', color: 'text-slate-700 bg-slate-100 border-slate-200' },
-};
 
 interface SimilarCandidate {
     userId: string;
@@ -43,19 +31,31 @@ interface SimilarCandidatesProps {
 }
 
 export default function SimilarCandidates({ currentSlug, orientation, locale }: SimilarCandidatesProps) {
+    const t = useTranslations('SimilarCandidates');
     const [candidates, setCandidates] = useState<SimilarCandidate[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const ORIENTATION_META: Record<string, { label: string; icon: typeof Zap; color: string; bg: string }> = {
+        'tech-driven': { label: t('orientationTech'), icon: Zap, color: 'text-blue-600', bg: 'bg-blue-50' },
+        'business-driven': { label: t('orientationBusiness'), icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        'management-driven': { label: t('orientationManagement'), icon: Briefcase, color: 'text-violet-600', bg: 'bg-violet-50' },
+        'balanced': { label: t('orientationBalanced'), icon: Globe, color: 'text-amber-600', bg: 'bg-amber-50' },
+    };
+
+    const INTENT_META: Record<string, { badge: string; color: string }> = {
+        'now': { badge: t('intentNow'), color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+        'within_3_months': { badge: t('intent3Months'), color: 'text-blue-700 bg-blue-50 border-blue-200' },
+        'open_to_offers': { badge: t('intentOpen'), color: 'text-slate-700 bg-slate-100 border-slate-200' },
+    };
 
     useEffect(() => {
         const fetchSimilar = async () => {
             try {
-                // Search for candidates with similar orientation if available
                 const params = new URLSearchParams({ limit: '3' });
                 if (orientation) params.set('search', orientation.replace('-', ' '));
                 const res = await fetch(`/api/recruiter/candidates?${params}`);
                 if (res.ok) {
                     const data = await res.json();
-                    // Filter out the current candidate
                     const filtered = (data.candidates || [])
                         .filter((c: SimilarCandidate) => c.slug !== currentSlug)
                         .slice(0, 3);
@@ -83,26 +83,26 @@ export default function SimilarCandidates({ currentSlug, orientation, locale }: 
 
     if (candidates.length === 0) return null;
 
+    const dashboardUrl = locale ? `/${locale}/recruiter/dashboard` : '/recruiter/dashboard';
+
     return (
         <div className="space-y-5">
-            {/* Section Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
                         <Users className="w-4 h-4 text-indigo-600" />
                     </div>
-                    <h3 className="font-bold text-slate-900">Similar Candidates</h3>
+                    <h3 className="font-bold text-slate-900">{t('title')}</h3>
                 </div>
                 <Link
-                    href={locale ? `/${locale}/recruiter/dashboard` : '/recruiter/dashboard'}
+                    href={dashboardUrl}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
                 >
-                    Browse all
+                    {t('browseAll')}
                     <ArrowRight className="w-3 h-3" />
                 </Link>
             </div>
 
-            {/* Candidate Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {candidates.map(candidate => {
                     const ori = ORIENTATION_META[candidate.orientation || ''];
@@ -120,7 +120,7 @@ export default function SimilarCandidates({ currentSlug, orientation, locale }: 
                             <div className="flex items-start justify-between mb-2">
                                 <div className="min-w-0 flex-1">
                                     <h4 className="font-semibold text-slate-900 text-sm truncate">
-                                        {candidate.fullName || 'Anonymous'}
+                                        {candidate.fullName || t('anonymous')}
                                     </h4>
                                     {candidate.highlightedResume?.currentRole && (
                                         <p className="text-[11px] text-slate-500 truncate mt-0.5">
@@ -130,7 +130,6 @@ export default function SimilarCandidates({ currentSlug, orientation, locale }: 
                                 </div>
                             </div>
 
-                            {/* Badges */}
                             <div className="flex flex-wrap gap-1 mb-2">
                                 {ori && (
                                     <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${ori.bg} ${ori.color}`}>
@@ -146,14 +145,12 @@ export default function SimilarCandidates({ currentSlug, orientation, locale }: 
                                 )}
                             </div>
 
-                            {/* AI Summary */}
                             {candidate.aiObjectiveReview && (
                                 <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2 mb-2">
                                     {candidate.aiObjectiveReview}
                                 </p>
                             )}
 
-                            {/* Salary */}
                             {(salaryMin || salaryTarget) && (
                                 <div className="flex items-center gap-1 text-[11px] text-slate-500">
                                     <DollarSign className="w-3 h-3 text-green-500" />
@@ -165,28 +162,24 @@ export default function SimilarCandidates({ currentSlug, orientation, locale }: 
                                 </div>
                             )}
 
-                            {/* View link */}
                             <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-1 text-[11px] font-semibold text-indigo-600 group-hover:text-indigo-700">
-                                View Profile <ArrowRight className="w-3 h-3" />
+                                {t('viewProfile')} <ArrowRight className="w-3 h-3" />
                             </div>
                         </Link>
                     );
                 })}
             </div>
 
-            {/* Explore CTA */}
             <div className="bg-slate-50 rounded-xl border border-slate-200/60 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <Search className="w-5 h-5 text-slate-400" />
-                    <p className="text-sm text-slate-600">
-                        Discover more candidates by skills, role, or salary range
-                    </p>
+                    <p className="text-sm text-slate-600">{t('discoverMore')}</p>
                 </div>
                 <Link
-                    href={locale ? `/${locale}/recruiter/dashboard` : '/recruiter/dashboard'}
+                    href={dashboardUrl}
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-indigo-600 bg-white border border-indigo-200 rounded-xl hover:bg-indigo-50 transition-colors shrink-0"
                 >
-                    Start Search
+                    {t('startSearch')}
                     <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
             </div>

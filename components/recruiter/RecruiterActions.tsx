@@ -4,9 +4,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
     Bookmark, BookmarkCheck, MessageSquare, Send, X, Loader2,
-    CheckCircle2, AlertCircle, Sparkles, Shield, User, Inbox
+    CheckCircle2, AlertCircle, Shield, User, Inbox
 } from 'lucide-react';
 
 interface RecruiterActionsProps {
@@ -19,6 +20,7 @@ interface RecruiterActionsProps {
 export default function RecruiterActions({ candidateSlug, candidateName, candidateRole, recruiterType }: RecruiterActionsProps) {
     const params = useParams();
     const locale = params.locale as string || 'en';
+    const t = useTranslations('RecruiterActions');
     const [isSaved, setIsSaved] = useState(false);
     const [hasContacted, setHasContacted] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -60,12 +62,12 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
         try {
             const data = await res.json();
             if (data.code === 'SELF_ACTION') {
-                setError('You cannot perform this action on your own profile.');
+                setError(t('errorSelfAction'));
             } else {
-                setError(data.error || 'Something went wrong. Please try again.');
+                setError(data.error || t('errorGeneric'));
             }
         } catch {
-            setError('Something went wrong. Please try again.');
+            setError(t('errorGeneric'));
         }
     };
 
@@ -87,7 +89,7 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                 await handleApiError(res);
             }
         } catch {
-            setError('Network error. Please check your connection.');
+            setError(t('errorNetwork'));
         } finally {
             setSaving(false);
         }
@@ -121,7 +123,7 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                 await handleApiError(res);
             }
         } catch {
-            setError('Network error. Please check your connection.');
+            setError(t('errorNetwork'));
         } finally {
             setSendingContact(false);
         }
@@ -136,7 +138,7 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
         );
     }
 
-    const displayName = candidateName || 'this candidate';
+    const displayName = candidateName || '';
 
     return (
         <>
@@ -158,7 +160,7 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                         ) : (
                             <Bookmark className="w-4 h-4" />
                         )}
-                        {isSaved ? 'Saved' : 'Save'}
+                        {isSaved ? t('saved') : t('save')}
                     </button>
 
                     <button
@@ -166,7 +168,7 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all duration-200 hover:-translate-y-0.5 shadow-sm hover:shadow-lg shadow-indigo-200/40"
                     >
                         <MessageSquare className="w-4 h-4" />
-                        {hasContacted ? 'Send Another Message' : 'Contact Candidate'}
+                        {hasContacted ? t('sendAnotherMessage') : t('contactCandidate')}
                     </button>
 
                     {hasContacted && (
@@ -175,7 +177,7 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:-translate-y-0.5 shadow-sm"
                         >
                             <Inbox className="w-4 h-4" />
-                            Open Inbox
+                            {t('openInbox')}
                         </Link>
                     )}
                 </div>
@@ -211,9 +213,9 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                                         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
                                             <CheckCircle2 className="w-8 h-8 text-emerald-600" />
                                         </div>
-                                        <h3 className="text-xl font-bold text-slate-900 mb-2">Request Sent</h3>
+                                        <h3 className="text-xl font-bold text-slate-900 mb-2">{t('requestSentTitle')}</h3>
                                         <p className="text-slate-500 text-sm leading-relaxed max-w-xs mx-auto">
-                                            Your scouting message has been sent to {displayName}. You&apos;ll be notified when they respond.
+                                            {t('requestSentDesc', { name: displayName })}
                                         </p>
                                     </div>
                                 ) : (
@@ -233,15 +235,15 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                                                     <Send className="w-4.5 h-4.5 text-white" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-lg font-bold text-slate-900">Scout Candidate</h3>
+                                                    <h3 className="text-lg font-bold text-slate-900">{t('scoutCandidate')}</h3>
                                                     <div className="flex items-center gap-1.5">
-                                                        <p className="text-xs text-slate-500">Send a direct scouting message</p>
+                                                        <p className="text-xs text-slate-500">{t('sendDirectMessage')}</p>
                                                         {recruiterType && (
                                                             <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${recruiterType === 'in_house'
                                                                 ? 'bg-blue-50 text-blue-600 border border-blue-200'
                                                                 : 'bg-amber-50 text-amber-600 border border-amber-200'
                                                                 }`}>
-                                                                {recruiterType === 'in_house' ? 'In-House' : 'Agency'}
+                                                                {recruiterType === 'in_house' ? t('inHouse') : t('agency')}
                                                             </span>
                                                         )}
                                                     </div>
@@ -270,15 +272,15 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                                         <form onSubmit={handleContactSubmit} className="px-6 pb-6">
                                             <div className="mb-4">
                                                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                                                    Your message
+                                                    {t('messageLabel')}
                                                 </label>
                                                 <p className="text-xs text-slate-400 mb-2.5">
-                                                    Introduce yourself, your role, and why this candidate is a great fit.
+                                                    {t('messageDesc')}
                                                 </p>
                                                 <textarea
                                                     value={contactMessage}
                                                     onChange={e => setContactMessage(e.target.value)}
-                                                    placeholder={"Hi, I'm recruiting for [Company]. We have an exciting [Role] opportunity that aligns with your experience in..."}
+                                                    placeholder={t('messagePlaceholder')}
                                                     rows={5}
                                                     maxLength={2000}
                                                     autoFocus
@@ -288,7 +290,7 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                                                 <div className="flex items-center justify-between mt-1.5">
                                                     <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
                                                         <Shield className="w-3 h-3" />
-                                                        Only shared with this candidate
+                                                        {t('onlySharedWith')}
                                                     </div>
                                                     <span className={`text-[11px] tabular-nums ${contactMessage.length > 1800 ? 'text-amber-500 font-medium' : 'text-slate-400'}`}>
                                                         {contactMessage.length.toLocaleString()}/{(2000).toLocaleString()}
@@ -311,7 +313,7 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                                                     onClick={() => setShowContactForm(false)}
                                                     className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
                                                 >
-                                                    Cancel
+                                                    {t('cancel')}
                                                 </button>
                                                 <button
                                                     type="submit"
@@ -323,7 +325,7 @@ export default function RecruiterActions({ candidateSlug, candidateName, candida
                                                     ) : (
                                                         <Send className="w-4 h-4" />
                                                     )}
-                                                    {sendingContact ? 'Sending...' : 'Send Scout Request'}
+                                                    {sendingContact ? t('sending') : t('sendScout')}
                                                 </button>
                                             </div>
                                         </form>

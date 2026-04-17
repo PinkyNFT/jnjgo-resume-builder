@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Clock, ArrowLeft, LogOut } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 
 export default function PendingApprovalPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const t = useTranslations('PendingApproval');
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -42,12 +44,11 @@ export default function PendingApprovalPage() {
                     </div>
 
                     <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mb-4 tracking-tight">
-                        Approval Pending
+                        {t('title')}
                     </h1>
 
                     <p className="text-slate-600 leading-relaxed mb-8">
-                        Thank you for registering as a Recruiter. Your account is currently under review by our administrators. This manual verification helps us ensure a secure, high-quality network.
-                        We will notify you once your account is approved.
+                        {t('description')}
                     </p>
 
                     <div className="w-full flex flex-col sm:flex-row gap-3">
@@ -56,20 +57,20 @@ export default function PendingApprovalPage() {
                             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold text-sm rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
                         >
                             <LogOut className="w-4 h-4" />
-                            Sign Out
+                            {t('signOut')}
                         </button>
                         <button
                             onClick={() => router.push('/')}
                             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold text-sm rounded-xl border-2 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition-colors"
                         >
                             <ArrowLeft className="w-4 h-4" />
-                            Return Home
+                            {t('returnHome')}
                         </button>
                     </div>
                 </div>
 
                 <p className="mt-8 text-xs text-slate-400">
-                    If you believe this is an error, please contact support.
+                    {t('contactSupport')}
                 </p>
             </div>
         </div>

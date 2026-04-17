@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import {
     Search, Building2, Users, LogOut,
@@ -15,19 +15,6 @@ import {
 import { toast } from '../../../../lib/toast';
 import LanguageSwitcher from '../../../../components/LanguageSwitcher';
 import { RecruiterProfile } from '../../../../types';
-
-const ORIENTATION_META: Record<string, { label: string; icon: typeof Zap; color: string; bg: string }> = {
-    'tech-driven': { label: 'Tech / Specialist', icon: Zap, color: 'text-blue-600', bg: 'bg-blue-50' },
-    'business-driven': { label: 'Business / Strategy', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    'management-driven': { label: 'Management / Lead', icon: Briefcase, color: 'text-violet-600', bg: 'bg-violet-50' },
-    'balanced': { label: 'Balanced / Hybrid', icon: Globe, color: 'text-amber-600', bg: 'bg-amber-50' },
-};
-
-const INTENT_META: Record<string, { label: string; badge: string; color: string }> = {
-    'now': { label: 'Actively looking', badge: 'Now', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-    'within_3_months': { label: 'Within 3 months', badge: '3m', color: 'text-blue-700 bg-blue-50 border-blue-200' },
-    'open_to_offers': { label: 'Open to offers', badge: 'Passive', color: 'text-slate-700 bg-slate-100 border-slate-200' },
-};
 
 interface CandidateCard {
     userId: string;
@@ -67,10 +54,11 @@ export default function RecruiterDashboardPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const locale = useLocale();
+    const t = useTranslations('RecruiterDashboard');
+
     const [profile, setProfile] = useState<RecruiterProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
-
     const [isAdmin, setIsAdmin] = useState(false);
 
     // Candidate browsing state
@@ -107,6 +95,20 @@ export default function RecruiterDashboardPage() {
     const [replyText, setReplyText] = useState('');
     const [isReplying, setIsReplying] = useState(false);
     const [totalUnreadReplies, setTotalUnreadReplies] = useState(0);
+
+    // Translated metadata (must be inside component to use t())
+    const ORIENTATION_META: Record<string, { label: string; icon: typeof Zap; color: string; bg: string }> = {
+        'tech-driven': { label: t('orientationTech'), icon: Zap, color: 'text-blue-600', bg: 'bg-blue-50' },
+        'business-driven': { label: t('orientationBusiness'), icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        'management-driven': { label: t('orientationManagement'), icon: Briefcase, color: 'text-violet-600', bg: 'bg-violet-50' },
+        'balanced': { label: t('orientationBalanced'), icon: Globe, color: 'text-amber-600', bg: 'bg-amber-50' },
+    };
+
+    const INTENT_META: Record<string, { label: string; badge: string; color: string }> = {
+        'now': { label: t('intentNow'), badge: t('intentBadgeNow'), color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+        'within_3_months': { label: t('intent3Months'), badge: t('intentBadge3Months'), color: 'text-blue-700 bg-blue-50 border-blue-200' },
+        'open_to_offers': { label: t('intentOpen'), badge: t('intentBadgeOpen'), color: 'text-slate-700 bg-slate-100 border-slate-200' },
+    };
 
     const fetchCandidates = useCallback(async (page = 1, searchQuery = '') => {
         setCandidatesLoading(true);
@@ -178,8 +180,6 @@ export default function RecruiterDashboardPage() {
         }
 
         if (status === 'authenticated') {
-            // Check role
-            // Check role - only fully approved recruiters can access dashboard
             if (session?.user?.role !== 'recruiter') {
                 if (session?.user?.role === 'pending_recruiter') {
                     router.push('/auth/pending-approval');
@@ -189,13 +189,11 @@ export default function RecruiterDashboardPage() {
                 return;
             }
 
-            // Check admin status
             fetch('/api/admin/check')
                 .then(res => res.json())
                 .then(data => setIsAdmin(data.isAdmin === true))
                 .catch(() => { });
 
-            // Claim anonymous page views (one-time per session)
             if (!sessionStorage.getItem('jnjgo_pv_claimed')) {
                 const anonId = localStorage.getItem('jnjgo_anon_id');
                 if (anonId) {
@@ -208,36 +206,27 @@ export default function RecruiterDashboardPage() {
                 }
             }
 
-            // Load recruiter profile
             fetch('/api/recruiter/profile')
                 .then(res => res.json())
                 .then(data => {
                     if (data && !data.error) {
                         setProfile(data);
                     }
-                    // If no profile, redirect to onboarding
                     if (!data || data.error || !data.onboardingCompleted) {
                         router.push('/recruiter/onboarding');
                         return;
                     }
                     setIsLoading(false);
-                    // Load candidates after profile is ready
                     fetchCandidates();
                     fetchSavedCandidates();
                     fetchContacts();
-                    // Fetch recruiter stats
                     fetch('/api/recruiter/actions?type=stats')
                         .then(res => res.json())
-                        .then(data => {
-                            if (!data.error) setRecruiterStats(data);
-                        })
+                        .then(data => { if (!data.error) setRecruiterStats(data); })
                         .catch(() => { });
-                    // Fetch profiles viewed count
                     fetch('/api/recruiter/page-views')
                         .then(res => res.json())
-                        .then(data => {
-                            if (!data.error) setProfilesViewed(data.profilesViewed ?? 0);
-                        })
+                        .then(data => { if (!data.error) setProfilesViewed(data.profilesViewed ?? 0); })
                         .catch(() => { });
                 })
                 .catch(() => setIsLoading(false));
@@ -268,7 +257,6 @@ export default function RecruiterDashboardPage() {
             setThreadLoading(false);
         }
 
-        // Mark replies as read if there were any unread
         if (contact.unreadReplies > 0) {
             try {
                 await fetch('/api/recruiter/actions', {
@@ -276,8 +264,6 @@ export default function RecruiterDashboardPage() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ actionId: contact.id })
                 });
-
-                // Optimistically clear the unread badge
                 setContacts(prev => prev.map(c =>
                     c.id === contact.id ? { ...c, unreadReplies: 0 } : c
                 ));
@@ -323,7 +309,6 @@ export default function RecruiterDashboardPage() {
     if (status === 'loading' || isLoading) {
         return (
             <div className="min-h-screen bg-slate-50">
-                {/* Skeleton navbar */}
                 <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 h-16" />
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
                     <div className="h-40 bg-white rounded-2xl animate-pulse border border-slate-100" />
@@ -337,6 +322,8 @@ export default function RecruiterDashboardPage() {
         );
     }
 
+    const firstName = session?.user?.name?.split(' ')[0] || '';
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
             {/* Recruiter Navbar */}
@@ -349,7 +336,7 @@ export default function RecruiterDashboardPage() {
                                 <span className="text-2xl group-hover:scale-110 transition-transform inline-block">🚀</span>
                                 <div className="hidden sm:flex flex-col">
                                     <span className="font-black text-slate-800 tracking-tight text-lg leading-tight">JNJGO</span>
-                                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider -mt-0.5">Recruiter</span>
+                                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider -mt-0.5">{t('recruiterBadge')}</span>
                                 </div>
                             </Link>
 
@@ -359,7 +346,7 @@ export default function RecruiterDashboardPage() {
                                     className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-100/50"
                                 >
                                     <BarChart3 className="w-4 h-4" />
-                                    Dashboard
+                                    {t('dashboard')}
                                 </Link>
                                 <button
                                     onClick={() => { setActiveTab('contacts'); if (contacts.length === 0 && !contactsLoading) fetchContacts(); document.getElementById('recruiter-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
@@ -373,7 +360,7 @@ export default function RecruiterDashboardPage() {
                                             </span>
                                         )}
                                     </div>
-                                    Messages
+                                    {t('messages')}
                                 </button>
                                 {isAdmin && (
                                     <Link
@@ -381,7 +368,7 @@ export default function RecruiterDashboardPage() {
                                         className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200"
                                     >
                                         <Shield className="w-4 h-4" />
-                                        Admin
+                                        {t('admin')}
                                     </Link>
                                 )}
                             </div>
@@ -395,13 +382,13 @@ export default function RecruiterDashboardPage() {
                             <div className="relative">
                                 <button
                                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                                    className={`flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl transition-all duration-200 ${userMenuOpen ? 'bg-slate-100 ring-2 ring-slate-200' : 'hover:bg-slate-50'
-                                        }`}
+                                    className={`flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl transition-all duration-200 ${userMenuOpen ? 'bg-slate-100 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
                                 >
                                     {session?.user?.image ? (
                                         <img
                                             src={session.user.image}
                                             alt={session.user.name || ''}
+                                            referrerPolicy="no-referrer"
                                             className="w-8 h-8 rounded-full ring-2 ring-white shadow-sm"
                                         />
                                     ) : (
@@ -417,7 +404,7 @@ export default function RecruiterDashboardPage() {
                                         <div className="px-4 py-3 border-b border-slate-100">
                                             <div className="flex items-center gap-3">
                                                 {session?.user?.image ? (
-                                                    <img src={session.user.image} alt="" className="w-10 h-10 rounded-full shadow-sm" />
+                                                    <img src={session.user.image} referrerPolicy="no-referrer" alt="" className="w-10 h-10 rounded-full shadow-sm" />
                                                 ) : (
                                                     <div className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold shadow-sm">
                                                         {(session?.user?.name || 'R').charAt(0).toUpperCase()}
@@ -427,7 +414,7 @@ export default function RecruiterDashboardPage() {
                                                     <p className="text-sm font-bold text-slate-900 truncate">{session?.user?.name}</p>
                                                     <p className="text-xs text-slate-400 truncate">{session?.user?.email}</p>
                                                     <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
-                                                        <Search className="w-2.5 h-2.5" /> Recruiter
+                                                        <Search className="w-2.5 h-2.5" /> {t('recruiterBadge')}
                                                     </span>
                                                 </div>
                                             </div>
@@ -440,7 +427,7 @@ export default function RecruiterDashboardPage() {
                                                     className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all duration-150"
                                                 >
                                                     <Shield className="w-4 h-4" />
-                                                    Admin Dashboard
+                                                    {t('adminDashboard')}
                                                 </Link>
                                             )}
                                             <button
@@ -448,7 +435,7 @@ export default function RecruiterDashboardPage() {
                                                 className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-150"
                                             >
                                                 <LogOut className="w-4 h-4" />
-                                                Sign Out
+                                                {t('signOut')}
                                             </button>
                                         </div>
                                     </div>
@@ -470,11 +457,11 @@ export default function RecruiterDashboardPage() {
                         <div className="space-y-1">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                                    <Shield className="w-3 h-3" /> Recruiter Dashboard
+                                    <Shield className="w-3 h-3" /> {t('dashboardBadge')}
                                 </span>
                             </div>
                             <h1 className="text-2xl md:text-3xl font-bold text-white">
-                                Welcome back{session?.user?.name ? `, ${session.user.name.split(' ')[0]}` : ''} 👋
+                                {firstName ? t('welcomeBack', { name: firstName }) : t('welcomeBackNoName')}
                             </h1>
                             <p className="text-slate-400 text-sm">
                                 {profile?.companyName} · {profile?.jobTitle}
@@ -483,7 +470,7 @@ export default function RecruiterDashboardPage() {
                                         ? 'bg-blue-500/15 text-blue-300 border border-blue-500/20'
                                         : 'bg-amber-500/15 text-amber-300 border border-amber-500/20'
                                         }`}>
-                                        {profile.recruiterType === 'in_house' ? 'In-House' : 'Agency'}
+                                        {profile.recruiterType === 'in_house' ? t('profileInHouse') : t('profileAgency')}
                                     </span>
                                 )}
                             </p>
@@ -494,10 +481,10 @@ export default function RecruiterDashboardPage() {
                 {/* Stats Row */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                        { label: 'Profiles Viewed', value: profilesViewed !== null ? String(profilesViewed) : '—', icon: Eye, color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
-                        { label: 'Saved Candidates', value: String(recruiterStats?.savedCount ?? savedCount ?? '—'), icon: BookmarkCheck, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
-                        { label: 'Active Candidates', value: String(candidatePagination.total || '—'), icon: Users, color: 'bg-violet-50 text-violet-600', border: 'border-violet-100' },
-                        { label: 'Scouts Sent', value: String(recruiterStats?.contactsSent ?? '—'), icon: TrendingUp, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
+                        { label: t('statProfilesViewed'), value: profilesViewed !== null ? String(profilesViewed) : '—', icon: Eye, color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
+                        { label: t('statSavedCandidates'), value: String(recruiterStats?.savedCount ?? savedCount ?? '—'), icon: BookmarkCheck, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
+                        { label: t('statActiveCandidates'), value: String(candidatePagination.total || '—'), icon: Users, color: 'bg-violet-50 text-violet-600', border: 'border-violet-100' },
+                        { label: t('statScoutsSent'), value: String(recruiterStats?.contactsSent ?? '—'), icon: TrendingUp, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
                     ].map((stat, i) => (
                         <div key={i} className={`group bg-white rounded-xl border ${stat.border} p-5 flex items-center gap-4`}>
                             <div className={`w-11 h-11 rounded-xl ${stat.color} flex items-center justify-center shrink-0`}>
@@ -513,20 +500,20 @@ export default function RecruiterDashboardPage() {
 
                 {/* Getting Started / Feature Cards */}
                 <div className="space-y-5">
-                    <h2 className="text-lg font-bold text-slate-800">Getting Started</h2>
+                    <h2 className="text-lg font-bold text-slate-800">{t('gettingStarted')}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {/* Discover Candidates */}
                         <div className="group bg-white rounded-2xl border border-slate-200/80 p-6 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
                             <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center mb-4 group-hover:bg-emerald-100 transition-colors">
                                 <Search className="w-6 h-6 text-emerald-600" />
                             </div>
-                            <h3 className="font-bold text-slate-900 mb-2">Browse Candidate Profiles</h3>
+                            <h3 className="font-bold text-slate-900 mb-2">{t('browseProfiles')}</h3>
                             <p className="text-sm text-slate-500 leading-relaxed mb-4">
-                                Access verified candidate profiles shared via JNJGO links. View salary expectations, career intent, and deal-breakers.
+                                {t('browseProfilesDesc')}
                             </p>
                             <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
                                 <Sparkles className="w-3.5 h-3.5" />
-                                Candidates share their profiles via unique links
+                                {t('candidatesShareLink')}
                             </div>
                         </div>
 
@@ -535,23 +522,17 @@ export default function RecruiterDashboardPage() {
                             <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
                                 <Zap className="w-6 h-6 text-blue-600" />
                             </div>
-                            <h3 className="font-bold text-slate-900 mb-2">How It Works</h3>
+                            <h3 className="font-bold text-slate-900 mb-2">{t('howItWorks')}</h3>
                             <p className="text-sm text-slate-500 leading-relaxed mb-4">
-                                Candidates build AI-powered resumes and publish private profiles. When they share their JNJGO link, you can access their full details.
+                                {t('browseProfilesDesc')}
                             </p>
                             <div className="space-y-2 text-xs text-slate-500">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">1</div>
-                                    Candidate shares their /c/[slug] link
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">2</div>
-                                    Sign in as recruiter to unlock details
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">3</div>
-                                    View salary, intent & preferences
-                                </div>
+                                {[t('howItWorksStep1'), t('howItWorksStep2'), t('howItWorksStep3')].map((step, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">{i + 1}</div>
+                                        {step}
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
@@ -560,36 +541,36 @@ export default function RecruiterDashboardPage() {
                             <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center mb-4 group-hover:bg-violet-100 transition-colors">
                                 <Building2 className="w-6 h-6 text-violet-600" />
                             </div>
-                            <h3 className="font-bold text-slate-900 mb-2">Your Company Profile</h3>
+                            <h3 className="font-bold text-slate-900 mb-2">{t('yourProfile')}</h3>
                             <div className="space-y-3 text-sm">
                                 <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                                    <span className="text-slate-500">Company</span>
+                                    <span className="text-slate-500">{t('profileCompany')}</span>
                                     <span className="font-semibold text-slate-800">{profile?.companyName || '—'}</span>
                                 </div>
                                 <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                                    <span className="text-slate-500">Title</span>
+                                    <span className="text-slate-500">{t('profileTitle')}</span>
                                     <span className="font-semibold text-slate-800">{profile?.jobTitle || '—'}</span>
                                 </div>
                                 {profile?.recruiterType && (
                                     <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                                        <span className="text-slate-500">Type</span>
+                                        <span className="text-slate-500">{t('profileType')}</span>
                                         <span className={`text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${profile.recruiterType === 'in_house'
                                             ? 'bg-blue-50 text-blue-600 border border-blue-200'
                                             : 'bg-amber-50 text-amber-600 border border-amber-200'
                                             }`}>
-                                            {profile.recruiterType === 'in_house' ? 'In-House' : 'Agency'}
+                                            {profile.recruiterType === 'in_house' ? t('profileInHouse') : t('profileAgency')}
                                         </span>
                                     </div>
                                 )}
                                 {profile?.industry && (
                                     <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                                        <span className="text-slate-500">Industry</span>
+                                        <span className="text-slate-500">{t('profileIndustry')}</span>
                                         <span className="font-semibold text-slate-800">{profile.industry}</span>
                                     </div>
                                 )}
                                 {profile?.companySize && (
                                     <div className="flex items-center justify-between py-1.5">
-                                        <span className="text-slate-500">Size</span>
+                                        <span className="text-slate-500">{t('profileSize')}</span>
                                         <span className="font-semibold text-slate-800 capitalize">{profile.companySize}</span>
                                     </div>
                                 )}
@@ -604,22 +585,16 @@ export default function RecruiterDashboardPage() {
                         <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
                             <button
                                 onClick={() => setActiveTab('browse')}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'browse'
-                                    ? 'bg-white text-slate-900 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
-                                    }`}
+                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'browse' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
-                                Browse All
+                                {t('tabBrowse')}
                             </button>
                             <button
                                 onClick={() => { setActiveTab('saved'); if (savedCandidates.length === 0 && !savedLoading) fetchSavedCandidates(); }}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'saved'
-                                    ? 'bg-white text-slate-900 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
-                                    }`}
+                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'saved' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 <BookmarkCheck className="w-3.5 h-3.5" />
-                                Saved
+                                {t('tabSaved')}
                                 {savedCount > 0 && (
                                     <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full">
                                         {savedCount}
@@ -628,13 +603,10 @@ export default function RecruiterDashboardPage() {
                             </button>
                             <button
                                 onClick={() => { setActiveTab('contacts'); if (contacts.length === 0 && !contactsLoading) fetchContacts(); }}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'contacts'
-                                    ? 'bg-white text-slate-900 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
-                                    }`}
+                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'contacts' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 <MailOpen className="w-3.5 h-3.5" />
-                                Sent Scouts
+                                {t('tabContacts')}
                                 {contacts.reduce((sum, c) => sum + c.unreadReplies, 0) > 0 && (
                                     <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-red-100 text-red-700 rounded-full">
                                         {contacts.reduce((sum, c) => sum + c.unreadReplies, 0)}
@@ -643,13 +615,10 @@ export default function RecruiterDashboardPage() {
                             </button>
                             <button
                                 onClick={() => { setActiveTab('recently_viewed'); if (recentlyViewed.length === 0 && !recentlyViewedLoading) fetchRecentlyViewed(); }}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'recently_viewed'
-                                    ? 'bg-white text-slate-900 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
-                                    }`}
+                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'recently_viewed' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 <History className="w-3.5 h-3.5" />
-                                Recently Viewed
+                                {t('tabRecentlyViewed')}
                             </button>
                         </div>
                         {activeTab === 'browse' && (
@@ -660,7 +629,7 @@ export default function RecruiterDashboardPage() {
                                         type="text"
                                         value={candidateSearchInput}
                                         onChange={e => setCandidateSearchInput(e.target.value)}
-                                        placeholder="Search by name, role, skills..."
+                                        placeholder={t('searchPlaceholder')}
                                         className="w-full pl-10 pr-4 py-2.5 text-sm text-slate-800 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
                                     />
                                 </div>
@@ -668,7 +637,7 @@ export default function RecruiterDashboardPage() {
                                     type="submit"
                                     className="px-4 py-2.5 text-sm font-medium bg-slate-900 text-white rounded-xl hover:bg-emerald-600 transition-colors shrink-0"
                                 >
-                                    Search
+                                    {t('search')}
                                 </button>
                             </form>
                         )}
@@ -685,10 +654,8 @@ export default function RecruiterDashboardPage() {
                                 <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                     <BookmarkCheck className="w-8 h-8 text-slate-300" />
                                 </div>
-                                <h3 className="font-bold text-slate-700 mb-1">No saved candidates</h3>
-                                <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">
-                                    Save candidates from their profile pages to quickly access them later.
-                                </p>
+                                <h3 className="font-bold text-slate-700 mb-1">{t('noSaved')}</h3>
+                                <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">{t('noSavedDesc')}</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -700,15 +667,12 @@ export default function RecruiterDashboardPage() {
                                     const salaryMax = formatSalaryShort(candidate.desiredSalary?.target);
 
                                     return (
-                                        <div
-                                            key={candidate.userId}
-                                            className="group bg-white rounded-2xl border border-emerald-200/80 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
-                                        >
+                                        <div key={candidate.userId} className="group bg-white rounded-2xl border border-emerald-200/80 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
                                             <div className="p-5">
                                                 <div className="flex items-start justify-between mb-3">
                                                     <div className="min-w-0 flex-1">
                                                         <h3 className="font-bold text-slate-900 text-sm truncate">
-                                                            {candidate.fullName || 'Anonymous Candidate'}
+                                                            {candidate.fullName || t('anonymousCandidate')}
                                                         </h3>
                                                         {candidate.highlightedResume?.currentRole && (
                                                             <p className="text-xs text-slate-500 mt-0.5 truncate">{candidate.highlightedResume.currentRole}</p>
@@ -742,12 +706,9 @@ export default function RecruiterDashboardPage() {
                                             </div>
                                             {candidate.slug && (
                                                 <div className="border-t border-emerald-100 px-5 py-3 bg-emerald-50/30">
-                                                    <Link
-                                                        href={`/c/${candidate.slug}`}
-                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
-                                                    >
+                                                    <Link href={`/c/${candidate.slug}`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
                                                         <Eye className="w-3.5 h-3.5" />
-                                                        View Full Profile
+                                                        {t('viewFullProfile')}
                                                         <ArrowRight className="w-3 h-3" />
                                                     </Link>
                                                 </div>
@@ -770,12 +731,10 @@ export default function RecruiterDashboardPage() {
                                 <Users className="w-8 h-8 text-slate-300" />
                             </div>
                             <h3 className="font-bold text-slate-700 mb-1">
-                                {candidateSearch ? 'No matching candidates' : 'No published profiles yet'}
+                                {candidateSearch ? t('noMatches') : t('noPublished')}
                             </h3>
                             <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">
-                                {candidateSearch
-                                    ? 'Try adjusting your search terms.'
-                                    : 'When candidates publish their profiles on JNJGO, they will appear here for you to browse.'}
+                                {candidateSearch ? t('noMatchesDesc') : t('noPublishedDesc')}
                             </p>
                         </div>
                     ) : (
@@ -789,21 +748,15 @@ export default function RecruiterDashboardPage() {
                                     const salaryMax = formatSalaryShort(candidate.desiredSalary?.target);
 
                                     return (
-                                        <div
-                                            key={candidate.userId}
-                                            className="group bg-white rounded-2xl border border-slate-200/80 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
-                                        >
+                                        <div key={candidate.userId} className="group bg-white rounded-2xl border border-slate-200/80 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
                                             <div className="p-5">
-                                                {/* Header */}
                                                 <div className="flex items-start justify-between mb-3">
                                                     <div className="min-w-0 flex-1">
                                                         <h3 className="font-bold text-slate-900 text-sm truncate">
-                                                            {candidate.fullName || 'Anonymous Candidate'}
+                                                            {candidate.fullName || t('anonymousCandidate')}
                                                         </h3>
                                                         {candidate.highlightedResume?.currentRole && (
-                                                            <p className="text-xs text-slate-500 mt-0.5 truncate">
-                                                                {candidate.highlightedResume.currentRole}
-                                                            </p>
+                                                            <p className="text-xs text-slate-500 mt-0.5 truncate">{candidate.highlightedResume.currentRole}</p>
                                                         )}
                                                         {candidate.location && (
                                                             <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
@@ -828,62 +781,44 @@ export default function RecruiterDashboardPage() {
                                                     </div>
                                                 </div>
 
-                                                {/* AI Summary */}
                                                 {candidate.aiObjectiveReview && (
-                                                    <p className="text-xs text-slate-600 leading-relaxed mb-3 line-clamp-2">
-                                                        {candidate.aiObjectiveReview}
-                                                    </p>
+                                                    <p className="text-xs text-slate-600 leading-relaxed mb-3 line-clamp-2">{candidate.aiObjectiveReview}</p>
                                                 )}
 
-                                                {/* Resume highlight — skills */}
                                                 {candidate.highlightedResume?.skills && candidate.highlightedResume.skills.length > 0 && (
                                                     <div className="flex flex-wrap gap-1 mb-3">
                                                         {candidate.highlightedResume.skills.slice(0, 5).map((skill, i) => (
-                                                            <span key={i} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
-                                                                {skill}
-                                                            </span>
+                                                            <span key={i} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">{skill}</span>
                                                         ))}
                                                         {candidate.highlightedResume.skills.length > 5 && (
-                                                            <span className="text-[10px] text-slate-400 px-1">
-                                                                +{candidate.highlightedResume.skills.length - 5}
-                                                            </span>
+                                                            <span className="text-[10px] text-slate-400 px-1">+{candidate.highlightedResume.skills.length - 5}</span>
                                                         )}
                                                     </div>
                                                 )}
 
-                                                {/* Desired roles */}
                                                 {candidate.desiredRoles.length > 0 && (
                                                     <div className="flex flex-wrap gap-1 mb-3">
                                                         {candidate.desiredRoles.slice(0, 3).map((r, i) => (
-                                                            <span key={i} className="text-[10px] font-medium bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md border border-indigo-100">
-                                                                {r.role}
-                                                            </span>
+                                                            <span key={i} className="text-[10px] font-medium bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md border border-indigo-100">{r.role}</span>
                                                         ))}
                                                     </div>
                                                 )}
 
-                                                {/* Salary range */}
                                                 {(salaryMin || salaryMax) && (
                                                     <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3">
                                                         <DollarSign className="w-3 h-3 text-green-500" />
                                                         <span className="font-medium text-slate-700">
-                                                            {salaryMin && salaryMax
-                                                                ? `${salaryMin} ~ ${salaryMax}`
-                                                                : salaryMin || salaryMax}
+                                                            {salaryMin && salaryMax ? `${salaryMin} ~ ${salaryMax}` : salaryMin || salaryMax}
                                                         </span>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            {/* Footer */}
                                             {candidate.slug && (
                                                 <div className="border-t border-slate-100 px-5 py-3 bg-slate-50/50">
-                                                    <Link
-                                                        href={`/c/${candidate.slug}`}
-                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
-                                                    >
+                                                    <Link href={`/c/${candidate.slug}`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
                                                         <Eye className="w-3.5 h-3.5" />
-                                                        View Full Profile
+                                                        {t('viewFullProfile')}
                                                         <ArrowRight className="w-3 h-3" />
                                                     </Link>
                                                 </div>
@@ -897,7 +832,11 @@ export default function RecruiterDashboardPage() {
                             {candidatePagination.totalPages > 1 && (
                                 <div className="flex items-center justify-between pt-2">
                                     <p className="text-xs text-slate-500">
-                                        Showing {((candidatePagination.page - 1) * candidatePagination.limit) + 1}-{Math.min(candidatePagination.page * candidatePagination.limit, candidatePagination.total)} of {candidatePagination.total}
+                                        {t('showing', {
+                                            from: ((candidatePagination.page - 1) * candidatePagination.limit) + 1,
+                                            to: Math.min(candidatePagination.page * candidatePagination.limit, candidatePagination.total),
+                                            total: candidatePagination.total
+                                        })}
                                     </p>
                                     <div className="flex items-center gap-1">
                                         <button
@@ -908,7 +847,7 @@ export default function RecruiterDashboardPage() {
                                             <ChevronLeft className="w-4 h-4" />
                                         </button>
                                         <span className="text-xs text-slate-600 px-2">
-                                            Page {candidatePagination.page} of {candidatePagination.totalPages}
+                                            {t('pageOf', { page: candidatePagination.page, total: candidatePagination.totalPages })}
                                         </span>
                                         <button
                                             onClick={() => fetchCandidates(candidatePagination.page + 1, candidateSearch)}
@@ -926,7 +865,6 @@ export default function RecruiterDashboardPage() {
                     {/* ── Sent Scouts & Replies Tab ── */}
                     {activeTab === 'contacts' && (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
-                            {/* Inbox List */}
                             <div className="md:col-span-1 space-y-2">
                                 {contactsLoading ? (
                                     <div className="flex justify-center py-10">
@@ -934,7 +872,7 @@ export default function RecruiterDashboardPage() {
                                     </div>
                                 ) : contacts.length === 0 ? (
                                     <div className="text-center py-10 bg-white rounded-2xl border border-slate-200">
-                                        <p className="text-sm text-slate-400">No scouts sent yet.</p>
+                                        <p className="text-sm text-slate-400">{t('noScouts')}</p>
                                     </div>
                                 ) : (
                                     contacts.map(contact => (
@@ -978,17 +916,16 @@ export default function RecruiterDashboardPage() {
                                                 </div>
                                                 <div>
                                                     <h3 className="font-bold text-slate-900 text-sm">
-                                                        Candidate: {selectedContact.candidatePageSlug}
+                                                        {t('candidateLabel', { slug: selectedContact.candidatePageSlug })}
                                                     </h3>
                                                     <Link href={`/${locale}/c/${selectedContact.candidatePageSlug}`} className="text-[10px] text-emerald-600 hover:underline font-semibold flex items-center gap-1">
-                                                        View Profile <ArrowRight className="w-3 h-3" />
+                                                        {t('viewProfile')} <ArrowRight className="w-3 h-3" />
                                                     </Link>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
-                                            {/* Original Scout Message */}
                                             <div className="flex justify-end">
                                                 <div className="max-w-[85%] bg-emerald-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 text-sm shadow-sm">
                                                     <p className="whitespace-pre-wrap">{selectedContact.message}</p>
@@ -998,7 +935,6 @@ export default function RecruiterDashboardPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Thread Replies */}
                                             {threadLoading ? (
                                                 <div className="flex justify-center py-4">
                                                     <Loader2 className="w-5 h-5 animate-spin text-slate-300" />
@@ -1025,7 +961,7 @@ export default function RecruiterDashboardPage() {
                                             <textarea
                                                 value={replyText}
                                                 onChange={(e) => setReplyText(e.target.value)}
-                                                placeholder="Type your reply..."
+                                                placeholder={t('replyPlaceholder')}
                                                 className="w-full h-[80px] bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none shadow-sm pb-10"
                                                 maxLength={3000}
                                             />
@@ -1041,7 +977,7 @@ export default function RecruiterDashboardPage() {
                                                     {isReplying ? (
                                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                                     ) : (
-                                                        <>Send <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" /></>
+                                                        <>{t('send')} <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" /></>
                                                     )}
                                                 </button>
                                             </div>
@@ -1051,7 +987,7 @@ export default function RecruiterDashboardPage() {
                                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm h-[500px] flex flex-col items-center justify-center text-center px-6">
                                         <MailOpen className="w-12 h-12 text-slate-200 mb-4" />
                                         <p className="text-sm font-medium text-slate-400">
-                                            Select a contact history to view your scout message and any candidate replies.
+                                            {t('selectContact')}
                                         </p>
                                     </div>
                                 )}
@@ -1070,22 +1006,22 @@ export default function RecruiterDashboardPage() {
                                 <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                     <History className="w-8 h-8 text-slate-300" />
                                 </div>
-                                <h3 className="font-bold text-slate-700 mb-1">No profiles viewed yet</h3>
+                                <h3 className="font-bold text-slate-700 mb-1">{t('noViewed')}</h3>
                                 <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">
-                                    Candidate profiles you visit will appear here so you can quickly revisit them.
+                                    {t('noViewedDesc')}
                                 </p>
                                 <button
                                     onClick={() => setActiveTab('browse')}
                                     className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
                                 >
                                     <Search className="w-4 h-4" />
-                                    Browse Candidates
+                                    {t('browseCandidates')}
                                 </button>
                             </div>
                         ) : (
                             <div className="space-y-4 animate-in fade-in duration-300">
                                 <p className="text-xs text-slate-400 font-medium">
-                                    Showing {recentlyViewed.length} recently viewed profile{recentlyViewed.length !== 1 ? 's' : ''} · sorted by most recent visit
+                                    {t('recentlyViewedCount', { n: recentlyViewed.length })} · {t('sortedByRecent')}
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {recentlyViewed.map(candidate => {
@@ -1099,15 +1035,12 @@ export default function RecruiterDashboardPage() {
                                             : null;
 
                                         return (
-                                            <div
-                                                key={candidate.userId}
-                                                className="group bg-white rounded-2xl border border-slate-200/80 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
-                                            >
+                                            <div key={candidate.userId} className="group bg-white rounded-2xl border border-slate-200/80 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
                                                 <div className="p-5">
                                                     <div className="flex items-start justify-between mb-3">
                                                         <div className="min-w-0 flex-1">
                                                             <h3 className="font-bold text-slate-900 text-sm truncate">
-                                                                {candidate.fullName || 'Anonymous Candidate'}
+                                                                {candidate.fullName || t('anonymousCandidate')}
                                                             </h3>
                                                             {candidate.highlightedResume?.currentRole && (
                                                                 <p className="text-xs text-slate-500 mt-0.5 truncate">{candidate.highlightedResume.currentRole}</p>
@@ -1142,9 +1075,7 @@ export default function RecruiterDashboardPage() {
                                                     {candidate.highlightedResume?.skills && candidate.highlightedResume.skills.length > 0 && (
                                                         <div className="flex flex-wrap gap-1 mb-3">
                                                             {candidate.highlightedResume.skills.slice(0, 5).map((skill, i) => (
-                                                                <span key={i} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
-                                                                    {skill}
-                                                                </span>
+                                                                <span key={i} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">{skill}</span>
                                                             ))}
                                                             {candidate.highlightedResume.skills.length > 5 && (
                                                                 <span className="text-[10px] text-slate-400 px-1">+{candidate.highlightedResume.skills.length - 5}</span>
@@ -1164,16 +1095,13 @@ export default function RecruiterDashboardPage() {
 
                                                 <div className="border-t border-slate-100 px-5 py-3 bg-slate-50/50 flex items-center justify-between">
                                                     {candidate.slug ? (
-                                                        <Link
-                                                            href={`/c/${candidate.slug}`}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
-                                                        >
+                                                        <Link href={`/c/${candidate.slug}`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
                                                             <Eye className="w-3.5 h-3.5" />
-                                                            View Profile
+                                                            {t('viewProfile')}
                                                             <ArrowRight className="w-3 h-3" />
                                                         </Link>
                                                     ) : (
-                                                        <span className="text-xs text-slate-400">Profile unavailable</span>
+                                                        <span className="text-xs text-slate-400">{t('profileUnavailable')}</span>
                                                     )}
                                                     {viewedAt && (
                                                         <span className="text-[10px] text-slate-400 flex items-center gap-1">

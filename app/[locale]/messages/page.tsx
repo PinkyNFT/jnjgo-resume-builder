@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import {
     MessageSquare, Loader2, Building2, Clock, CheckCheck,
@@ -35,23 +35,28 @@ interface Pagination {
     totalPages: number;
 }
 
-function timeAgo(timestamp: number): string {
-    const now = Date.now();
-    const diff = now - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return new Date(timestamp).toLocaleDateString();
+function useTimeAgo() {
+    const t = useTranslations('Messages');
+    return (timestamp: number): string => {
+        const now = Date.now();
+        const diff = now - timestamp;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+        if (minutes < 1) return t('justNow');
+        if (minutes < 60) return t('minutesAgo', { n: minutes });
+        if (hours < 24) return t('hoursAgo', { n: hours });
+        if (days < 7) return t('daysAgo', { n: days });
+        return new Date(timestamp).toLocaleDateString();
+    };
 }
 
 export default function MessagesPage() {
     const { status } = useSession();
     const router = useRouter();
     const locale = useLocale();
+    const t = useTranslations('Messages');
+    const timeAgo = useTimeAgo();
 
     const [messages, setMessages] = useState<ScoutMessage[]>([]);
     const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
@@ -196,12 +201,12 @@ export default function MessagesPage() {
                             className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-900 transition-all duration-200 hover:-translate-x-0.5 group"
                         >
                             <ArrowLeft className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                            <span className="hidden sm:inline">Dashboard</span>
+                            <span className="hidden sm:inline">{t('dashboard')}</span>
                         </Link>
                         <div className="w-px h-5 bg-slate-200" />
                         <div className="flex items-center gap-2">
                             <MessageSquare className="w-4 h-4 text-indigo-600" />
-                            <span className="font-bold text-slate-800">Scout Inbox</span>
+                            <span className="font-bold text-slate-800">{t('scoutInbox')}</span>
                             {unreadCount > 0 && (
                                 <span className="inline-flex items-center justify-center text-[10px] font-bold bg-indigo-600 text-white w-5 h-5 rounded-full">
                                     {unreadCount > 99 ? '99+' : unreadCount}
@@ -220,7 +225,7 @@ export default function MessagesPage() {
                             ) : (
                                 <CheckCheck className="w-3.5 h-3.5" />
                             )}
-                            Mark all read
+                            {t('markAllRead')}
                         </button>
                     )}
                 </div>
@@ -233,16 +238,16 @@ export default function MessagesPage() {
                         <div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
                             <Inbox className="w-10 h-10 text-indigo-400" />
                         </div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">No messages yet</h2>
+                        <h2 className="text-2xl font-bold text-slate-800 mb-2">{t('noMessages')}</h2>
                         <p className="text-slate-500 max-w-sm leading-relaxed">
-                            When a recruiter scouts you via your JNJGO profile link, their message will appear here.
+                            {t('noMessagesDesc')}
                         </p>
                         <Link
                             href={`/${locale}/profile/private`}
                             className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-all hover:-translate-y-0.5 shadow-lg shadow-indigo-200/50"
                         >
                             <Sparkles className="w-4 h-4" />
-                            Set up your recruiter profile
+                            {t('setupProfile')}
                         </Link>
                     </div>
                 ) : (
@@ -251,8 +256,8 @@ export default function MessagesPage() {
                         {/* ── Message List ── */}
                         <div className="md:col-span-1 space-y-2">
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-3">
-                                {pagination.total} message{pagination.total !== 1 ? 's' : ''}
-                                {unreadCount > 0 && ` · ${unreadCount} unread`}
+                                {t('messageCount', { n: pagination.total })}
+                                {unreadCount > 0 && ` ${t('unreadCount', { n: unreadCount })}`}
                             </p>
                             {messages.map(msg => (
                                 <button
@@ -277,7 +282,7 @@ export default function MessagesPage() {
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center justify-between gap-1 mb-0.5">
                                                 <p className={`text-sm truncate ${!msg.isRead ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>
-                                                    {msg.recruiterCompany || 'Unknown Company'}
+                                                    {msg.recruiterCompany || t('unknownCompany')}
                                                 </p>
                                                 <span className="text-[10px] text-slate-400 shrink-0 font-medium">
                                                     {timeAgo(msg.createdAt)}
@@ -327,7 +332,7 @@ export default function MessagesPage() {
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <h2 className="font-bold text-slate-900 text-lg leading-tight">
-                                                    {selectedMessage.recruiterCompany || 'Unknown Company'}
+                                                    {selectedMessage.recruiterCompany || t('unknownCompany')}
                                                 </h2>
                                                 {selectedMessage.recruiterTitle && (
                                                     <div className="flex items-center gap-1.5 mt-1">
@@ -348,7 +353,7 @@ export default function MessagesPage() {
                                             <div className="shrink-0">
                                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
                                                     <Building2 className="w-3 h-3" />
-                                                    Scout Message
+                                                    {t('scoutMessage')}
                                                 </span>
                                             </div>
                                         </div>
@@ -389,7 +394,7 @@ export default function MessagesPage() {
                                         <textarea
                                             value={replyText}
                                             onChange={(e) => setReplyText(e.target.value)}
-                                            placeholder="Type your reply to the recruiter..."
+                                            placeholder={t('replyPlaceholder')}
                                             className="w-full h-[100px] bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none shadow-sm pb-12"
                                             maxLength={3000}
                                         />
@@ -405,7 +410,7 @@ export default function MessagesPage() {
                                                 {isReplying ? (
                                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                                 ) : (
-                                                    <>Send <ArrowLeft className="w-3 h-3 rotate-180 group-hover:translate-x-0.5 transition-transform" /></>
+                                                    <>{t('send')} <ArrowLeft className="w-3 h-3 rotate-180 group-hover:translate-x-0.5 transition-transform" /></>
                                                 )}
                                             </button>
                                         </div>
@@ -415,7 +420,7 @@ export default function MessagesPage() {
                                 /* No message selected */
                                 <div className="bg-white rounded-2xl border border-slate-200/80 flex flex-col items-center justify-center py-24 text-center shadow-sm">
                                     <MessageSquare className="w-10 h-10 text-slate-200 mb-4" />
-                                    <p className="text-sm font-semibold text-slate-400">Select a message to read it</p>
+                                    <p className="text-sm font-semibold text-slate-400">{t('selectMessage')}</p>
                                 </div>
                             )}
                         </div>

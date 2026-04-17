@@ -18,6 +18,7 @@ import {
     Loader2,
     Sparkles,
     MessageSquare,
+    FlaskConical,
 } from 'lucide-react';
 
 interface AppNavbarProps {
@@ -37,10 +38,22 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
     const locale = useLocale();
     const pathname = usePathname();
     const t = useTranslations('Nav');
+    const tBeta = useTranslations('BetaBanner');
     const [mobileOpen, setMobileOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
     const [unreadMessages, setUnreadMessages] = useState(0);
+    const [betaBannerDismissed, setBetaBannerDismissed] = useState(true);
+    const [avatarError, setAvatarError] = useState(false);
+
+    useEffect(() => {
+        setBetaBannerDismissed(localStorage.getItem('beta-banner-dismissed') === '1');
+    }, []);
+
+    const dismissBetaBanner = () => {
+        localStorage.setItem('beta-banner-dismissed', '1');
+        setBetaBannerDismissed(true);
+    };
 
     // Fetch unread message count for the badge
     useEffect(() => {
@@ -77,6 +90,19 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
 
     return (
         <>
+            {!betaBannerDismissed && (
+                <div className="sticky top-0 z-50 bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-center gap-3 text-sm text-amber-800">
+                    <FlaskConical className="w-4 h-4 shrink-0 text-amber-500" />
+                    <span>{tBeta('text')}</span>
+                    <button
+                        onClick={dismissBetaBanner}
+                        className="ml-2 p-0.5 rounded hover:bg-amber-200 transition-colors shrink-0"
+                        aria-label={tBeta('dismiss')}
+                    >
+                        <X className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            )}
             <nav className="sticky top-0 z-50 glass border-b border-slate-200/60 shadow-sm shadow-slate-100/50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6">
                     <div className="flex h-16 items-center justify-between">
@@ -182,10 +208,12 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
                                         onClick={() => setUserMenuOpen(!userMenuOpen)}
                                         className={`flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl transition-all duration-200 ${userMenuOpen ? 'bg-slate-100 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
                                     >
-                                        {session.user.image ? (
+                                        {session.user.image && !avatarError ? (
                                             <img
                                                 src={session.user.image}
                                                 alt={session.user.name || 'User'}
+                                                referrerPolicy="no-referrer"
+                                                onError={() => setAvatarError(true)}
                                                 className="w-8 h-8 rounded-full ring-2 ring-white shadow-sm"
                                             />
                                         ) : (
@@ -201,8 +229,8 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
                                             {/* User info */}
                                             <div className="px-4 py-3 border-b border-slate-100">
                                                 <div className="flex items-center gap-3">
-                                                    {session.user.image ? (
-                                                        <img src={session.user.image} alt="" className="w-10 h-10 rounded-full shadow-sm" />
+                                                    {session.user.image && !avatarError ? (
+                                                        <img src={session.user.image} alt="" referrerPolicy="no-referrer" onError={() => setAvatarError(true)} className="w-10 h-10 rounded-full shadow-sm" />
                                                     ) : (
                                                         <div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-sm">
                                                             {(session.user.name || session.user.email || 'U').charAt(0).toUpperCase()}

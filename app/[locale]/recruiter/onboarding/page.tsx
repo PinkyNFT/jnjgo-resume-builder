@@ -5,33 +5,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
 import {
     Building2, Briefcase, Phone, Globe, Users, Loader2,
-    ArrowRight, Sparkles, CheckCircle2, ArrowLeft, Zap
+    ArrowRight, CheckCircle2, ArrowLeft
 } from 'lucide-react';
-
-const COMPANY_SIZES = [
-    { value: 'startup', label: 'Startup', desc: '1–10 employees' },
-    { value: 'small', label: 'Small', desc: '11–50 employees' },
-    { value: 'medium', label: 'Medium', desc: '51–200 employees' },
-    { value: 'large', label: 'Large', desc: '201–1,000 employees' },
-    { value: 'enterprise', label: 'Enterprise', desc: '1,000+ employees' },
-] as const;
-
-const INDUSTRIES = [
-    'IT / Software',
-    'Recruiting / Staffing',
-    'Consulting',
-    'Financial Services',
-    'Manufacturing',
-    'Healthcare',
-    'Education',
-    'Other',
-] as const;
+import { useTranslations } from 'next-intl';
 
 function OnboardingContent() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get('callbackUrl');
+    const t = useTranslations('RecruiterOnboarding');
 
     const [step, setStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,13 +29,31 @@ function OnboardingContent() {
     const [companySize, setCompanySize] = useState('');
     const [industry, setIndustry] = useState('');
 
+    const COMPANY_SIZES = [
+        { value: 'startup', label: t('sizeStartup'), desc: t('sizeStartupDesc') },
+        { value: 'small', label: t('sizeSmall'), desc: t('sizeSmallDesc') },
+        { value: 'medium', label: t('sizeMedium'), desc: t('sizeMediumDesc') },
+        { value: 'large', label: t('sizeLarge'), desc: t('sizeLargeDesc') },
+        { value: 'enterprise', label: t('sizeEnterprise'), desc: t('sizeEnterpriseDesc') },
+    ] as const;
+
+    const INDUSTRIES = [
+        t('industryIT'),
+        t('industryRecruiting'),
+        t('industryConsulting'),
+        t('industryFinance'),
+        t('industryManufacturing'),
+        t('industryHealthcare'),
+        t('industryEducation'),
+        t('industryOther'),
+    ] as const;
+
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/auth/signin');
         }
     }, [status, router]);
 
-    // Check if user is a recruiter or pending_recruiter; redirect if not
     useEffect(() => {
         if (session?.user?.role && session.user.role !== 'recruiter' && session.user.role !== 'pending_recruiter') {
             router.push('/dashboard');
@@ -61,7 +62,7 @@ function OnboardingContent() {
 
     const handleSubmit = async () => {
         if (!companyName.trim() || !jobTitle.trim()) {
-            setError('Company name and job title are required.');
+            setError(t('requiredError'));
             return;
         }
 
@@ -89,7 +90,6 @@ function OnboardingContent() {
                 throw new Error(data.error || 'Failed to save profile');
             }
 
-            // Navigate to pending approval if they are still pending, otherwise dashboard
             if (session?.user?.role === 'pending_recruiter') {
                 router.push('/auth/pending-approval');
             } else {
@@ -124,7 +124,7 @@ function OnboardingContent() {
                         <div className={`w-8 h-1.5 rounded-full transition-all duration-500 ${step >= 1 ? 'bg-emerald-500' : 'bg-slate-200'}`} />
                         <div className={`w-8 h-1.5 rounded-full transition-all duration-500 ${step >= 2 ? 'bg-emerald-500' : 'bg-slate-200'}`} />
                     </div>
-                    <span className="text-xs font-semibold text-slate-400 ml-2">Step {step} of 2</span>
+                    <span className="text-xs font-semibold text-slate-400 ml-2">{t('stepOf', { step })}</span>
                 </div>
 
                 {/* Step 1: Essential Info */}
@@ -135,10 +135,10 @@ function OnboardingContent() {
                                 <Building2 className="w-8 h-8 text-emerald-600" />
                             </div>
                             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2 tracking-tight">
-                                Set up your recruiter profile
+                                {t('step1Title')}
                             </h1>
                             <p className="text-slate-500 max-w-sm mx-auto">
-                                Help candidates know who&apos;s viewing their profile. This builds trust and credibility.
+                                {t('step1Subtitle')}
                             </p>
                         </div>
 
@@ -146,7 +146,7 @@ function OnboardingContent() {
                             {/* Company Name */}
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                                    Company Name <span className="text-red-400">*</span>
+                                    {t('companyName')} <span className="text-red-400">*</span>
                                 </label>
                                 <div className="relative">
                                     <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -154,7 +154,7 @@ function OnboardingContent() {
                                         type="text"
                                         value={companyName}
                                         onChange={(e) => setCompanyName(e.target.value)}
-                                        placeholder="e.g. Recruit Holdings"
+                                        placeholder={t('companyNamePlaceholder')}
                                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all placeholder:text-slate-300"
                                     />
                                 </div>
@@ -163,7 +163,7 @@ function OnboardingContent() {
                             {/* Job Title */}
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                                    Your Job Title <span className="text-red-400">*</span>
+                                    {t('jobTitle')} <span className="text-red-400">*</span>
                                 </label>
                                 <div className="relative">
                                     <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -171,7 +171,7 @@ function OnboardingContent() {
                                         type="text"
                                         value={jobTitle}
                                         onChange={(e) => setJobTitle(e.target.value)}
-                                        placeholder="e.g. Senior Talent Acquisition Manager"
+                                        placeholder={t('jobTitlePlaceholder')}
                                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all placeholder:text-slate-300"
                                     />
                                 </div>
@@ -180,7 +180,7 @@ function OnboardingContent() {
                             {/* Recruiter Type */}
                             <div className="space-y-2">
                                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                                    Recruiter Type <span className="text-slate-300 normal-case">(optional)</span>
+                                    {t('recruiterType')} <span className="text-slate-300 normal-case">{t('optional')}</span>
                                 </label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
@@ -192,8 +192,8 @@ function OnboardingContent() {
                                             }`}
                                     >
                                         <Building2 className={`w-5 h-5 mb-2 ${recruiterType === 'in_house' ? 'text-emerald-600' : 'text-slate-400'}`} />
-                                        <div className={`text-sm font-bold ${recruiterType === 'in_house' ? 'text-emerald-700' : 'text-slate-700'}`}>In-House</div>
-                                        <div className="text-[10px] text-slate-400 mt-0.5">Hiring for your own company</div>
+                                        <div className={`text-sm font-bold ${recruiterType === 'in_house' ? 'text-emerald-700' : 'text-slate-700'}`}>{t('inHouse')}</div>
+                                        <div className="text-[10px] text-slate-400 mt-0.5">{t('inHouseDesc')}</div>
                                     </button>
                                     <button
                                         type="button"
@@ -204,8 +204,8 @@ function OnboardingContent() {
                                             }`}
                                     >
                                         <Users className={`w-5 h-5 mb-2 ${recruiterType === 'agency' ? 'text-emerald-600' : 'text-slate-400'}`} />
-                                        <div className={`text-sm font-bold ${recruiterType === 'agency' ? 'text-emerald-700' : 'text-slate-700'}`}>Agency / Staffing</div>
-                                        <div className="text-[10px] text-slate-400 mt-0.5">Recruiting for client companies</div>
+                                        <div className={`text-sm font-bold ${recruiterType === 'agency' ? 'text-emerald-700' : 'text-slate-700'}`}>{t('agency')}</div>
+                                        <div className="text-[10px] text-slate-400 mt-0.5">{t('agencyDesc')}</div>
                                     </button>
                                 </div>
                             </div>
@@ -213,7 +213,7 @@ function OnboardingContent() {
                             {/* Phone (optional) */}
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                                    Phone <span className="text-slate-300 normal-case">(optional)</span>
+                                    {t('phone')} <span className="text-slate-300 normal-case">{t('optional')}</span>
                                 </label>
                                 <div className="relative">
                                     <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -221,7 +221,7 @@ function OnboardingContent() {
                                         type="tel"
                                         value={phone}
                                         onChange={(e) => setPhone(e.target.value)}
-                                        placeholder="e.g. 090-1234-5678"
+                                        placeholder={t('phonePlaceholder')}
                                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all placeholder:text-slate-300"
                                     />
                                 </div>
@@ -238,7 +238,7 @@ function OnboardingContent() {
                             <button
                                 onClick={() => {
                                     if (!companyName.trim() || !jobTitle.trim()) {
-                                        setError('Company name and job title are required.');
+                                        setError(t('requiredError'));
                                         return;
                                     }
                                     setError('');
@@ -246,7 +246,7 @@ function OnboardingContent() {
                                 }}
                                 className="inline-flex items-center gap-2 px-8 py-3.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200/40 hover:-translate-y-0.5"
                             >
-                                Continue
+                                {t('continue')}
                                 <ArrowRight className="w-4 h-4" />
                             </button>
                         </div>
@@ -261,10 +261,10 @@ function OnboardingContent() {
                                 <Users className="w-8 h-8 text-teal-600" />
                             </div>
                             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2 tracking-tight">
-                                Company details
+                                {t('step2Title')}
                             </h1>
                             <p className="text-slate-500 max-w-sm mx-auto">
-                                Optional info that helps us personalize your experience.
+                                {t('step2Subtitle')}
                             </p>
                         </div>
 
@@ -272,7 +272,7 @@ function OnboardingContent() {
                             {/* Company Website */}
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                                    Company Website
+                                    {t('companyWebsite')}
                                 </label>
                                 <div className="relative">
                                     <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -280,7 +280,7 @@ function OnboardingContent() {
                                         type="url"
                                         value={companyWebsite}
                                         onChange={(e) => setCompanyWebsite(e.target.value)}
-                                        placeholder="e.g. https://company.co.jp"
+                                        placeholder={t('companyWebsitePlaceholder')}
                                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all placeholder:text-slate-300"
                                     />
                                 </div>
@@ -289,7 +289,7 @@ function OnboardingContent() {
                             {/* Company Size */}
                             <div className="space-y-2">
                                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                                    Company Size
+                                    {t('companySize')}
                                 </label>
                                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                                     {COMPANY_SIZES.map((size) => (
@@ -311,7 +311,7 @@ function OnboardingContent() {
                             {/* Industry */}
                             <div className="space-y-2">
                                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                                    Industry
+                                    {t('industry')}
                                 </label>
                                 <div className="flex flex-wrap gap-2">
                                     {INDUSTRIES.map((ind) => (
@@ -342,18 +342,15 @@ function OnboardingContent() {
                                 className="inline-flex items-center gap-2 px-5 py-3 text-slate-600 font-semibold text-sm rounded-xl hover:bg-slate-100 transition-all"
                             >
                                 <ArrowLeft className="w-4 h-4" />
-                                Back
+                                {t('back')}
                             </button>
                             <div className="flex items-center gap-3">
                                 <button
-                                    onClick={() => {
-                                        // Skip optional step
-                                        handleSubmit();
-                                    }}
+                                    onClick={handleSubmit}
                                     disabled={isSubmitting}
                                     className="text-sm font-medium text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50"
                                 >
-                                    Skip
+                                    {t('skip')}
                                 </button>
                                 <button
                                     onClick={handleSubmit}
@@ -363,11 +360,11 @@ function OnboardingContent() {
                                     {isSubmitting ? (
                                         <>
                                             <Loader2 className="w-4 h-4 animate-spin" />
-                                            Creating profile...
+                                            {t('creatingProfile')}
                                         </>
                                     ) : (
                                         <>
-                                            Complete Setup
+                                            {t('completeSetup')}
                                             <CheckCircle2 className="w-4 h-4" />
                                         </>
                                     )}

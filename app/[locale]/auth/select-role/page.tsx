@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
 import { FileText, Search, ArrowRight, Sparkles, Users, Building2, CheckCircle2, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 function SelectRoleContent() {
     const { data: session, status, update } = useSession();
@@ -16,6 +17,7 @@ function SelectRoleContent() {
     );
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const t = useTranslations('SelectRole');
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -98,13 +100,13 @@ function SelectRoleContent() {
                 <div className="text-center mb-10 animate-[fade-in_0.4s_ease-out]">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-5 border border-indigo-100">
                         <Sparkles className="w-3.5 h-3.5" />
-                        Welcome to JNJGO
+                        {t('welcome')}
                     </div>
                     <h1 className="text-3xl sm:text-4xl font-black text-slate-900 mb-3 tracking-tight">
-                        How will you use JNJGO?
+                        {t('question')}
                     </h1>
                     <p className="text-slate-500 text-lg max-w-md mx-auto">
-                        Choose your role to get a personalized experience. This helps us tailor the platform for you.
+                        {t('subtitle')}
                     </p>
                 </div>
 
@@ -130,12 +132,12 @@ function SelectRoleContent() {
                             }`}>
                             <FileText className={`w-7 h-7 ${selectedRole === 'candidate' ? 'text-white' : 'text-indigo-600'}`} />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">I&apos;m a Candidate</h3>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">{t('candidateTitle')}</h3>
                         <p className="text-sm text-slate-500 leading-relaxed mb-4">
-                            Build AI-powered resumes, manage your career profile, and connect with top recruiters.
+                            {t('candidateDesc')}
                         </p>
                         <div className="space-y-2">
-                            {['AI interview & resume builder', 'Private recruiter profile', 'Multi-platform export'].map((item) => (
+                            {[t('candidateFeature1'), t('candidateFeature2'), t('candidateFeature3')].map((item) => (
                                 <div key={item} className="flex items-center gap-2 text-xs text-slate-600">
                                     <div className="w-1 h-1 rounded-full bg-indigo-400" />
                                     {item}
@@ -164,12 +166,12 @@ function SelectRoleContent() {
                             }`}>
                             <Search className={`w-7 h-7 ${selectedRole === 'recruiter' ? 'text-white' : 'text-emerald-600'}`} />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">I&apos;m a Recruiter</h3>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">{t('recruiterTitle')}</h3>
                         <p className="text-sm text-slate-500 leading-relaxed mb-4">
-                            Access verified candidate profiles with salary expectations, career intent, and deal-breakers.
+                            {t('recruiterDesc')}
                         </p>
                         <div className="space-y-2">
-                            {['View candidate private profiles', 'Salary & availability data', 'Direct scouting pipeline'].map((item) => (
+                            {[t('recruiterFeature1'), t('recruiterFeature2'), t('recruiterFeature3')].map((item) => (
                                 <div key={item} className="flex items-center gap-2 text-xs text-slate-600">
                                     <div className="w-1 h-1 rounded-full bg-emerald-400" />
                                     {item}
@@ -206,19 +208,19 @@ function SelectRoleContent() {
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="w-5 h-5 animate-spin" />
-                                Setting up your account...
+                                {t('settingUp')}
                             </>
                         ) : (
                             <>
-                                Continue
+                                {t('continue')}
                                 <ArrowRight className="w-5 h-5" />
                             </>
                         )}
                     </button>
                     <p className="mt-4 text-xs text-slate-400">
                         {session?.user?.role
-                            ? `You are currently a ${session.user.role}. Your role cannot be changed.`
-                            : 'Choose the role that best describes you. This choice is permanent and cannot be changed later.'}
+                            ? t('currentRole', { role: session.user.role })
+                            : t('permanentChoice')}
                     </p>
                 </div>
             </div>

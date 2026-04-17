@@ -318,6 +318,11 @@ export default function LandingPage() {
             <span className="text-lg">🚀</span>
             <span className="font-bold text-slate-600 text-sm">JNJGO Resume</span>
           </div>
+          <div className="flex items-center gap-4 text-sm text-slate-400">
+            <Link href="/how-to-test" className="hover:text-slate-600 transition-colors">{t('footerTestingGuide')}</Link>
+            <Link href="/privacy" className="hover:text-slate-600 transition-colors">{t('footerPrivacy')}</Link>
+            <Link href="/terms" className="hover:text-slate-600 transition-colors">{t('footerTerms')}</Link>
+          </div>
           <p className="text-sm text-slate-400">{t('footer')}</p>
         </div>
       </footer>

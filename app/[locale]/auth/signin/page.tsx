@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { Shield, Zap, FileText, ArrowLeft, Search, DollarSign, Users, Ban } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 function SignInContent() {
     const searchParams = useSearchParams();
@@ -12,6 +13,7 @@ function SignInContent() {
     const intent = searchParams.get('intent'); // 'recruiter' for recruiter-focused sign-in
     const isRecruiterIntent = intent === 'recruiter';
     const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
+    const tLanding = useTranslations('Landing');
 
     const errorParam = searchParams.get('error');
 
@@ -282,7 +284,10 @@ function SignInContent() {
 
                         {/* Footer */}
                         <p className="text-center text-xs text-slate-400 pt-4">
-                            By continuing, you agree to our Terms of Service and Privacy Policy.
+                            {tLanding('signinLegal')}{' '}
+                            <Link href="/terms" className="underline hover:text-slate-600 transition-colors">{tLanding('signinTerms')}</Link>
+                            {' '}{tLanding('signinAnd')}{' '}
+                            <Link href="/privacy" className="underline hover:text-slate-600 transition-colors">{tLanding('signinPrivacy')}</Link>.
                         </p>
                     </div>
                 </div>
