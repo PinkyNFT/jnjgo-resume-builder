@@ -379,6 +379,22 @@ export const DEFAULT_SETTINGS = [
         description: 'Minimum total score for a resume to be considered submission-ready',
         category: 'app' as const,
         valueType: 'number' as const
+    },
+    {
+        key: 'rate_limit_ai_requests',
+        value: 15,
+        label: 'AI Rate Limit — Max Requests',
+        description: 'Maximum number of AI requests (chat, parse, analyze) allowed per user per window. Enforced across all server instances via MongoDB.',
+        category: 'limits' as const,
+        valueType: 'number' as const
+    },
+    {
+        key: 'rate_limit_ai_window_seconds',
+        value: 60,
+        label: 'AI Rate Limit — Window (seconds)',
+        description: 'Duration of the rate limit window in seconds for AI endpoints.',
+        category: 'limits' as const,
+        valueType: 'number' as const
     }
 ];
 

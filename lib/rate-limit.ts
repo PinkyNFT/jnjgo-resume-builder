@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/mongodb';
+import { RateLimitModel } from '@/lib/models';
+import { getAdminSetting } from '@/lib/admin-settings-reader';
 
 interface RateLimitEntry {
     count: number;
@@ -102,4 +105,65 @@ export function applyRateLimit(
     }
 
     return null;
+}
+
+/**
+ * MongoDB-backed rate limiter for AI endpoints.
+ * Works correctly across all serverless instances.
+ * Limit and window are configurable via the admin panel (Settings → Limits).
+ * Falls back to allowing the request if DB is unreachable.
+ */
+export async function applyRateLimitDB(
+    request: NextRequest,
+    routeKey: string,
+    config: RateLimitConfig
+): Promise<NextResponse | null> {
+    try {
+        await connectToDatabase();
+
+        // Admin-overridable limits — cached for 5 min, no per-request DB cost
+        const limit = await getAdminSetting<number>('rate_limit_ai_requests', config.limit);
+        const windowSeconds = await getAdminSetting<number>('rate_limit_ai_window_seconds', config.windowSeconds);
+
+        const key = getClientKey(request, routeKey);
+        const now = new Date();
+        const resetAt = new Date(now.getTime() + windowSeconds * 1000);
+
+        const entry = await RateLimitModel.findOneAndUpdate(
+            { key },
+            [{
+                $set: {
+                    count: {
+                        $cond: [{ $gt: ['$resetAt', now] }, { $add: ['$count', 1] }, 1]
+                    },
+                    resetAt: {
+                        $cond: [{ $gt: ['$resetAt', now] }, '$resetAt', resetAt]
+                    }
+                }
+            }],
+            { upsert: true, new: true }
+        );
+
+        if (entry && entry.count > limit) {
+            const retryAfter = Math.ceil((entry.resetAt.getTime() - now.getTime()) / 1000);
+            return NextResponse.json(
+                { error: 'Too many requests. Please try again later.' },
+                {
+                    status: 429,
+                    headers: {
+                        'Retry-After': String(retryAfter),
+                        'X-RateLimit-Limit': String(limit),
+                        'X-RateLimit-Remaining': '0',
+                        'X-RateLimit-Reset': String(entry.resetAt.getTime()),
+                    },
+                }
+            );
+        }
+
+        return null;
+    } catch (err) {
+        // DB unavailable — fail open to avoid blocking users, log for monitoring
+        console.error('[RateLimitDB] MongoDB rate limit check failed, allowing request:', err);
+        return null;
+    }
 }

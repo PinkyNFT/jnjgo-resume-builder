@@ -1,8 +1,9 @@
 'use client';
 
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { User, LogOut, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, LogOut, ChevronDown } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 
 export function AuthButton() {
     const { data: session, status } = useSession();
@@ -77,8 +78,16 @@ export function AuthButton() {
                             </div>
                         </div>
 
-                        {/* Sign out */}
-                        <div className="px-2 pt-2">
+                        {/* Dashboard + Sign out */}
+                        <div className="px-2 pt-2 space-y-1">
+                            <Link
+                                href={session.user.role === 'recruiter' ? '/recruiter/dashboard' : session.user.role === 'pending_recruiter' ? '/auth/pending-approval' : '/dashboard'}
+                                onClick={() => setIsOpen(false)}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors"
+                            >
+                                <LayoutDashboard className="w-4 h-4" />
+                                Go to Dashboard
+                            </Link>
                             <button
                                 onClick={() => { setIsOpen(false); signOut({ callbackUrl: '/' }); }}
                                 className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"

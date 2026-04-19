@@ -18,6 +18,26 @@ import {
     RecruiterPageView,
 } from '../types';
 
+// ===== RATE LIMIT =====
+
+export interface IRateLimitDocument extends Document {
+    key: string;
+    count: number;
+    resetAt: Date;
+}
+
+const RateLimitSchema = new Schema<IRateLimitDocument>({
+    key: { type: String, required: true, unique: true },
+    count: { type: Number, default: 1 },
+    resetAt: { type: Date, required: true },
+});
+
+// TTL index: MongoDB auto-deletes documents once resetAt is passed
+RateLimitSchema.index({ resetAt: 1 }, { expireAfterSeconds: 0 });
+
+export const RateLimitModel: Model<IRateLimitDocument> =
+    mongoose.models.RateLimit || mongoose.model<IRateLimitDocument>('RateLimit', RateLimitSchema);
+
 // ===== INTERFACES FOR MONGOOSE DOCUMENTS =====
 
 export interface IUserProfileDocument extends Document, Omit<UserProfile, 'id'> {
