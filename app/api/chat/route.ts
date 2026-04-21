@@ -5,6 +5,7 @@ import { GEMINI_MODEL } from '@/config/models';
 import { getSystemInstruction } from '@/lib/prompts';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
+import { callWithRetry } from '@/lib/gemini-client';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
                 })) : []
             });
 
-            const response = await chat.sendMessage({ message });
+            const response = await callWithRetry(() => chat.sendMessage({ message }), 'chat/sendMessage');
 
             // Auto-detect confirmation phase based on response content
             const responseText = response.text;
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
                 ? "ユーザーが助けを求めています。具体的な数字や詳細を含むフレンドリーな例を挙げてください。"
                 : "User needs help. Give a friendly example with specific numbers or details.";
 
-            const response = await chat.sendMessage({ message: hintPrompt });
+            const response = await callWithRetry(() => chat.sendMessage({ message: hintPrompt }), 'chat/generateHint');
             return NextResponse.json({
                 hint: response.text || (locale === 'ja'
                     ? "例：「5人のエンジニアチームを率いた」や「収益を30%増加させた」"

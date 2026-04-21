@@ -7,7 +7,7 @@ import {
     ChevronLeft, ChevronRight, FileText, MapPin, Mail,
     UserCheck, Briefcase, X, CheckCircle2, XCircle,
     Clock, Building2, Globe, Phone, AlertTriangle, Eye,
-    Filter, Sparkles
+    Filter, Sparkles, Trash2
 } from 'lucide-react';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
@@ -450,6 +450,30 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
         });
     };
 
+    const handleDeleteUser = (user: UserData) => {
+        setPendingConfirm({
+            message: `Permanently delete ${user.fullName || user.email}'s account? This removes all their data and cannot be undone.`,
+            onConfirm: async () => {
+                setPendingConfirm(null);
+                setActionLoading(prev => ({ ...prev, [`delete_${user.userId}`]: true }));
+                try {
+                    const res = await fetch(`/api/admin/users?userId=${user.userId}`, { method: 'DELETE' });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error || 'Failed');
+                    }
+                    fetchUsers(pagination.page, search);
+                    setToast({ message: `${user.fullName || user.email}'s account has been deleted.`, type: 'success' });
+                } catch (err: unknown) {
+                    const message = err instanceof Error ? err.message : 'Failed to delete user';
+                    setToast({ message, type: 'error' });
+                } finally {
+                    setActionLoading(prev => ({ ...prev, [`delete_${user.userId}`]: false }));
+                }
+            },
+        });
+    };
+
     const getRoleBadge = (user: UserData) => {
         if (!user.userRole) return <span className="text-xs text-slate-400">Not set</span>;
 
@@ -676,25 +700,40 @@ export function AdminUsers({ adminRole }: { adminRole: string }) {
                                             </td>
                                             {isSuperAdmin && (
                                                 <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
-                                                    {actionLoading[user.userId] ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin text-slate-400 ml-auto" />
-                                                    ) : user.isAdmin ? (
-                                                        <button
-                                                            onClick={() => handleAdminAction(user, 'revoke_admin')}
-                                                            className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors"
-                                                        >
-                                                            <ShieldOff className="w-3.5 h-3.5" />
-                                                            Revoke Admin
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleAdminAction(user, 'grant_admin')}
-                                                            className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg transition-colors"
-                                                        >
-                                                            <Shield className="w-3.5 h-3.5" />
-                                                            Make Admin
-                                                        </button>
-                                                    )}
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        {actionLoading[user.userId] ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                                                        ) : user.isAdmin ? (
+                                                            <button
+                                                                onClick={() => handleAdminAction(user, 'revoke_admin')}
+                                                                className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                                                            >
+                                                                <ShieldOff className="w-3.5 h-3.5" />
+                                                                Revoke Admin
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleAdminAction(user, 'grant_admin')}
+                                                                className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                                                            >
+                                                                <Shield className="w-3.5 h-3.5" />
+                                                                Make Admin
+                                                            </button>
+                                                        )}
+                                                        {actionLoading[`delete_${user.userId}`] ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleDeleteUser(user)}
+                                                                disabled={user.isAdmin}
+                                                                title={user.isAdmin ? 'Revoke admin access before deleting' : 'Delete user account'}
+                                                                className="inline-flex items-center gap-1 text-xs font-medium text-red-500 hover:bg-red-50 hover:text-red-700 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                Delete
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             )}
                                         </tr>

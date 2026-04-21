@@ -5,6 +5,7 @@ import { GEMINI_MODEL } from '@/config/models';
 import { getParseResumePrompt } from '@/lib/prompts';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
+import { callWithRetry } from '@/lib/gemini-client';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
         const prompt = await getParseResumePrompt(conversationText, importedText, locale || 'en');
 
-        const response = await ai.models.generateContent({
+        const response = await callWithRetry(() => ai.models.generateContent({
             model,
             contents: prompt,
             config: {
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
                     }
                 }
             }
-        });
+        }), 'parse');
 
         if (response.text) {
             try {

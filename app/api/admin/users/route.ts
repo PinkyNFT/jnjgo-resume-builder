@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ObjectId } from 'mongodb';
 import { connectToDatabase } from '@/lib/mongodb';
 import { requireAdmin, requireSuperAdmin, logAdminAction, getClientIp, AdminContext } from '@/lib/admin-auth';
 import { AdminUserModel } from '@/lib/admin-models';
 import clientPromise from '@/lib/mongodb-client';
+import {
+    UserProfileModel,
+    ProjectModel,
+    ResumeVersionModel,
+    CandidatePrivateProfileModel,
+    CandidatePublicPageModel,
+    ExportEventModel,
+    RecruiterProfileModel,
+    RecruiterActionModel,
+    CandidateReplyModel,
+    RecruiterPageViewModel,
+} from '@/lib/models';
 
 /**
  * GET /api/admin/users
@@ -265,6 +278,80 @@ export async function POST(request: NextRequest) {
         console.error('Error managing user:', error);
         return NextResponse.json(
             { error: 'Failed to manage user' },
+            { status: 500 }
+        );
+    }
+}
+
+/**
+ * DELETE /api/admin/users?userId=<id>
+ * Permanently deletes a user account and all associated data.
+ * Super Admin only. Admins cannot delete other admins or themselves.
+ */
+export async function DELETE(request: NextRequest) {
+    const admin = await requireSuperAdmin(request);
+    if (admin instanceof NextResponse) return admin;
+
+    const { searchParams } = new URL(request.url);
+    const targetUserId = searchParams.get('userId');
+
+    if (!targetUserId) {
+        return NextResponse.json({ error: 'userId query param is required' }, { status: 400 });
+    }
+
+    // Prevent self-deletion
+    if (targetUserId === (admin as AdminContext).userId) {
+        return NextResponse.json({ error: 'Cannot delete your own account via admin panel' }, { status: 400 });
+    }
+
+    try {
+        await connectToDatabase();
+        const client = await clientPromise;
+        const db = client.db();
+
+        // Prevent deletion of other admins — must revoke admin first
+        const targetAdmin = await AdminUserModel.findOne({ userId: targetUserId, isActive: true });
+        if (targetAdmin) {
+            return NextResponse.json(
+                { error: 'Cannot delete an active admin account. Revoke admin access first.' },
+                { status: 400 }
+            );
+        }
+
+        // Fetch user info before deletion for the audit log
+        const targetUser = await db.collection('users').findOne({ _id: new ObjectId(targetUserId) });
+
+        await Promise.all([
+            // Application data
+            UserProfileModel.deleteMany({ userId: targetUserId }),
+            ProjectModel.deleteMany({ userId: targetUserId }),
+            ResumeVersionModel.deleteMany({ userId: targetUserId }),
+            CandidatePrivateProfileModel.deleteMany({ userId: targetUserId }),
+            CandidatePublicPageModel.deleteMany({ userId: targetUserId }),
+            ExportEventModel.deleteMany({ userId: targetUserId }),
+            RecruiterProfileModel.deleteMany({ userId: targetUserId }),
+            RecruiterActionModel.deleteMany({ $or: [{ recruiterId: targetUserId }, { candidateUserId: targetUserId }] }),
+            CandidateReplyModel.deleteMany({ $or: [{ candidateUserId: targetUserId }, { recruiterId: targetUserId }] }),
+            RecruiterPageViewModel.deleteMany({ $or: [{ userId: targetUserId }, { candidateUserId: targetUserId }] }),
+            // NextAuth auth records
+            db.collection('users').deleteOne({ _id: new ObjectId(targetUserId) }),
+            db.collection('accounts').deleteMany({ userId: targetUserId }),
+            db.collection('sessions').deleteMany({ userId: targetUserId }),
+        ]);
+
+        logAdminAction(
+            admin as AdminContext,
+            'user.delete',
+            `user:${targetUserId}`,
+            { targetEmail: targetUser?.email || 'unknown' },
+            getClientIp(request)
+        );
+
+        return NextResponse.json({ success: true }, { status: 200 });
+    } catch (error) {
+        console.error('Admin account deletion error:', error);
+        return NextResponse.json(
+            { error: 'Failed to delete account', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }

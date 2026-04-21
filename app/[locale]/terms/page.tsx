@@ -59,6 +59,9 @@ export default async function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-slate-900">{t('s4Title')}</h2>
             <p className="text-slate-600 leading-relaxed">{t('s4Body')}</p>
+            <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 text-sm text-red-800">
+              {t('s4Disclaimer')}
+            </div>
           </section>
 
           <section className="space-y-3">

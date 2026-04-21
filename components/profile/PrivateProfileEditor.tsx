@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Loader2, Sparkles, CheckCircle2, AlertCircle, XCircle,
     DollarSign, Briefcase, Ban, CalendarCheck, FileText, Globe,
-    Zap, Target, TrendingUp, Eye, Link2, Copy, Check, ExternalLink, Save,
+    Zap, Target, TrendingUp, Eye, Link2, Copy, Check, ExternalLink, Save, Trash2,
 } from 'lucide-react';
+import { signOut } from 'next-auth/react';
 import { CandidatePrivateProfile } from '../../types';
 
 /* ─── Constants ──────────────────────────────────────────── */
@@ -102,6 +103,9 @@ export default function PrivateProfileEditor() {
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteConfirmText, setDeleteConfirmText] = useState('');
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [copied, setCopied] = useState(false);
@@ -225,6 +229,20 @@ export default function PrivateProfileEditor() {
             setCopied(false);
             setSuccessMessage('');
         }, 2500);
+    };
+
+    const handleDeleteAccount = async () => {
+        if (deleteConfirmText !== 'DELETE') return;
+        setIsDeleting(true);
+        try {
+            const res = await fetch('/api/account/delete', { method: 'DELETE' });
+            if (!res.ok) throw new Error('Deletion failed');
+            await signOut({ callbackUrl: '/' });
+        } catch {
+            setError('Failed to delete account. Please try again or contact support.');
+            setIsDeleting(false);
+            setShowDeleteModal(false);
+        }
     };
 
     const formatSalary = (val: number | undefined) =>
@@ -741,6 +759,89 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
             </div>
+
+            {/* ── Danger Zone ── */}
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-6">
+                <div className="border border-red-200 rounded-2xl p-6 bg-red-50/50">
+                    <div className="flex items-start gap-3 mb-4">
+                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-bold text-red-900">Danger Zone</h3>
+                            <p className="text-xs text-red-700 mt-0.5">
+                                Permanently delete your account and all associated data — resumes, projects, profile, and conversation history. This cannot be undone.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
+                        className="text-sm font-semibold text-red-700 border border-red-300 bg-white hover:bg-red-50 px-4 py-2 rounded-lg transition-colors"
+                    >
+                        Delete my account
+                    </button>
+                </div>
+            </div>
+
+            {/* ── Delete Confirmation Modal ── */}
+            <AnimatePresence>
+                {showDeleteModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+                        onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteModal(false); }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md"
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                                    <Trash2 className="w-5 h-5 text-red-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-bold text-slate-900">Delete account</h2>
+                                    <p className="text-xs text-slate-500">This action is permanent and cannot be reversed.</p>
+                                </div>
+                            </div>
+                            <p className="text-sm text-slate-600 mb-4">
+                                All your resumes, projects, candidate profile, and conversation history will be permanently deleted. Type <strong className="font-mono">DELETE</strong> to confirm.
+                            </p>
+                            <input
+                                type="text"
+                                value={deleteConfirmText}
+                                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                placeholder="Type DELETE to confirm"
+                                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-400 mb-4"
+                            />
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDeleteModal(false)}
+                                    disabled={isDeleting}
+                                    className="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleDeleteAccount}
+                                    disabled={deleteConfirmText !== 'DELETE' || isDeleting}
+                                    className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-40 inline-flex items-center gap-2"
+                                >
+                                    {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    {isDeleting ? 'Deleting…' : 'Delete my account'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* ── Sticky Action Bar ── */}
             <motion.div
