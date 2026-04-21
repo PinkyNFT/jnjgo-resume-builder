@@ -22,7 +22,7 @@ export default function LandingPage() {
     <div className="font-sans text-slate-900 bg-white min-h-screen">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 glass border-b border-slate-100 shadow-sm shadow-slate-100/50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
           <Link href="/" className="group flex items-center gap-2.5">
             <span className="text-2xl drop-shadow-sm group-hover:scale-110 transition-transform inline-block">🚀</span>
             <span className="font-black text-slate-800 tracking-tight text-lg">JNJGO Resume</span>
@@ -40,7 +40,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-linear-to-b from-indigo-50/50 via-white to-white"></div>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-200 h-150 bg-linear-to-br from-indigo-200/30 via-purple-200/20 to-pink-200/10 rounded-full blur-3xl"></div>
 
-        <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-24 md:pt-32 md:pb-36">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-20 md:pt-32 md:pb-36">
           <div className="max-w-4xl mx-auto text-center space-y-8 page-transition">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-sm font-semibold shadow-sm">
@@ -86,8 +86,8 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Preview mockup */}
-          <div className="mt-20 max-w-5xl mx-auto">
+          {/* Preview mockup — hidden on mobile, visible on md+ */}
+          <div className="hidden md:block mt-20 max-w-5xl mx-auto">
             <div className="relative">
               <div className="absolute -inset-4 bg-linear-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 rounded-3xl blur-2xl"></div>
               <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
@@ -157,8 +157,8 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-slate-50/80">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="py-16 md:py-24 bg-slate-50/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">{t('featuresTitle')}</h2>
             <p className="text-lg text-slate-500 max-w-2xl mx-auto">{t('featuresSubtitle')}</p>
@@ -193,8 +193,8 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="py-16 md:py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">{t('howItWorksTitle')}</h2>
             <p className="text-lg text-slate-500 max-w-2xl mx-auto">{t('howItWorksSubtitle')}</p>
@@ -223,13 +223,13 @@ export default function LandingPage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-24 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 text-white relative overflow-hidden">
+      <section className="py-16 md:py-24 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 text-white relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full">
           <div className="absolute top-20 right-20 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl animate-pulse-soft"></div>
           <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse-soft"></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-6">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
           <div className="max-w-3xl mx-auto text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-black mb-4">{t('benefitsTitle')}</h2>
             <p className="text-lg text-slate-400">{t('benefitsSubtitle')}</p>
@@ -252,10 +252,10 @@ export default function LandingPage() {
       </section>
 
       {/* Recruiter Section */}
-      <section className="py-24 bg-linear-to-br from-emerald-50 via-teal-50/30 to-white relative overflow-hidden">
+      <section className="py-16 md:py-24 bg-linear-to-br from-emerald-50 via-teal-50/30 to-white relative overflow-hidden">
         <div className="absolute top-10 right-10 w-64 h-64 bg-emerald-200/20 rounded-full blur-3xl" />
         <div className="absolute bottom-10 left-10 w-48 h-48 bg-teal-200/20 rounded-full blur-3xl" />
-        <div className="relative max-w-7xl mx-auto px-6">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100/80 border border-emerald-200 text-emerald-700 text-sm font-semibold">
@@ -299,9 +299,9 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-28 bg-white relative overflow-hidden">
+      <section className="py-20 md:py-28 bg-white relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-200 h-100 bg-linear-to-br from-indigo-50/40 via-purple-50/20 to-transparent rounded-full blur-3xl"></div>
-        <div className="relative max-w-3xl mx-auto text-center px-6 space-y-8">
+        <div className="relative max-w-3xl mx-auto text-center px-4 sm:px-6 space-y-8">
           <h2 className="text-3xl md:text-4xl font-black text-slate-900">{t('ctaTitle')}</h2>
           <p className="text-lg text-slate-500">{t('ctaSubtitle')}</p>
           <Link
@@ -316,7 +316,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="py-8 bg-slate-50 border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
           <div className="flex items-center gap-2">
             <span className="text-lg">🚀</span>
             <span className="font-bold text-slate-600 text-sm">JNJGO Resume</span>

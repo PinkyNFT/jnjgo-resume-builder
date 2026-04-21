@@ -563,7 +563,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                         </span>
                     </motion.button>
 
-                    {/* Data Completeness Indicator — Agent-driven Progress */}
+                    {/* Data Completeness Indicator — desktop only */}
                     <div className="hidden md:flex items-center gap-2">
                         <div className="relative group">
                             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-default transition-all group-hover:bg-white group-hover:border-slate-300">
@@ -656,29 +656,29 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                 </div>
                             </div>
                         </div>
-
-                        {/* Generate Resume Button — always available, visual emphasis changes based on readiness */}
-                        <motion.button
-                            onClick={() => setShowGenerateConfirm(true)}
-                            animate={agentReady ? {
-                                boxShadow: ['0 0 0 0 rgba(16,185,129,0.3)', '0 0 0 8px rgba(16,185,129,0)', '0 0 0 0 rgba(16,185,129,0.3)'],
-                            } : {}}
-                            transition={agentReady ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : {}}
-                            className={`flex items-center gap-2 text-xs px-4 py-2.5 rounded-xl font-bold transition-all duration-200 active:scale-95 ${isReadyToGenerate
-                                ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-200/50 hover:shadow-lg'
-                                : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm'
-                                }`}
-                            title={isReadyToGenerate ? t('generateResume') : t('generateEarlyHint')}
-                        >
-                            {isReadyToGenerate ? (
-                                <CheckCircle2 className="w-4 h-4" />
-                            ) : (
-                                <ClipboardCheck className="w-4 h-4" />
-                            )}
-                            <span className="hidden sm:inline">{isReadyToGenerate ? t('generateResume') : t('generateEarly')}</span>
-                            <span className="sm:hidden">{isReadyToGenerate ? 'Generate' : 'Generate'}</span>
-                        </motion.button>
                     </div>
+
+                    {/* Generate Resume Button — always visible on all screen sizes */}
+                    <motion.button
+                        onClick={() => setShowGenerateConfirm(true)}
+                        animate={agentReady ? {
+                            boxShadow: ['0 0 0 0 rgba(16,185,129,0.3)', '0 0 0 8px rgba(16,185,129,0)', '0 0 0 0 rgba(16,185,129,0.3)'],
+                        } : {}}
+                        transition={agentReady ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : {}}
+                        className={`flex items-center gap-2 text-xs px-3 md:px-4 py-2.5 rounded-xl font-bold transition-all duration-200 active:scale-95 ${isReadyToGenerate
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-200/50 hover:shadow-lg'
+                            : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm'
+                            }`}
+                        title={isReadyToGenerate ? t('generateResume') : t('generateEarlyHint')}
+                    >
+                        {isReadyToGenerate ? (
+                            <CheckCircle2 className="w-4 h-4" />
+                        ) : (
+                            <ClipboardCheck className="w-4 h-4" />
+                        )}
+                        <span className="hidden sm:inline">{isReadyToGenerate ? t('generateResume') : t('generateEarly')}</span>
+                        <span className="sm:hidden">{isReadyToGenerate ? 'Generate' : 'Generate'}</span>
+                    </motion.button>
                 </div>
             </div>
 

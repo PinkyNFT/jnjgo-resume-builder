@@ -1,6 +1,6 @@
 # Known Issues — JNJGO Resume Builder (Beta)
 
-> Last updated: 2026-04-19 (rev 2)
+> Last updated: 2026-04-21 (rev 3)
 > Priority levels: P0 = crash/data loss · P1 = core flow broken · P2 = minor UI issue
 
 ---
@@ -25,7 +25,7 @@
 
 | ID | Description | Steps to Reproduce | Status |
 |----|-------------|-------------------|--------|
-| — | *(none logged)* | | |
+| P2-001 | **Mobile responsiveness** — Core flows (landing page hero mockup, resume editor two-column layout, interview view generate button) were desktop-only. Mobile users couldn't access the "Generate Resume" button in the interview flow, and the editor controls panel overflowed on narrow screens. | Open any page on a screen narrower than 768 px (e.g. iPhone). | **Fixed 2026-04-21** — Landing mockup hidden on mobile; editor layout stacks vertically on small screens; generate button extracted from `hidden md:flex` container; padding adjusted for mobile bottom nav bar. |
 
 ---
 

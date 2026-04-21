@@ -582,16 +582,16 @@ export default function RecruiterDashboardPage() {
                 {/* ── Candidate Profiles Browser ── */}
                 <div id="recruiter-tabs" className="space-y-5 scroll-mt-20">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+                        <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1 overflow-x-auto max-w-full scrollbar-none">
                             <button
                                 onClick={() => setActiveTab('browse')}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'browse' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`shrink-0 px-3 md:px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all ${activeTab === 'browse' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 {t('tabBrowse')}
                             </button>
                             <button
                                 onClick={() => { setActiveTab('saved'); if (savedCandidates.length === 0 && !savedLoading) fetchSavedCandidates(); }}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'saved' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`shrink-0 px-3 md:px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 'saved' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 <BookmarkCheck className="w-3.5 h-3.5" />
                                 {t('tabSaved')}
@@ -603,7 +603,7 @@ export default function RecruiterDashboardPage() {
                             </button>
                             <button
                                 onClick={() => { setActiveTab('contacts'); if (contacts.length === 0 && !contactsLoading) fetchContacts(); }}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'contacts' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`shrink-0 px-3 md:px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 'contacts' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 <MailOpen className="w-3.5 h-3.5" />
                                 {t('tabContacts')}
@@ -615,7 +615,7 @@ export default function RecruiterDashboardPage() {
                             </button>
                             <button
                                 onClick={() => { setActiveTab('recently_viewed'); if (recentlyViewed.length === 0 && !recentlyViewedLoading) fetchRecentlyViewed(); }}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === 'recently_viewed' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`shrink-0 px-3 md:px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 'recently_viewed' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 <History className="w-3.5 h-3.5" />
                                 {t('tabRecentlyViewed')}

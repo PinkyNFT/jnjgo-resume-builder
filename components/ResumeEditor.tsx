@@ -267,7 +267,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
     };
 
     return (
-        <div className="max-w-7xl mx-auto pb-20 flex gap-8 page-transition">
+        <div className="max-w-7xl mx-auto pb-24 lg:pb-20 flex flex-col lg:flex-row gap-6 lg:gap-8 page-transition">
             {/* Print Styles */}
             <style>{`
         @media print {
@@ -304,7 +304,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
       `}</style>
 
             {/* LEFT COLUMN: Controls */}
-            <div className="w-80 shrink-0 space-y-6 print:hidden h-fit sticky top-6">
+            <div className="w-full lg:w-80 lg:shrink-0 space-y-6 print:hidden h-fit lg:sticky lg:top-6">
                 <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-semibold text-sm mb-2 transition-all duration-200 hover:-translate-x-0.5 group">
                     <ArrowLeft className="w-4 h-4 group-hover:scale-110 transition-transform" /> {t('backToDashboard')}
                 </button>
@@ -564,7 +564,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             </div>
 
             {/* RIGHT COLUMN: Master Resume (Japanese Style Layout) */}
-            <div className="flex-1 overflow-x-auto pb-10">
+            <div className="flex-1 min-w-0 overflow-x-auto pb-10">
                 {/* Preview Version Banner */}
                 {isPreviewMode && (
                     <div className="sticky top-0 z-20 mb-4 animate-in fade-in slide-in-from-top-2 duration-200">

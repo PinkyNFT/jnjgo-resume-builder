@@ -41,7 +41,7 @@ type Step = 'dashboard' | 'setup' | 'personal_info' | 'interview' | 'generating'
 const EmptyState = ({ onStart }: { onStart: () => void }) => {
   const t = useTranslations('Dashboard');
   return (
-    <div className="text-center max-w-lg mx-auto space-y-8 py-24 px-6 page-transition">
+    <div className="text-center max-w-lg mx-auto space-y-8 py-16 md:py-24 px-4 sm:px-6 page-transition">
       <div className="relative w-24 h-24 mx-auto">
         <div className="absolute inset-0 bg-indigo-100 rounded-3xl rotate-6 opacity-60" />
         <div className="relative w-24 h-24 bg-linear-to-br from-indigo-50 to-purple-50 rounded-3xl flex items-center justify-center shadow-sm border border-indigo-100/50">
@@ -224,7 +224,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-12 px-6 page-transition">
+    <div className="max-w-3xl mx-auto py-8 md:py-12 px-4 sm:px-6 page-transition">
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-4">
           <Sparkles className="w-3 h-3" /> Step 1 of 3
@@ -232,7 +232,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
         <h2 className="text-3xl font-black text-slate-900">{t('title')}</h2>
       </div>
 
-      <div className="space-y-8 bg-white p-8 md:p-10 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
+      <div className="space-y-8 bg-white p-5 sm:p-8 md:p-10 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-4 uppercase tracking-wide">{t('selectRole')}</label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -343,12 +343,12 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
           />
         </div>
 
-        <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-slate-100">
           <button onClick={onCancel} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all duration-200">{tCommon('cancel')}</button>
           <button
             onClick={handleStart}
             disabled={isAnalyzing}
-            className="group px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-indigo-600 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="group px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-indigo-600 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isAnalyzing ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> {t('analyzing')}</>
@@ -379,7 +379,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-12 px-6 page-transition">
+    <div className="max-w-2xl mx-auto py-8 md:py-12 px-4 sm:px-6 page-transition">
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-4">
           <User className="w-3 h-3" /> Step 2 of 3
@@ -388,7 +388,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
         <p className="text-slate-500">{t('subtitle')}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white p-5 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="col-span-2">
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{t('fullName')}</label>
@@ -462,9 +462,9 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-slate-100">
           <button type="button" onClick={onBack} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">{tCommon('back')}</button>
-          <button type="submit" className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 shadow-lg transition-all flex items-center gap-2">
+          <button type="submit" className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 shadow-lg transition-all flex items-center justify-center gap-2">
             {t('confirmStart')} <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -779,7 +779,7 @@ export default function Page() {
                         </div>
                         <button
                           onClick={handleStartSetup}
-                          className="group flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-xl hover:bg-indigo-50 transition-all font-bold text-sm shadow-lg hover:-translate-y-0.5 shrink-0"
+                          className="group flex items-center justify-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-xl hover:bg-indigo-50 transition-all font-bold text-sm shadow-lg hover:-translate-y-0.5 shrink-0 w-full md:w-auto"
                         >
                           <Plus className="w-4 h-4" /> {t('createNewProject')}
                           <ArrowRight className="w-4 h-4 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />
@@ -922,7 +922,7 @@ export default function Page() {
           )}
 
           {step === 'editor' && currentProject && currentProject.data && (
-            <div className="min-h-screen py-8 px-4 bg-slate-100">
+            <div className="min-h-screen py-4 md:py-8 px-2 sm:px-4 bg-slate-100">
               <ResumeEditor
                 project={currentProject}
                 onUpdate={handleUpdateProjectData}

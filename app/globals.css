@@ -248,3 +248,25 @@ button:focus-visible {
 .page-transition {
   animation: fade-in 0.3s ease-out, slide-up-sm 0.3s ease-out;
 }
+
+/* ── Scrollbar utilities ────────────────────────────── */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Mobile touch improvements ──────────────────────── */
+@media (max-width: 768px) {
+  /* Prevent horizontal overflow at page level */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Improve tap target sizes */
+  button, a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
