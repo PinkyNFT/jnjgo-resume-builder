@@ -141,8 +141,8 @@ export async function applyRateLimitDB(
                     }
                 }
             }],
-            { upsert: true, new: true }
-        );
+            { upsert: true, new: true, updatePipeline: true } as any
+        ) as unknown as import('./models').IRateLimitDocument | null;
 
         if (entry && entry.count > limit) {
             const retryAfter = Math.ceil((entry.resetAt.getTime() - now.getTime()) / 1000);

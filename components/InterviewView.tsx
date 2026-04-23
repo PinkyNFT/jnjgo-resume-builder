@@ -661,23 +661,23 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                     {/* Generate Resume Button — always visible on all screen sizes */}
                     <motion.button
                         onClick={() => setShowGenerateConfirm(true)}
-                        animate={agentReady ? {
-                            boxShadow: ['0 0 0 0 rgba(16,185,129,0.3)', '0 0 0 8px rgba(16,185,129,0)', '0 0 0 0 rgba(16,185,129,0.3)'],
+                        animate={isReadyToGenerate ? {
+                            boxShadow: ['0 0 0 0 rgba(16,185,129,0.4)', '0 0 0 10px rgba(16,185,129,0)', '0 0 0 0 rgba(16,185,129,0.4)'],
                         } : {}}
-                        transition={agentReady ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : {}}
-                        className={`flex items-center gap-2 text-xs px-3 md:px-4 py-2.5 rounded-xl font-bold transition-all duration-200 active:scale-95 ${isReadyToGenerate
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-200/50 hover:shadow-lg'
-                            : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm'
+                        transition={isReadyToGenerate ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : {}}
+                        className={`flex items-center gap-1.5 text-xs font-black rounded-xl transition-all duration-200 active:scale-95 ${isReadyToGenerate
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-300/60 hover:shadow-xl px-3 py-2.5 ring-2 ring-emerald-400/50 ring-offset-1'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200 px-3 py-2.5'
                             }`}
                         title={isReadyToGenerate ? t('generateResume') : t('generateEarlyHint')}
                     >
                         {isReadyToGenerate ? (
-                            <CheckCircle2 className="w-4 h-4" />
+                            <Sparkles className="w-4 h-4 shrink-0" />
                         ) : (
-                            <ClipboardCheck className="w-4 h-4" />
+                            <ClipboardCheck className="w-4 h-4 shrink-0" />
                         )}
                         <span className="hidden sm:inline">{isReadyToGenerate ? t('generateResume') : t('generateEarly')}</span>
-                        <span className="sm:hidden">{isReadyToGenerate ? 'Generate' : 'Generate'}</span>
+                        {isReadyToGenerate && <span className="sm:hidden text-[11px]">Generate</span>}
                     </motion.button>
                 </div>
             </div>
@@ -919,6 +919,44 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                 )}
                 <div ref={messagesEndRef} />
             </div>
+
+            {/* Sticky Generate CTA — appears above input when interview data is ready */}
+            <AnimatePresence>
+                {isReadyToGenerate && !showGenerateConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        transition={{ duration: 0.35, ease: 'easeOut' }}
+                        className="px-3 md:px-4 pt-3 border-t border-emerald-200 bg-emerald-50"
+                    >
+                        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3 py-2.5 px-4 bg-white border-2 border-emerald-300 rounded-2xl shadow-md shadow-emerald-100/60">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <motion.div
+                                    animate={{ scale: [1, 1.15, 1] }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                    className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0"
+                                >
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                </motion.div>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-black text-emerald-900 leading-tight">{t('readyBannerTitle')}</p>
+                                    <p className="text-[11px] text-emerald-700 leading-tight truncate">{t('readyBannerDesc')}</p>
+                                </div>
+                            </div>
+                            <motion.button
+                                onClick={() => setShowGenerateConfirm(true)}
+                                animate={agentReady ? { scale: [1, 1.04, 1] } : {}}
+                                transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                                className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-black rounded-xl hover:bg-emerald-700 transition-all shadow-md shadow-emerald-300/50 active:scale-95 whitespace-nowrap"
+                            >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                {t('generateResume')}
+                            </motion.button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <div className="p-3 md:p-4 glass border-t border-slate-200/80 shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
                 <div className="flex items-end gap-2 max-w-4xl mx-auto">

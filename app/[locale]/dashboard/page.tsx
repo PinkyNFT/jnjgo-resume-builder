@@ -390,7 +390,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
 
       <form onSubmit={handleSubmit} className="bg-white p-5 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="col-span-2">
+          <div className="col-span-full">
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{t('fullName')}</label>
             <div className="relative">
               <User className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />
@@ -434,7 +434,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
             </div>
           </div>
 
-          <div className="col-span-2">
+          <div className="col-span-full">
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{t('address')}</label>
             <div className="relative">
               <MapPin className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />
@@ -448,7 +448,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
             </div>
           </div>
 
-          <div className="col-span-2">
+          <div className="col-span-full">
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{t('linkedin')}</label>
             <div className="relative">
               <Linkedin className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />

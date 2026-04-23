@@ -39,8 +39,7 @@ export default function PageTransition({ children }: { children: React.ReactNode
         <div
             style={{
                 opacity: isVisible ? 1 : 0,
-                transform: isVisible ? 'translateY(0)' : 'translateY(6px)',
-                transition: 'opacity 0.2s ease-out, transform 0.2s ease-out',
+                transition: 'opacity 0.2s ease-out',
             }}
         >
             {children}
