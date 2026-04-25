@@ -1,6 +1,6 @@
 # Risk Report — JNJGO Resume Builder (Beta)
 
-> Last updated: 2026-04-21 (rev 3)
+> Last updated: 2026-04-25 (rev 4)
 > Status: Beta — for internal review and external stakeholder visibility
 
 ---
@@ -23,7 +23,7 @@
 | O1 | ~~**In-memory rate limiter**~~ — **Resolved (2026-04-19).** AI endpoints (`/api/chat`, `/api/parse`, `/api/analyze`) now use a MongoDB-backed rate limiter (`applyRateLimitDB`) enforced across all serverless instances. Uses a single atomic aggregation pipeline `$cond` update — no race conditions, no duplicate key errors. Limits are configurable by admins via Settings → Limits. Non-AI endpoints retain the in-memory limiter (acceptable for low-risk CRUD). $0 additional infrastructure cost. | ~~High~~ Resolved | See [lib/rate-limit.ts](../lib/rate-limit.ts). |
 | O2 | ~~**No data backup policy**~~ — **Documented (2026-04-21).** Backup policy and restoration procedure documented. Atlas M10+ with Continuous Cloud Backup required before public launch. Current M0 free tier has no backup support — covered by beta disclaimer. Quarterly restore tests mandated. | ~~High~~ Action Required | See [docs/BACKUP_POLICY.md](./BACKUP_POLICY.md). Requires Atlas tier upgrade before open launch. |
 | O3 | **No support/feedback channel** — The how-to-test page lists `dev@kerofi.net` as the contact. There is no ticketing system, response SLA, or escalation path. | Medium | Acceptable for closed beta with known testers. |
-| O4 | **Abuse via recruiter role** — The recruiter role can view candidate profiles. There is no audit log of who accessed whose profile. | Medium | Low risk for beta; becomes critical at scale. |
+| O4 | ~~**Abuse via recruiter role**~~ — **Resolved (2026-04-25).** Every profile view is recorded in `recruiterPageViews` (recruiter ID, candidate ID, timestamp, source). Candidates can now see identified recruiters who viewed their profile via the "Who viewed your profile" section on their private profile page. Anonymous views are counted separately. Data is retained for 1 year. | ~~Medium~~ Resolved | See [app/api/candidate/profile-views/route.ts](../app/api/candidate/profile-views/route.ts) and `components/profile/PrivateProfileEditor.tsx`. |
 
 ---
 
@@ -44,10 +44,11 @@
 | Category | High | Medium | Low | Resolved / Action Required |
 |----------|------|--------|-----|---------|
 | Legal | 0 | 2 | 0 | 2 |
-| Operational | 0 | 2 | 0 | 2 (O2 requires Atlas upgrade) |
+| Operational | 0 | 1 | 0 | 3 (O2 requires Atlas upgrade) |
 | Technical | 0 | 2 | 1 | 3 |
-| **Total** | **0** | **6** | **1** | **7** |
+| **Total** | **0** | **5** | **1** | **8** |
 
 **Resolved this sprint (2026-04-21):** L1 (AI disclaimer), L2 (account deletion), O2 (backup policy documented), T1 (Gemini retry logic).
+**Resolved (2026-04-25):** O4 (recruiter access audit — candidate-facing profile views + `recruiterPageViews` collection).
 **Blockers for open/public launch:** O2 (Atlas M10 upgrade required for actual backups), L3 + L4 (legal review).
 **Acceptable for closed beta:** All remaining Medium/Low items, provided testers are informed via the beta disclaimer.

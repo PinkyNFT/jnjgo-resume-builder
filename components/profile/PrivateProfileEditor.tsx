@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Loader2, Sparkles, CheckCircle2, AlertCircle, XCircle,
     DollarSign, Briefcase, Ban, CalendarCheck, FileText, Globe,
-    Zap, Target, TrendingUp, Eye, Link2, Copy, Check, ExternalLink, Save, Trash2,
+    Zap, Target, TrendingUp, Eye, Link2, Copy, Check, ExternalLink, Save, Trash2, Users, Clock,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { CandidatePrivateProfile } from '../../types';
@@ -113,6 +113,13 @@ export default function PrivateProfileEditor() {
     const [projectsLoading, setProjectsLoading] = useState(false);
     const initialProfileRef = useRef<string | null>(null);
 
+    const [profileViews, setProfileViews] = useState<{
+        totalViews: number;
+        anonymousCount: number;
+        uniqueRecruiters: number;
+        viewers: Array<{ recruiterId: string; recruiterName: string | null; viewedAt: number; totalViews: number }>;
+    } | null>(null);
+
     /* ── Dirty-state tracking ── */
     const isDirty = useMemo(() => {
         if (!profile || initialProfileRef.current === null) return false;
@@ -165,6 +172,15 @@ export default function PrivateProfileEditor() {
                 .catch(() => { /* ignore */ });
         } else {
             setPublicSlug(null);
+        }
+    }, [profile?.status]);
+
+    useEffect(() => {
+        if (profile?.status === 'published') {
+            fetch('/api/candidate/profile-views')
+                .then(r => r.ok ? r.json() : null)
+                .then(data => { if (data) setProfileViews(data); })
+                .catch(() => { /* non-critical */ });
         }
     }, [profile?.status]);
 
@@ -725,8 +741,81 @@ export default function PrivateProfileEditor() {
                     </InputField>
                 </SectionCard>
 
+                {/* ── Profile Views ── */}
+                {isPublished && profileViews && profileViews.totalViews > 0 && (
+                    <SectionCard title="Who viewed your profile" icon={Users} index={9}>
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-6">
+                                <div className="text-center">
+                                    <p className="text-2xl font-black text-slate-900">{profileViews.totalViews}</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Total views</p>
+                                </div>
+                                <div className="w-px h-10 bg-slate-200" />
+                                <div className="text-center">
+                                    <p className="text-2xl font-black text-indigo-600">{profileViews.uniqueRecruiters}</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Identified recruiters</p>
+                                </div>
+                                {profileViews.anonymousCount > 0 && (
+                                    <>
+                                        <div className="w-px h-10 bg-slate-200" />
+                                        <div className="text-center">
+                                            <p className="text-2xl font-black text-slate-400">{profileViews.anonymousCount}</p>
+                                            <p className="text-xs text-slate-500 mt-0.5">Anonymous</p>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {profileViews.viewers.length > 0 ? (
+                                <div className="space-y-2 mt-1">
+                                    {profileViews.viewers.map((v) => {
+                                        const initials = v.recruiterName
+                                            ? v.recruiterName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                                            : '?';
+                                        const relativeTime = (() => {
+                                            const diff = Date.now() - v.viewedAt;
+                                            if (diff < 60_000) return 'just now';
+                                            if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+                                            if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+                                            return `${Math.floor(diff / 86_400_000)}d ago`;
+                                        })();
+                                        return (
+                                            <motion.div
+                                                key={v.recruiterId}
+                                                initial={{ opacity: 0, x: -8 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100"
+                                            >
+                                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                                                    <span className="text-xs font-bold text-indigo-600">{initials}</span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-semibold text-slate-800 truncate">
+                                                        {v.recruiterName || 'Recruiter'}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                                                        <Clock className="w-3 h-3" />
+                                                        {relativeTime}
+                                                        {v.totalViews > 1 && (
+                                                            <span className="ml-1 text-indigo-500 font-medium">· {v.totalViews}×</span>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-slate-500">
+                                    No identified recruiter views yet. Views are attributed once a recruiter signs in.
+                                </p>
+                            )}
+                        </div>
+                    </SectionCard>
+                )}
+
                 {/* ── Visibility ── */}
-                <SectionCard title="Visibility" icon={Eye} index={9}>
+                <SectionCard title="Visibility" icon={Eye} index={isPublished && profileViews ? 10 : 9}>
                     <div className="flex items-center justify-between gap-4">
                         <div>
                             <p className="font-semibold text-slate-900 text-sm">Show to recruiters via your link</p>
