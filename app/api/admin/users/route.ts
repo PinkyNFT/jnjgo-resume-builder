@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
+import { routeErrorResponse } from '@/lib/api-error';
 import { connectToDatabase } from '@/lib/mongodb';
 import { requireAdmin, requireSuperAdmin, logAdminAction, getClientIp, AdminContext } from '@/lib/admin-auth';
 import { AdminUserModel } from '@/lib/admin-models';
@@ -163,11 +164,7 @@ export async function GET(request: NextRequest) {
             }
         }, { status: 200 });
     } catch (error) {
-        console.error('Error fetching users:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch users' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'GET /api/admin/users');
     }
 }
 
@@ -275,11 +272,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     } catch (error) {
-        console.error('Error managing user:', error);
-        return NextResponse.json(
-            { error: 'Failed to manage user' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'POST /api/admin/users');
     }
 }
 
@@ -349,10 +342,6 @@ export async function DELETE(request: NextRequest) {
 
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (error) {
-        console.error('Admin account deletion error:', error);
-        return NextResponse.json(
-            { error: 'Failed to delete account', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'DELETE /api/admin/users');
     }
 }

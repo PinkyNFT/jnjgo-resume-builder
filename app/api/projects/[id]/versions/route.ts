@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../../lib/api-error';
 import { connectToDatabase } from '../../../../../lib/mongodb';
 import { ResumeVersionModel } from '../../../../../lib/models';
 import { ResumeVersion } from '../../../../../types';
@@ -41,11 +42,7 @@ export async function GET(
         return NextResponse.json({ versions: transformed }, { status: 200 });
     } catch (error) {
         if (error instanceof NextResponse) return error;
-        console.error('Error fetching versions:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch versions', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'GET /api/projects/[id]/versions');
     }
 }
 
@@ -123,10 +120,6 @@ export async function POST(
         return NextResponse.json({ version: transformed }, { status: 201 });
     } catch (error) {
         if (error instanceof NextResponse) return error;
-        console.error('Error creating version:', error);
-        return NextResponse.json(
-            { error: 'Failed to create version', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'POST /api/projects/[id]/versions');
     }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeErrorResponse } from '@/lib/api-error';
 import { connectToDatabase } from '@/lib/mongodb';
 import { requireAdmin, logAdminAction, getClientIp } from '@/lib/admin-auth';
 import {
@@ -26,11 +27,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ settings }, { status: 200 });
     } catch (error) {
-        console.error('Error fetching settings:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch settings' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'GET /api/admin/settings');
     }
 }
 
@@ -90,10 +87,6 @@ export async function PUT(request: NextRequest) {
 
         return NextResponse.json({ setting: updated }, { status: 200 });
     } catch (error) {
-        console.error('Error updating setting:', error);
-        return NextResponse.json(
-            { error: 'Failed to update setting' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'PUT /api/admin/settings');
     }
 }

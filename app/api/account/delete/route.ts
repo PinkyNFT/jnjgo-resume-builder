@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
+import { routeErrorResponse } from '@/lib/api-error';
 import { connectToDatabase } from '@/lib/mongodb';
 import clientPromise from '@/lib/mongodb-client';
 import {
@@ -46,10 +47,6 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (error) {
         if (error instanceof NextResponse) return error;
-        console.error('Account deletion error:', error);
-        return NextResponse.json(
-            { error: 'Failed to delete account', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'DELETE /api/account/delete');
     }
 }

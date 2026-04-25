@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../../lib/api-error';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../../lib/auth';
 import { connectToDatabase } from '../../../../../lib/mongodb';
@@ -56,10 +57,6 @@ export async function POST(req: Request) {
         return NextResponse.json(responseData);
 
     } catch (error) {
-        console.error('Error generating Private Profile Draft:', error);
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : 'Internal server error while generating profile draft.' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'POST /api/profile/private/generate');
     }
 }

@@ -63,6 +63,8 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
         }).catch((error) => {
             console.error('❌ MongoDB connection error:', error);
             cached.promise = null;
+            // Tag so API routes can distinguish DB outages from other errors
+            if (error instanceof Error) (error as any).code = 'DB_UNAVAILABLE';
             throw error;
         });
     }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../lib/api-error';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { connectToDatabase } from '../../../../lib/mongodb';
@@ -159,10 +160,6 @@ export async function GET(request: NextRequest) {
             },
         });
     } catch (error) {
-        console.error('Error fetching candidates:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch candidates' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'GET /api/recruiter/candidates');
     }
 }

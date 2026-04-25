@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../lib/api-error';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { connectToDatabase } from '../../../../lib/mongodb';
@@ -150,8 +151,7 @@ export async function GET(request: NextRequest) {
             { status: 200, headers: { 'Cache-Control': 'private, max-age=60' } }
         );
     } catch (error) {
-        console.error('Error fetching page view stats:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'GET /api/recruiter/page-views');
     }
 }
 
@@ -206,8 +206,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ ok: true }, { status: 201 });
     } catch (error) {
-        console.error('Error recording page view:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'POST /api/recruiter/page-views');
     }
 }
 
@@ -242,7 +241,6 @@ export async function PATCH(request: NextRequest) {
 
         return NextResponse.json({ claimed: result.modifiedCount }, { status: 200 });
     } catch (error) {
-        console.error('Error claiming page views:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'PATCH /api/recruiter/page-views');
     }
 }

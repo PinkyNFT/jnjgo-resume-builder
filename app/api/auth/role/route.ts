@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../lib/api-error';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import clientPromise from '../../../../lib/mongodb-client';
@@ -31,8 +32,7 @@ export async function GET() {
             hasRole: !!user?.role,
         });
     } catch (error) {
-        console.error('Error fetching role:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'GET /api/auth/role');
     }
 }
 
@@ -102,7 +102,6 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ role: finalRole, success: true, changed: false });
     } catch (error) {
-        console.error('Error setting role:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'POST /api/auth/role');
     }
 }

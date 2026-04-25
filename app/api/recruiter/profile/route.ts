@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../lib/api-error';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { connectToDatabase } from '../../../../lib/mongodb';
@@ -48,8 +49,7 @@ export async function GET() {
 
         return NextResponse.json(serialized);
     } catch (error) {
-        console.error('Error fetching recruiter profile:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'GET /api/recruiter/profile');
     }
 }
 
@@ -115,7 +115,6 @@ export async function POST(req: Request) {
 
         return NextResponse.json(serialized);
     } catch (error) {
-        console.error('Error saving recruiter profile:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'POST /api/recruiter/profile');
     }
 }

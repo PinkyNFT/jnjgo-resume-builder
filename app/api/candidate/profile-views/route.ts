@@ -87,7 +87,6 @@ export async function GET(request: NextRequest) {
             viewers,
         }, { status: 200, headers: { 'Cache-Control': 'private, max-age=60' } });
     } catch (error) {
-        console.error('Error fetching candidate profile views:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'GET /api/candidate/profile-views');
     }
 }

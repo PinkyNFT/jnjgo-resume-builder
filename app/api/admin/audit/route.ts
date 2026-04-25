@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeErrorResponse } from '@/lib/api-error';
 import { connectToDatabase } from '@/lib/mongodb';
 import { requireAdmin } from '@/lib/admin-auth';
 import { AuditLogModel } from '@/lib/admin-models';
@@ -44,10 +45,6 @@ export async function GET(request: NextRequest) {
             }
         }, { status: 200 });
     } catch (error) {
-        console.error('Error fetching audit logs:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch audit logs' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'GET /api/admin/audit');
     }
 }

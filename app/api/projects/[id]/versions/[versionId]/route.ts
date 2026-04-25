@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../../../lib/api-error';
 import { connectToDatabase } from '../../../../../../lib/mongodb';
 import { ResumeVersionModel } from '../../../../../../lib/models';
 import { ResumeVersion } from '../../../../../../types';
@@ -41,11 +42,7 @@ export async function GET(
         return NextResponse.json({ version: transformed }, { status: 200 });
     } catch (error) {
         if (error instanceof NextResponse) return error;
-        console.error('Error fetching version:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch version', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'GET /api/projects/[id]/versions/[versionId]');
     }
 }
 
@@ -75,11 +72,7 @@ export async function DELETE(
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (error) {
         if (error instanceof NextResponse) return error;
-        console.error('Error deleting version:', error);
-        return NextResponse.json(
-            { error: 'Failed to delete version', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'DELETE /api/projects/[id]/versions/[versionId]');
     }
 }
 
@@ -130,10 +123,6 @@ export async function PATCH(
         return NextResponse.json({ version: transformed }, { status: 200 });
     } catch (error) {
         if (error instanceof NextResponse) return error;
-        console.error('Error updating version:', error);
-        return NextResponse.json(
-            { error: 'Failed to update version', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'PATCH /api/projects/[id]/versions/[versionId]');
     }
 }

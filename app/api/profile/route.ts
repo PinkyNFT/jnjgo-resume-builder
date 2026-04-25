@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../lib/api-error';
 import { connectToDatabase } from '../../../lib/mongodb';
 import { UserProfileModel } from '../../../lib/models';
 import { UserProfile } from '../../../types';
@@ -37,11 +38,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ profile: userProfile }, { status: 200 });
     } catch (error) {
         if (error instanceof NextResponse) return error;
-        console.error('Error fetching profile:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch profile', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'GET /api/profile');
     }
 }
 
@@ -90,10 +87,6 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ profile: userProfile }, { status: 200 });
     } catch (error) {
         if (error instanceof NextResponse) return error;
-        console.error('Error saving profile:', error);
-        return NextResponse.json(
-            { error: 'Failed to save profile', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'PUT /api/profile');
     }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeErrorResponse } from '@/lib/api-error';
 import { connectToDatabase } from '@/lib/mongodb';
 import { requireAdmin, logAdminAction, getClientIp } from '@/lib/admin-auth';
 import { PromptTemplateModel, invalidatePromptCache, snapshotPromptBeforeUpdate, getPromptHistory } from '@/lib/admin-models';
@@ -31,11 +32,7 @@ export async function GET(request: NextRequest) {
             const comparisons = await getPromptComparisons();
             return NextResponse.json({ comparisons }, { status: 200 });
         } catch (error) {
-            console.error('Error fetching prompt comparisons:', error);
-            return NextResponse.json(
-                { error: 'Failed to fetch prompt comparisons' },
-                { status: 500 }
-            );
+            return routeErrorResponse(error, 'GET /api/admin/prompts (comparisons)');
         }
     }
 
@@ -48,11 +45,7 @@ export async function GET(request: NextRequest) {
             const history = await getPromptHistory(historySlug, Math.min(limit, 50));
             return NextResponse.json({ history }, { status: 200 });
         } catch (error) {
-            console.error('Error fetching prompt history:', error);
-            return NextResponse.json(
-                { error: 'Failed to fetch prompt history' },
-                { status: 500 }
-            );
+            return routeErrorResponse(error, 'GET /api/admin/prompts (history)');
         }
     }
 
@@ -66,11 +59,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ prompts }, { status: 200 });
     } catch (error) {
-        console.error('Error fetching prompts:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch prompts' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'GET /api/admin/prompts');
     }
 }
 
@@ -137,11 +126,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ prompt }, { status: 201 });
     } catch (error) {
-        console.error('Error creating prompt:', error);
-        return NextResponse.json(
-            { error: 'Failed to create prompt' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'POST /api/admin/prompts');
     }
 }
 
@@ -255,10 +240,6 @@ export async function PUT(request: NextRequest) {
 
         return NextResponse.json({ prompt: updated }, { status: 200 });
     } catch (error) {
-        console.error('Error updating prompt:', error);
-        return NextResponse.json(
-            { error: 'Failed to update prompt' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'PUT /api/admin/prompts');
     }
 }

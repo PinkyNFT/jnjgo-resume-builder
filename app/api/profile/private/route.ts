@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../lib/api-error';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { connectToDatabase } from '../../../../lib/mongodb';
@@ -32,8 +33,7 @@ export async function GET(req: Request) {
         delete (serialized as any).__v;
         return NextResponse.json(serialized);
     } catch (error) {
-        console.error('Error fetching private profile:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'GET /api/profile/private');
     }
 }
 
@@ -107,7 +107,6 @@ async function handleSaveOrUpdate(req: Request) {
         if ((out as any).updatedAt instanceof Date) (out as any).updatedAt = (out as any).updatedAt.getTime();
         return NextResponse.json(out);
     } catch (error) {
-        console.error('Error saving private profile:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'POST /api/profile/private');
     }
 }

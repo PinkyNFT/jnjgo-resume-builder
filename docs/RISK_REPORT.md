@@ -32,7 +32,7 @@
 | ID | Risk | Severity | Notes |
 |----|------|----------|-------|
 | T1 | ~~**Single AI provider dependency**~~ — **Resolved (2026-04-21).** Gemini retry wrapper (`lib/gemini-client.ts`) added with exponential backoff (3 retries, up to 10s delay). All three AI routes (`/api/chat`, `/api/parse`, `/api/analyze`) now use `callWithRetry`. Returns a structured error response after all retries exhausted so users see a clear failure message rather than an unhandled crash. | ~~High~~ Resolved | See [lib/gemini-client.ts](../lib/gemini-client.ts). Provider fallback (e.g. OpenAI) remains a future item. |
-| T2 | **MongoDB cold connection** — The MongoDB connection uses pooling (`lib/mongodb.ts`) but there is no visible user-facing error state if the DB is unreachable at runtime. Users may see unhandled failures. | Medium | Health check endpoint exists at `/api/health` but is not surfaced to end users. |
+| T2 | ~~**MongoDB cold connection**~~ — **Resolved (2026-04-25).** DB connection failures now throw a tagged `DB_UNAVAILABLE` error. All API routes return HTTP 503 (not 500) on DB outage via `lib/api-error.ts` `routeErrorResponse()`. Client-side: `window.fetch` is patched in `Providers` to intercept 503 responses and fire a `toast.warning()` (deduplicated to once per 30 s). | ~~Medium~~ Resolved | See [lib/api-error.ts](../lib/api-error.ts), [lib/mongodb.ts](../lib/mongodb.ts), [app/providers.tsx](../app/providers.tsx). |
 | T3 | ~~**In-memory rate limiter does not scale**~~ — **Resolved (2026-04-19).** See O1. | ~~High~~ Resolved | Resolved alongside O1. |
 | T4 | **No error monitoring / observability** — There is no Sentry, Datadog, or equivalent. Errors in production are only visible in server logs, which are ephemeral on serverless hosts. | Medium | Identified in [PRODUCTION_ROADMAP.md](./PRODUCTION_ROADMAP.md) as a future item. |
 | T5 | **localStorage migration residue** — The app migrates legacy localStorage data to MongoDB on first load (`utils/dataMigration.ts`). If migration fails silently, users may lose data without knowing. | Low | Migration path has logging but no user-visible failure notification. |
@@ -45,10 +45,10 @@
 |----------|------|--------|-----|---------|
 | Legal | 0 | 2 | 0 | 2 |
 | Operational | 0 | 1 | 0 | 3 (O2 requires Atlas upgrade) |
-| Technical | 0 | 2 | 1 | 3 |
-| **Total** | **0** | **5** | **1** | **8** |
+| Technical | 0 | 1 | 1 | 4 |
+| **Total** | **0** | **4** | **1** | **9** |
 
 **Resolved this sprint (2026-04-21):** L1 (AI disclaimer), L2 (account deletion), O2 (backup policy documented), T1 (Gemini retry logic).
-**Resolved (2026-04-25):** O4 (recruiter access audit — candidate-facing profile views + `recruiterPageViews` collection).
+**Resolved (2026-04-25):** O4 (recruiter access audit), T2 (MongoDB cold connection — 503 error distinction + client-side toast).
 **Blockers for open/public launch:** O2 (Atlas M10 upgrade required for actual backups), L3 + L4 (legal review).
 **Acceptable for closed beta:** All remaining Medium/Low items, provided testers are informed via the beta disclaimer.

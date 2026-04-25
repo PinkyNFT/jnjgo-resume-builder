@@ -2,13 +2,33 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider } from 'next-auth/react';
-import { useState, PropsWithChildren } from 'react';
+import { useState, useEffect, PropsWithChildren } from 'react';
+import { toast } from '../lib/toast';
 
 /**
  * React Query Provider for the application
  * Configures intelligent request management, caching, and deduplication
  */
 export function Providers({ children }: PropsWithChildren) {
+    useEffect(() => {
+        const originalFetch = window.fetch;
+        let lastWarnAt = 0;
+
+        window.fetch = async (...args) => {
+            const res = await originalFetch(...args);
+            if (res.status === 503) {
+                const now = Date.now();
+                if (now - lastWarnAt > 30_000) {
+                    lastWarnAt = now;
+                    toast.warning('Our servers are temporarily unavailable. Please try again in a moment.', 8000);
+                }
+            }
+            return res;
+        };
+
+        return () => { window.fetch = originalFetch; };
+    }, []);
+
     const [queryClient] = useState(
         () =>
             new QueryClient({

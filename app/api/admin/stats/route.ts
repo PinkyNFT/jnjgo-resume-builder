@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
+import { routeErrorResponse } from '@/lib/api-error';
 import { connectToDatabase } from '@/lib/mongodb';
 import { requireAdmin } from '@/lib/admin-auth';
 import {
@@ -333,10 +334,6 @@ export async function GET(request: NextRequest) {
             },
         }, { status: 200 });
     } catch (error) {
-        console.error('Error fetching admin stats:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch statistics' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'GET /api/admin/stats');
     }
 }

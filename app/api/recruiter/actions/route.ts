@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../lib/api-error';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { connectToDatabase } from '../../../../lib/mongodb';
@@ -150,8 +151,7 @@ export async function POST(request: NextRequest) {
             message: actionType === 'contact_request' ? 'Contact request sent' : 'Action recorded',
         }, { status: 201 });
     } catch (error) {
-        console.error('[POST /api/recruiter/actions] Error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'POST /api/recruiter/actions');
     }
 }
 
@@ -366,8 +366,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 });
     } catch (error) {
-        console.error('[GET /api/recruiter/actions] Error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'GET /api/recruiter/actions');
     }
 }
 
@@ -415,7 +414,6 @@ export async function PATCH(request: NextRequest) {
 
         return NextResponse.json({ updatedCount: result.modifiedCount });
     } catch (error) {
-        console.error('[PATCH /api/recruiter/actions] Error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'PATCH /api/recruiter/actions');
     }
 }

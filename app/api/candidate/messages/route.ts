@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../lib/api-error';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { connectToDatabase } from '../../../../lib/mongodb';
@@ -119,8 +120,7 @@ export async function GET(request: NextRequest) {
             },
         }, { headers: { 'Cache-Control': 'private, max-age=10, stale-while-revalidate=60' } });
     } catch (error) {
-        console.error('[GET /api/candidate/messages] Error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'GET /api/candidate/messages');
     }
 }
 
@@ -165,8 +165,7 @@ export async function PATCH(request: NextRequest) {
 
         return NextResponse.json({ updatedCount: result.modifiedCount });
     } catch (error) {
-        console.error('[PATCH /api/candidate/messages] Error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'PATCH /api/candidate/messages');
     }
 }
 
@@ -236,7 +235,6 @@ export async function POST(request: NextRequest) {
             }
         });
     } catch (error) {
-        console.error('[POST /api/candidate/messages] Error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return routeErrorResponse(error, 'POST /api/candidate/messages');
     }
 }

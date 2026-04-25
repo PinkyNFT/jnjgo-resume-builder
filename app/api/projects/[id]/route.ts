@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../lib/api-error';
 import { connectToDatabase } from '../../../../lib/mongodb';
 import { ProjectModel } from '../../../../lib/models';
 import { Project } from '../../../../types';
@@ -56,11 +57,7 @@ export async function GET(
         return NextResponse.json({ project: transformedProject }, { status: 200 });
     } catch (error) {
         if (error instanceof NextResponse) return error;
-        console.error('Error fetching project:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch project', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'GET /api/projects/[id]');
     }
 }
 
@@ -139,11 +136,7 @@ export async function PUT(
         return NextResponse.json({ project: transformedProject }, { status: 200 });
     } catch (error) {
         if (error instanceof NextResponse) return error;
-        console.error('Error updating project:', error);
-        return NextResponse.json(
-            { error: 'Failed to update project', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'PUT /api/projects/[id]');
     }
 }
 
@@ -181,10 +174,6 @@ export async function DELETE(
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (error) {
         if (error instanceof NextResponse) return error;
-        console.error('Error deleting project:', error);
-        return NextResponse.json(
-            { error: 'Failed to delete project', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        return routeErrorResponse(error, 'DELETE /api/projects/[id]');
     }
 }

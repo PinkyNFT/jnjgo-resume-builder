@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { routeErrorResponse } from '../../../../lib/api-error';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { connectToDatabase } from '../../../../lib/mongodb';
@@ -32,7 +33,6 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true, eventId: exportEvent._id });
     } catch (error) {
-        console.error('Error logging export event:', error);
-        return NextResponse.json({ error: 'Internal server error logging event' }, { status: 500 });
+        return routeErrorResponse(error, 'POST /api/export/events');
     }
 }
