@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Loader2, Sparkles, CheckCircle2, AlertCircle, XCircle,
@@ -9,6 +9,10 @@ import {
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { CandidatePrivateProfile } from '../../types';
+import { usePrivateProfile, useSavePrivateProfile } from '../../hooks/usePrivateProfile';
+import { useProjects, ProjectOption } from '../../hooks/useProjects';
+import { usePublicSlug } from '../../hooks/usePublicSlug';
+import { useProfileViews } from '../../hooks/useProfileViews';
 
 /* ─── Constants ──────────────────────────────────────────── */
 
@@ -98,91 +102,47 @@ function InputField({
 /* ─── Main Component ─────────────────────────────────────── */
 
 export default function PrivateProfileEditor() {
+    // ── Server state via React Query (deduplicated + cached) ──────────────
+    const { data: serverProfile, isPending: profilePending } = usePrivateProfile();
+    const { mutateAsync: saveProfile, isPending: isSaving } = useSavePrivateProfile();
+    const { data: projects = [], isPending: projectsLoading } = useProjects();
+
+    // ── Local editable copy of profile ────────────────────────────────────
     const [profile, setProfile] = useState<Partial<CandidatePrivateProfile> | null>(null);
-    const [publicSlug, setPublicSlug] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const initialProfileRef = useRef<string | null>(null);
+    const hasInitialized = useRef(false);
+
+    // Sync server data → local state once on first load (or after cache warms)
+    useEffect(() => {
+        if (!profilePending && !hasInitialized.current) {
+            hasInitialized.current = true;
+            const data = serverProfile ?? null;
+            setProfile(data);
+            initialProfileRef.current = JSON.stringify(data);
+        }
+    }, [profilePending, serverProfile]);
+
+    const isLoading = profilePending && !hasInitialized.current;
+    const isPublished = profile?.status === 'published';
+
+    // ── Conditional queries — only fire when profile is published ──────────
+    const { data: publicSlug = null } = usePublicSlug(isPublished);
+    const { data: profileViews = null } = useProfileViews(isPublished);
+
+    // ── UI state ──────────────────────────────────────────────────────────
     const [isGenerating, setIsGenerating] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [copied, setCopied] = useState(false);
-    const [projects, setProjects] = useState<Array<{ id: string; title: string; status: string }>>([]);
-    const [projectsLoading, setProjectsLoading] = useState(false);
-    const initialProfileRef = useRef<string | null>(null);
-
-    const [profileViews, setProfileViews] = useState<{
-        totalViews: number;
-        anonymousCount: number;
-        uniqueRecruiters: number;
-        viewers: Array<{ recruiterId: string; recruiterName: string | null; viewedAt: number; totalViews: number }>;
-    } | null>(null);
 
     /* ── Dirty-state tracking ── */
     const isDirty = useMemo(() => {
         if (!profile || initialProfileRef.current === null) return false;
         return JSON.stringify(profile) !== initialProfileRef.current;
     }, [profile]);
-
-    /* ── Data loading ── */
-
-    const loadProfile = useCallback(async () => {
-        try {
-            const res = await fetch('/api/profile/private');
-            if (res.ok) {
-                const data = await res.json();
-                setProfile(data || null);
-                initialProfileRef.current = JSON.stringify(data || null);
-            }
-        } catch (e) {
-            console.error(e);
-            setError('Failed to load profile');
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        loadProfile();
-    }, [loadProfile]);
-
-    // Load user's projects for highlighted resume selector
-    useEffect(() => {
-        setProjectsLoading(true);
-        fetch('/api/projects')
-            .then(r => r.json())
-            .then(data => {
-                // Only show completed/generated projects that have resume data
-                const eligibleProjects = (data.projects || []).filter(
-                    (p: any) => (p.status === 'completed' || p.status === 'generated') && p.data?.fullName
-                );
-                setProjects(eligibleProjects.map((p: any) => ({ id: p.id, title: p.title, status: p.status })));
-            })
-            .catch(() => setProjects([]))
-            .finally(() => setProjectsLoading(false));
-    }, []);
-
-    useEffect(() => {
-        if (profile?.status === 'published') {
-            fetch('/api/profile/public/slug')
-                .then((r) => r.json())
-                .then((d) => setPublicSlug(d.slug || null))
-                .catch(() => { /* ignore */ });
-        } else {
-            setPublicSlug(null);
-        }
-    }, [profile?.status]);
-
-    useEffect(() => {
-        if (profile?.status === 'published') {
-            fetch('/api/candidate/profile-views')
-                .then(r => r.ok ? r.json() : null)
-                .then(data => { if (data) setProfileViews(data); })
-                .catch(() => { /* non-critical */ });
-        }
-    }, [profile?.status]);
 
     /* ── Actions ── */
 
@@ -209,17 +169,10 @@ export default function PrivateProfileEditor() {
 
     const handleSave = async (status: 'draft' | 'published') => {
         if (!profile) return;
-        setIsSaving(true);
         setError('');
         setSuccessMessage('');
         try {
-            const res = await fetch('/api/profile/private', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...profile, status }),
-            });
-            if (!res.ok) throw new Error('Failed to save');
-            const data = await res.json();
+            const data = await saveProfile({ ...profile, status });
             setProfile(data);
             initialProfileRef.current = JSON.stringify(data);
             setSuccessMessage(
@@ -229,8 +182,6 @@ export default function PrivateProfileEditor() {
             );
         } catch {
             setError('Could not save. Try again.');
-        } finally {
-            setIsSaving(false);
         }
     };
 
@@ -386,8 +337,6 @@ export default function PrivateProfileEditor() {
     }
 
     /* ─── Editor (profile exists) ───────────────────────── */
-
-    const isPublished = profile?.status === 'published';
 
     return (
         <div className="space-y-5 pb-28">

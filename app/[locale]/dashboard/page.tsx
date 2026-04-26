@@ -481,6 +481,7 @@ export default function Page() {
   const locale = useLocale();
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
+  const isAdmin = session?.user?.isAdmin ?? false;
   const [step, setStep] = useState<Step>('dashboard');
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -738,18 +739,6 @@ export default function Page() {
     }
   };
 
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  // Check admin status
-  useEffect(() => {
-    if (session?.user) {
-      fetch('/api/admin/check')
-        .then(res => res.json())
-        .then(data => setIsAdmin(data.isAdmin))
-        .catch(() => { });
-    }
-  }, [session]);
-
   return (
     <div className="font-sans text-slate-900 bg-slate-50 min-h-screen">
       {isLoading ? (
@@ -759,7 +748,7 @@ export default function Page() {
           {step === 'dashboard' && (
             <div className="animate-in fade-in duration-500">
               {/* Shared navigation */}
-              <AppNavbar isAdmin={isAdmin} />
+              <AppNavbar />
 
               <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-24 md:pb-20">
                 {projects.length === 0 ? (
@@ -882,14 +871,14 @@ export default function Page() {
 
           {step === 'setup' && (
             <>
-              <AppNavbar isAdmin={isAdmin} minimal />
+              <AppNavbar minimal />
               <SetupView onComplete={handleSetupComplete} onCancel={() => setStep('dashboard')} />
             </>
           )}
 
           {step === 'personal_info' && (
             <>
-              <AppNavbar isAdmin={isAdmin} minimal />
+              <AppNavbar minimal />
               <PersonalInfoView
                 initialProfile={userProfile}
                 onComplete={handlePersonalInfoComplete}

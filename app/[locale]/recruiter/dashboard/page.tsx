@@ -59,7 +59,8 @@ export default function RecruiterDashboardPage() {
     const [profile, setProfile] = useState<RecruiterProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(false);
+    // Admin status comes from the JWT — no extra API call needed
+    const isAdmin = session?.user?.isAdmin ?? false;
 
     // Candidate browsing state
     const [candidates, setCandidates] = useState<CandidateCard[]>([]);
@@ -188,11 +189,6 @@ export default function RecruiterDashboardPage() {
                 }
                 return;
             }
-
-            fetch('/api/admin/check')
-                .then(res => res.json())
-                .then(data => setIsAdmin(data.isAdmin === true))
-                .catch(() => { });
 
             if (!sessionStorage.getItem('jnjgo_pv_claimed')) {
                 const anonId = localStorage.getItem('jnjgo_anon_id');

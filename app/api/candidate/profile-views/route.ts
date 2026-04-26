@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
+import { routeErrorResponse } from '../../../../lib/api-error';
 import { connectToDatabase } from '../../../../lib/mongodb';
 import { RecruiterPageViewModel, UserProfileModel } from '../../../../lib/models';
 import { applyRateLimit, RATE_LIMITS } from '../../../../lib/rate-limit';

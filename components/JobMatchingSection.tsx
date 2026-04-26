@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
+import { usePrivateProfile } from '../hooks/usePrivateProfile';
 import {
     Briefcase, ArrowRight, Sparkles, Clock,
     DollarSign, MapPin, UserCircle, Zap, TrendingUp, Globe,
@@ -10,7 +11,7 @@ import {
 /* ─── Types ──────────────────────────────────────────────── */
 
 interface PrivateProfileSnippet {
-    status: 'draft' | 'published';
+    status?: 'draft' | 'published';
     orientation?: string;
     desiredRoles?: Array<{ role: string; priority: number }>;
     desiredSalary?: { minimum?: number; target?: number };
@@ -116,17 +117,11 @@ function PlaceholderJobCard({
 /* ─── Main Component ─────────────────────────────────────── */
 
 export default function JobMatchingSection({ locale }: { locale: string }) {
-    const [profile, setProfile] = useState<PrivateProfileSnippet | null | 'loading'>('loading');
+    // Reads from React Query cache — zero extra network request when PrivateProfileEditor
+    // is also mounted on the same page (same query key, shared cache)
+    const { data: profile, isPending } = usePrivateProfile();
 
-    useEffect(() => {
-        fetch('/api/profile/private')
-            .then(r => r.ok ? r.json() : null)
-            .then(data => setProfile(data || null))
-            .catch(() => setProfile(null));
-    }, []);
-
-    // Don't flash anything while loading — section appears silently
-    if (profile === 'loading') return null;
+    if (isPending) return null;
 
     const isPublished = profile?.status === 'published';
     const orientationMeta = ORIENTATION_META[profile?.orientation || ''];

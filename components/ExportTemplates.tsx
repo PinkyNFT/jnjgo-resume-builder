@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { usePublicSlug } from '../hooks/usePublicSlug';
 import { useTranslations } from 'next-intl';
 import { ResumeData } from '../types';
 import {
@@ -173,21 +174,9 @@ export const ExportTemplates: React.FC<ExportTemplatesProps> = ({
     const [rewrittenSections, setRewrittenSections] = useState<Map<string, ExportSection[]>>(new Map());
     const [rewriteError, setRewriteError] = useState<string | null>(null);
 
-    const [serverSlug, setServerSlug] = useState<string | null>(null);
-
-    // Fetch genuine slug from server if not provided explicitly
-    useEffect(() => {
-        if (candidateSlug) {
-            setServerSlug(candidateSlug);
-        } else {
-            fetch('/api/profile/public/slug')
-                .then(r => r.json())
-                .then(d => setServerSlug(d.slug || null))
-                .catch(() => { });
-        }
-    }, [candidateSlug]);
-
-    const effectiveSlug = serverSlug;
+    // Fetch slug from cache when not passed explicitly as a prop
+    const { data: fetchedSlug = null } = usePublicSlug(!candidateSlug);
+    const effectiveSlug = candidateSlug ?? fetchedSlug;
 
     // Initialize link toggle from platform policy when platform changes
     useEffect(() => {

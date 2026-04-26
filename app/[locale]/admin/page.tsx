@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -31,31 +31,18 @@ export default function AdminDashboardPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<AdminTab>('overview');
-    const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-    const [adminRole, setAdminRole] = useState<string>('');
-    const [isBootstrapped, setIsBootstrapped] = useState(false);
-    const [isAutoPromoted, setIsAutoPromoted] = useState(false);
+
+    // Admin status and role come directly from the JWT — no extra API call needed
+    const isAdmin = session?.user?.isAdmin ?? false;
+    const adminRole = session?.user?.adminRole ?? '';
 
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/auth/signin?callbackUrl=/admin');
-            return;
-        }
-
-        if (status === 'authenticated') {
-            fetch('/api/admin/check')
-                .then(res => res.json())
-                .then(data => {
-                    setIsAdmin(data.isAdmin);
-                    setAdminRole(data.role || '');
-                    if (data.bootstrapped) setIsBootstrapped(true);
-                    if (data.autoPromoted) setIsAutoPromoted(true);
-                })
-                .catch(() => setIsAdmin(false));
         }
     }, [status, router]);
 
-    if (status === 'loading' || isAdmin === null) {
+    if (status === 'loading') {
         return <AdminSkeleton />;
     }
 
@@ -103,37 +90,6 @@ export default function AdminDashboardPage() {
                     </p>
                 </div>
             </div>
-
-            {/* Bootstrap notification */}
-            {(isBootstrapped || isAutoPromoted) && (
-                <div className="max-w-7xl mx-auto px-6 mt-4">
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-                        <Shield className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-                        <div>
-                            {isBootstrapped && (
-                                <>
-                                    <p className="text-sm font-medium text-green-800">
-                                        You&apos;ve been automatically assigned as the first Super Admin.
-                                    </p>
-                                    <p className="text-xs text-green-600 mt-1">
-                                        Default settings have been seeded. You can now manage all aspects of the application.
-                                    </p>
-                                </>
-                            )}
-                            {isAutoPromoted && !isBootstrapped && (
-                                <>
-                                    <p className="text-sm font-medium text-green-800">
-                                        You&apos;ve been automatically promoted to Super Admin via ADMIN_EMAILS configuration.
-                                    </p>
-                                    <p className="text-xs text-green-600 mt-1">
-                                        You now have full access to manage settings, prompts, users, and view audit logs.
-                                    </p>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Tab Navigation */}
             <div className="max-w-7xl mx-auto px-6 mt-6">

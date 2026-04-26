@@ -2,19 +2,32 @@ import NextAuth, { NextAuthOptions, DefaultSession, getServerSession } from "nex
 import GoogleProvider from "next-auth/providers/google";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import clientPromise from "./mongodb-client";
+import { connectToDatabase } from "./mongodb";
+import { AdminUserModel, seedDefaultSettings } from "./admin-models";
 import { UserRole } from "../types";
 
-// Extend NextAuth types to include user ID and role in session
+// Extend NextAuth types to include user ID, role, and admin status in session
 declare module "next-auth" {
     interface Session {
         user: {
             id: string;
             role?: UserRole | null;
+            isAdmin?: boolean;
+            adminRole?: string | null;
         } & DefaultSession["user"];
     }
 
     interface User {
         role?: UserRole | null;
+    }
+}
+
+declare module "next-auth/jwt" {
+    interface JWT {
+        id?: string;
+        role?: UserRole | null;
+        isAdmin?: boolean;
+        adminRole?: string | null;
     }
 }
 
@@ -58,12 +71,13 @@ export const authOptions: NextAuthOptions = {
             return true;
         },
         async jwt({ token, user, trigger }) {
-            // Initial sign in
+            // Initial sign in: populate token from the newly created/found user
             if (user) {
                 token.id = user.id;
                 token.role = (user as any).role || null;
             }
-            // Re-read role from DB when the client calls update() (e.g. after role selection)
+
+            // Re-read role from DB on explicit session update (e.g. after role selection)
             if (trigger === 'update' && token.id) {
                 const client = await clientPromise;
                 const db = client.db();
@@ -78,12 +92,80 @@ export const authOptions: NextAuthOptions = {
                     // keep existing token.role on error
                 }
             }
+
+            // Refresh admin status on sign-in or explicit session update
+            if ((user || trigger === 'update') && token.id) {
+                try {
+                    await connectToDatabase();
+
+                    const userEmail = (token.email as string | undefined) ?? '';
+                    const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) ?? [];
+                    const isAdminEmail = userEmail ? adminEmails.includes(userEmail.toLowerCase()) : false;
+                    const adminCount = await AdminUserModel.countDocuments();
+
+                    if (adminCount === 0 || isAdminEmail) {
+                        // Bootstrap: promote this user to super_admin if not already one
+                        const existingAdmin = await AdminUserModel.findOne({
+                            $or: [{ userId: token.id }, { email: userEmail }],
+                        });
+
+                        if (existingAdmin) {
+                            if (existingAdmin.userId !== token.id) {
+                                await AdminUserModel.updateOne(
+                                    { _id: existingAdmin._id },
+                                    { $set: { userId: token.id } }
+                                );
+                            }
+                            token.isAdmin = true;
+                            token.adminRole = existingAdmin.role;
+                        } else {
+                            await AdminUserModel.create({
+                                userId: token.id,
+                                email: userEmail,
+                                name: (token.name as string | undefined) ?? userEmail,
+                                role: 'super_admin',
+                                isActive: true,
+                                createdBy: adminCount === 0 ? 'system_bootstrap' : 'auto_admin_emails',
+                            });
+
+                            if (adminCount === 0) {
+                                await seedDefaultSettings(token.id as string);
+                            }
+
+                            token.isAdmin = true;
+                            token.adminRole = 'super_admin';
+                        }
+                    } else {
+                        // Normal lookup — fall back to email match to survive userId churn
+                        let adminUser = await AdminUserModel.findOne({ userId: token.id, isActive: true }).lean();
+
+                        if (!adminUser && userEmail) {
+                            adminUser = await AdminUserModel.findOne({ email: userEmail, isActive: true }).lean();
+                            if (adminUser) {
+                                await AdminUserModel.updateOne(
+                                    { _id: adminUser._id },
+                                    { $set: { userId: token.id } }
+                                );
+                            }
+                        }
+
+                        token.isAdmin = !!adminUser;
+                        token.adminRole = (adminUser as any)?.role ?? null;
+                    }
+                } catch {
+                    // Keep existing value on DB error — don't blank out a valid isAdmin
+                    token.isAdmin = token.isAdmin ?? false;
+                }
+            }
+
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
                 session.user.id = token.id as string;
-                session.user.role = (token.role as UserRole | null) || null;
+                session.user.role = token.role ?? null;
+                session.user.isAdmin = token.isAdmin ?? false;
+                session.user.adminRole = token.adminRole ?? null;
             }
             return session;
         },

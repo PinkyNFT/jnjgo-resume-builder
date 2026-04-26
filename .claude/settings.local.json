@@ -10,7 +10,8 @@
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:d[k] for k in ['Terms','Privacy'] if k in d}, indent=2\\)\\)\")",
       "Bash(python3 -c ' *)",
       "Bash(node -e \"const d=require\\('d:/Projects/jnjgo-resume-builder/messages/en.json'\\); console.log\\(JSON.stringify\\({Terms:d.Terms, Privacy:d.Privacy}, null, 2\\)\\)\")",
-      "Bash(node -e \"const d=require\\('d:/Projects/jnjgo-resume-builder/messages/ja.json'\\); console.log\\(JSON.stringify\\({Terms:d.Terms, Privacy:d.Privacy}, null, 2\\)\\)\")"
+      "Bash(node -e \"const d=require\\('d:/Projects/jnjgo-resume-builder/messages/ja.json'\\); console.log\\(JSON.stringify\\({Terms:d.Terms, Privacy:d.Privacy}, null, 2\\)\\)\")",
+      "Bash(npm run *)"
     ]
   }
 }

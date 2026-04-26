@@ -62,7 +62,7 @@ export function Providers({ children }: PropsWithChildren) {
     );
 
     return (
-        <SessionProvider>
+        <SessionProvider refetchOnWindowFocus={false}>
             <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
         </SessionProvider>
     );

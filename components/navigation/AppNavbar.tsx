@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import { useQuery } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -19,7 +20,6 @@ import {
 } from 'lucide-react';
 
 interface AppNavbarProps {
-    isAdmin?: boolean;
     minimal?: boolean;
 }
 
@@ -28,7 +28,7 @@ const NAV_ITEMS = [
     { href: '/profile/private', labelKey: 'profile', icon: UserCircle },
 ] as const;
 
-export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavbarProps) {
+export default function AppNavbar({ minimal = false }: AppNavbarProps) {
     const { data: session, status } = useSession();
     const locale = useLocale();
     const pathname = usePathname();
@@ -36,9 +36,23 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
     const tBeta = useTranslations('BetaBanner');
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
-    const [unreadMessages, setUnreadMessages] = useState(0);
     const [betaBannerDismissed, setBetaBannerDismissed] = useState(true);
     const [avatarError, setAvatarError] = useState(false);
+
+    // Admin status comes directly from the JWT — no extra API call needed
+    const isAdmin = session?.user?.isAdmin ?? false;
+
+    // Unread message count — React Query deduplicates and caches across all navbar instances
+    const { data: messagesData } = useQuery({
+        queryKey: ['unreadMessages'],
+        queryFn: async () => {
+            const res = await fetch('/api/candidate/messages?page=1&limit=1');
+            return res.ok ? res.json() : { unreadCount: 0 };
+        },
+        enabled: status === 'authenticated',
+        staleTime: 60 * 1000,
+    });
+    const unreadMessages = messagesData?.unreadCount ?? 0;
 
     useEffect(() => {
         setBetaBannerDismissed(localStorage.getItem('beta-banner-dismissed') === '1');
@@ -48,15 +62,6 @@ export default function AppNavbar({ isAdmin = false, minimal = false }: AppNavba
         localStorage.setItem('beta-banner-dismissed', '1');
         setBetaBannerDismissed(true);
     };
-
-    useEffect(() => {
-        if (status === 'authenticated') {
-            fetch('/api/candidate/messages?page=1&limit=1')
-                .then(res => res.json())
-                .then(data => setUnreadMessages(data.unreadCount ?? 0))
-                .catch(() => { });
-        }
-    }, [status]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
