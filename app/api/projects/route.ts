@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
             id: proj.id,
             title: proj.title,
             roleType: proj.roleType,
+
             updatedAt: proj.updatedAt,
             status: proj.status,
             history: [],
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
             id: sanitizedProject.id,
             title: sanitizedProject.title,
             roleType: sanitizedProject.roleType,
+
             updatedAt: sanitizedProject.updatedAt || Date.now(),
             status: sanitizedProject.status || 'draft',
             history: sanitizedProject.history || [],
@@ -87,6 +89,7 @@ export async function POST(request: NextRequest) {
             id: project.id,
             title: project.title,
             roleType: project.roleType,
+            detectedRoleType: project.detectedRoleType,
             updatedAt: project.updatedAt,
             status: project.status,
             history: project.history || [],

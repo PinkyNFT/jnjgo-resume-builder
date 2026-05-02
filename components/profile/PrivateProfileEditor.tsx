@@ -10,7 +10,7 @@ import {
 import { signOut } from 'next-auth/react';
 import { CandidatePrivateProfile } from '../../types';
 import { usePrivateProfile, useSavePrivateProfile } from '../../hooks/usePrivateProfile';
-import { useProjects, ProjectOption } from '../../hooks/useProjects';
+import { useProjects } from '../../hooks/useProjects';
 import { usePublicSlug } from '../../hooks/usePublicSlug';
 import { useProfileViews } from '../../hooks/useProfileViews';
 
@@ -802,7 +802,7 @@ export default function PrivateProfileEditor() {
             <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-6">
                 <div className="border border-red-200 rounded-2xl p-6 bg-red-50/50">
                     <div className="flex items-start gap-3 mb-4">
-                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
                             <Trash2 className="w-4 h-4 text-red-600" />
                         </div>
                         <div>
@@ -942,8 +942,8 @@ export default function PrivateProfileEditor() {
                             whileHover={!isSaving && (isDirty || !isPublished) ? { y: -1, boxShadow: '0 8px 25px -5px rgba(99,102,241,0.25)' } : {}}
                             whileTap={!isSaving && (isDirty || !isPublished) ? { scale: 0.97 } : {}}
                             className={`px-6 py-2.5 text-sm font-bold rounded-xl inline-flex items-center justify-center gap-2 transition-all ${!isDirty && isPublished
-                                    ? 'text-slate-400 bg-slate-100 border-2 border-slate-200 cursor-default'
-                                    : 'text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40'
+                                ? 'text-slate-400 bg-slate-100 border-2 border-slate-200 cursor-default'
+                                : 'text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40'
                                 }`}
                         >
                             {isSaving ? (

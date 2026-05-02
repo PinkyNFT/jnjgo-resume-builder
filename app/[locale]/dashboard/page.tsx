@@ -235,7 +235,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
       <div className="space-y-8 bg-white p-5 sm:p-8 md:p-10 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
         <div>
           <label className="block text-sm font-bold text-slate-700 mb-4 uppercase tracking-wide">{t('selectRole')}</label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => setRole('consultant')}
               className={`p-6 rounded-2xl border-2 text-left transition-all duration-200 ${role === 'consultant' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-4 ring-indigo-500/10 shadow-sm' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
@@ -249,6 +249,13 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
             >
               <div className="font-bold text-lg mb-1">{t('roleEngineer')}</div>
               <div className="text-xs text-indigo-600/80 font-medium">{t('roleEngineerDesc')}</div>
+            </button>
+            <button
+              onClick={() => setRole('general')}
+              className={`p-6 rounded-2xl border-2 text-left transition-all duration-200 ${role === 'general' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-4 ring-indigo-500/10 shadow-sm' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
+            >
+              <div className="font-bold text-lg mb-1">{t('roleGeneral')}</div>
+              <div className="text-xs text-indigo-600/80 font-medium">{t('roleGeneralDesc')}</div>
             </button>
           </div>
         </div>

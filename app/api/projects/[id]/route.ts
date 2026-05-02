@@ -46,6 +46,7 @@ export async function GET(
             id: project.id,
             title: project.title,
             roleType: project.roleType,
+
             updatedAt: project.updatedAt,
             status: project.status,
             history: project.history || [],
@@ -101,6 +102,7 @@ export async function PUT(
             {
                 title: sanitizedProject.title,
                 roleType: sanitizedProject.roleType,
+
                 updatedAt: sanitizedProject.updatedAt || Date.now(),
                 status: sanitizedProject.status,
                 history: sanitizedProject.history,
@@ -125,6 +127,7 @@ export async function PUT(
             id: project.id,
             title: project.title,
             roleType: project.roleType,
+
             updatedAt: project.updatedAt,
             status: project.status,
             history: project.history || [],

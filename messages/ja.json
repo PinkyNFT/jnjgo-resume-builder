@@ -90,7 +90,8 @@
 		"statAvgScore": "平均スコア",
 		"roleType": {
 			"consultant": "コンサルタント / PM",
-			"senior_engineer": "シニアエンジニア"
+			"senior_engineer": "シニアエンジニア",
+			"general": "自動検出"
 		},
 		"generatingTitle": "マスターレジュメを生成中",
 		"generatingDesc": "AIがあなたの経験を分析し、プロフェッショナルなストーリーを構築しています..."
@@ -129,6 +130,8 @@
 		"roleConsultantDesc": "戦略 / オペレーション / PM",
 		"roleEngineer": "シニアエンジニア / テックリード",
 		"roleEngineerDesc": "SWE / SRE / テックリード",
+		"roleGeneral": "その他 / 一般",
+		"roleGeneralDesc": "営業・マーケティング・HR・財務など",
 		"importTitle": "既存のレジュメをインポート (任意)",
 		"importDesc": "現在のレジュメのテキストをここに貼り付けてください。AIがタイムラインを抽出し、ギャップを即座に検出します。",
 		"importPlaceholder": "PDF/DOCXからテキストを貼り付けてください...",

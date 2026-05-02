@@ -90,7 +90,8 @@
 		"statAvgScore": "Avg. Score",
 		"roleType": {
 			"consultant": "CONSULTANT / PM",
-			"senior_engineer": "SENIOR ENGINEER"
+			"senior_engineer": "SENIOR ENGINEER",
+			"general": "AUTO-DETECT"
 		},
 		"generatingTitle": "Generating Your Master Resume",
 		"generatingDesc": "AI is analyzing your experience and structuring your professional story..."
@@ -129,6 +130,8 @@
 		"roleConsultantDesc": "Strategy / Operations / PM",
 		"roleEngineer": "Senior Engineer / Tech Lead",
 		"roleEngineerDesc": "SWE / SRE / Tech Lead",
+		"roleGeneral": "Other / General",
+		"roleGeneralDesc": "Marketing, Sales, HR, Finance & more",
 		"importTitle": "Import Existing Resume (Optional)",
 		"importDesc": "Paste your current resume text here. The AI will extract your timeline and find gaps immediately.",
 		"importPlaceholder": "Paste text from your PDF/DOCX here...",

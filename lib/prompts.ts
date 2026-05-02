@@ -55,9 +55,11 @@ TOTAL: Sum of above (max 15 points)`;
 TOTAL: Sum of above (max 15 points)`;
   }
   return `### GENERAL EVALUATION:
-- Technical competency appropriate to experience level (5 pts)
-- Project/initiative ownership (5 pts)
-- Impact and results orientation (5 pts)
+- Role Clarity & Positioning (3 pts): Is the candidate's professional function clearly communicated with a defined scope?
+- Cross-Functional Impact (3 pts): Does the resume show measurable deliverables and stakeholder collaboration?
+- Growth Trajectory (3 pts): Does the career progression demonstrate increasing scope, responsibility, or seniority?
+- Communication of Value (3 pts): Are achievements framed in terms of business or team impact, not just task completion?
+- Adaptability & Breadth (3 pts): Does the candidate show versatility across contexts, tools, or domains?
 TOTAL: Sum of above (max 15 points)`;
 }
 
@@ -72,13 +74,13 @@ export const getSystemInstruction = async (roleType: RoleType, importData?: Impo
     ? 'a consultant'
     : roleType === 'senior_engineer'
       ? 'an engineer'
-      : 'a professional';
+      : 'a professional in any field. IMPORTANT: Ask for their job title and industry in your very first question (e.g. "What is your current title and what industry do you work in?"). Once you know, adapt all follow-up questions to that specific domain — a marketer needs questions about campaigns and revenue impact; a sales professional needs questions about quotas and deals; an HR professional needs questions about hiring, retention, and initiatives. Frame every question around the language and concerns of their actual field';
 
   const roleContextJa = roleType === 'consultant'
     ? 'コンサルタント'
     : roleType === 'senior_engineer'
       ? 'エンジニア'
-      : 'プロフェッショナル';
+      : 'あらゆる職種のプロフェッショナル。重要：最初の質問で必ず役職と業界を確認してください（例：「現在の役職と業界を教えてください」）。それが分かったら、その職種に合わせた質問をしてください。マーケターにはキャンペーンや売上への影響を、営業職にはクォータや商談を、HR職には採用・定着・施策を中心に質問してください';
 
   const roleContext = isJa ? roleContextJa : roleContextEn;
 

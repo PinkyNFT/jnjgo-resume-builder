@@ -333,6 +333,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
         prevLoadingRef.current = isLoading;
     }, [isLoading]);
 
+
     // Handle sending messages
     const handleSend = async () => {
         if (!inputValue.trim() || isLoading) return;
@@ -371,7 +372,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
             const response = await sendMessageMutation.mutateAsync({
                 message: userMsg.text,
                 history: messages, // Use previous messages, not including this one
-                roleType,
+                roleType: effectiveRoleType,
                 importData,
                 initialData,
                 signal: controller.signal,
@@ -429,7 +430,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
         try {
             const hintText = await generateHintMutation.mutateAsync({
                 history: messages,
-                roleType,
+                roleType: effectiveRoleType,
                 importData,
                 initialData,
                 signal: controller.signal,
