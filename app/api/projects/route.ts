@@ -89,7 +89,6 @@ export async function POST(request: NextRequest) {
             id: project.id,
             title: project.title,
             roleType: project.roleType,
-            detectedRoleType: project.detectedRoleType,
             updatedAt: project.updatedAt,
             status: project.status,
             history: project.history || [],

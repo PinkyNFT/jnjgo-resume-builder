@@ -11,7 +11,15 @@
       "Bash(python3 -c ' *)",
       "Bash(node -e \"const d=require\\('d:/Projects/jnjgo-resume-builder/messages/en.json'\\); console.log\\(JSON.stringify\\({Terms:d.Terms, Privacy:d.Privacy}, null, 2\\)\\)\")",
       "Bash(node -e \"const d=require\\('d:/Projects/jnjgo-resume-builder/messages/ja.json'\\); console.log\\(JSON.stringify\\({Terms:d.Terms, Privacy:d.Privacy}, null, 2\\)\\)\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Projects\\\\jnjgo-resume-builder\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Sort-Object PSIsContainer -Descending, Name)",
+      "PowerShell(ls -Force \"d:\\\\Projects\\\\jnjgo-resume-builder\" | Where-Object { $_.Name -match \"^\\\\.\" -or $_.Name -in @\\(\"README.md\", \"CLAUDE.md\", \"jest.config\", \"vitest.config\", \"playwright.config\"\\) })",
+      "PowerShell(Get-ChildItem -Path \"d:\\\\Projects\\\\jnjgo-resume-builder\" -Directory | Where-Object { $_.Name -notlike \"node_modules\" -and $_.Name -notlike \".next\" -and $_.Name -notlike \".git\" } | Select-Object Name)",
+      "Bash(npm test *)",
+      "Bash(git check-ignore *)",
+      "Bash(node -e \"const t = require\\('./messages/en.json'\\); const keys = ['RoleSelect','Dashboard','Interview','SetupView','Export','HowToTest','Recruiter','Admin','Landing']; keys.forEach\\(k => { if\\(t[k]\\) console.log\\('=== '+k+' ==='\\); if\\(t[k]\\) console.log\\(JSON.stringify\\(t[k], null, 2\\)\\); }\\);\")"
     ]
   }
 }

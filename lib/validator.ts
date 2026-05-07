@@ -51,6 +51,10 @@ export function isValidEmail(email: string): boolean {
  */
 export function isValidPhone(phone: string): boolean {
     // Allow: +1234567890, 123-456-7890, (123) 456-7890, etc.
+    // Require at least 7 digits total to reject short non-phone strings like '123'
+    const stripped = phone.replace(/[\s\-\.\(\)]/g, '');
+    const digitsOnly = stripped.replace(/[^\d]/g, '');
+    if (digitsOnly.length < 7) return false;
     const phoneRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
     return phoneRegex.test(phone.replace(/\s/g, ''));
 }
@@ -87,8 +91,10 @@ export function isValidObjectId(id: string): boolean {
 export function sanitizeString(input: string): string {
     return input
         .trim()
-        .replace(/[<>]/g, '') // Remove potential HTML tags
-        .replace(/[\x00-\x1F\x7F]/g, ''); // Remove control characters
+        .replace(/[<>]/g, '') // Remove HTML angle brackets
+        .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+        .replace(/\s+/g, ' ') // Normalize multiple spaces to single space
+        .trim();
 }
 
 /**

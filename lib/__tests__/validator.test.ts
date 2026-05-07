@@ -266,7 +266,7 @@ describe('Sanitization', () => {
     describe('sanitizeString', () => {
         it('should remove dangerous characters', () => {
             expect(sanitizeString('  hello  ')).toBe('hello');
-            expect(sanitizeString('test<script>alert("xss")</script>')).toBe('testsalert("xss")/script');
+            expect(sanitizeString('test<script>alert("xss")</script>')).toBe('testscriptalert("xss")/script');
             expect(sanitizeString('normal text')).toBe('normal text');
         });
     });

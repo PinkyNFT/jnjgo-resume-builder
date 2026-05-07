@@ -372,7 +372,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
             const response = await sendMessageMutation.mutateAsync({
                 message: userMsg.text,
                 history: messages, // Use previous messages, not including this one
-                roleType: effectiveRoleType,
+                roleType: roleType,
                 importData,
                 initialData,
                 signal: controller.signal,
@@ -430,7 +430,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
         try {
             const hintText = await generateHintMutation.mutateAsync({
                 history: messages,
-                roleType: effectiveRoleType,
+                roleType: roleType,
                 importData,
                 initialData,
                 signal: controller.signal,
