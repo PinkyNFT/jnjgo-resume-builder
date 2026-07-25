@@ -111,9 +111,11 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                         label: work.company || 'Unknown',
                         startYear: parsed.startYear,
                         endYear: parsed.endYear,
+                        startMonth: parsed.startMonth,
+                        endMonth: parsed.endMonth,
                     };
                 })
-                .filter((item): item is TimelineChartItem => item !== null);
+                .filter((item): item is NonNullable<typeof item> => item !== null);
             return insertGapsInTimeline(items);
         }
         // Fallback: use timeline entries with type 'work'
@@ -129,9 +131,11 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                     label: entry.organization || 'Unknown',
                     startYear: parsed.startYear,
                     endYear: parsed.endYear,
+                    startMonth: parsed.startMonth,
+                    endMonth: parsed.endMonth,
                 };
             })
-            .filter((item): item is TimelineChartItem => item !== null);
+            .filter((item): item is NonNullable<typeof item> => item !== null);
         return insertGapsInTimeline(items);
     }, [data.workExperience, data.timeline]);
 
@@ -148,9 +152,11 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                     label: st.skillName || '',
                     startYear: parsed.startYear,
                     endYear: parsed.endYear,
+                    startMonth: parsed.startMonth,
+                    endMonth: parsed.endMonth,
                 };
             })
-            .filter((item): item is TimelineChartItem => item !== null);
+            .filter((item): item is NonNullable<typeof item> => item !== null);
         return insertGapsInTimeline(items);
     }, [data.skillTimelines]);
 
@@ -205,17 +211,17 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
     /* ── Full A4-style resume preview ── */
     const FullResume = (
         <div className="bg-white border border-slate-200 rounded-xl shadow-inner mt-4 overflow-hidden">
-            <div className="p-6 sm:p-8 text-slate-900 font-sans text-[9.5pt] leading-relaxed max-w-none">
+            <div className="p-6 sm:p-8 text-slate-900 resume-doc text-[9.5pt] leading-relaxed max-w-none">
                 {/* Header */}
                 <div className="border-b-2 border-slate-900 pb-4 mb-6">
                     <div className="mb-3">
                         {data.fullName && (
-                            <h1 className="text-[28pt] font-bold tracking-tight text-slate-900 mb-2 leading-none">
+                            <h1 className="text-[24pt] font-bold tracking-tight text-slate-900 mb-2 leading-none">
                                 {data.fullName}
                             </h1>
                         )}
                         {data.currentRole && (
-                            <div className="text-[11pt] text-slate-700 leading-tight mb-1">
+                            <div className="text-[11pt] text-slate-700 leading-tight mb-1 whitespace-pre-line">
                                 {data.currentRole}
                             </div>
                         )}
@@ -226,28 +232,27 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                         )}
                     </div>
                     <div className="text-[9pt] text-slate-700 leading-tight flex gap-2 flex-wrap items-center">
-                        {data.contactInfo?.email && (
-                            <>
-                                <span>Email: {data.contactInfo.email}</span>
-                                <span className="text-slate-400">|</span>
-                            </>
-                        )}
-                        {data.contactInfo?.phone && (
-                            <>
-                                <span>Phone: {data.contactInfo.phone}</span>
-                                <span className="text-slate-400">|</span>
-                            </>
-                        )}
-                        {data.contactInfo?.location && (
-                            <span>{data.contactInfo.location}</span>
-                        )}
+                        {(() => {
+                            // Render only the present fields, joined by separators (no trailing "|").
+                            const parts: React.ReactNode[] = [];
+                            if (data.contactInfo?.email) parts.push(<span key="email">Email: {data.contactInfo.email}</span>);
+                            if (data.contactInfo?.phone) parts.push(<span key="phone">Phone: {data.contactInfo.phone}</span>);
+                            if (data.contactInfo?.location) parts.push(<span key="location">{data.contactInfo.location}</span>);
+                            if (data.contactInfo?.linkedin) parts.push(<span key="linkedin">LinkedIn: {data.contactInfo.linkedin}</span>);
+                            return parts.map((node, i) => (
+                                <React.Fragment key={i}>
+                                    {i > 0 && <span className="text-slate-400">|</span>}
+                                    {node}
+                                </React.Fragment>
+                            ));
+                        })()}
                     </div>
                 </div>
 
                 {/* Professional Summary */}
                 {data.careerSummary && (
                     <div className="mb-7">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-wide uppercase">
                             Professional Summary
                         </h2>
                         <div className="text-[9.5pt] text-slate-800 leading-relaxed whitespace-pre-line">
@@ -259,7 +264,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {/* Employer Timeline */}
                 {employerTimelineData.length > 0 && (
                     <div className="mb-7">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-wide uppercase">
                             Employer Timeline
                         </h2>
                         <TimelineChart
@@ -272,7 +277,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {/* Skill Timeline */}
                 {skillTimelineData.length > 0 && (
                     <div className="mb-7">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-wide uppercase">
                             Skill Timeline
                         </h2>
                         <TimelineChart
@@ -285,7 +290,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {/* Career Summary / Timeline */}
                 {data.timeline && data.timeline.length > 0 && (
                     <div className="mb-7">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-wide uppercase">
                             Career Summary
                         </h2>
                         <div className="space-y-2 text-[9.5pt] mb-4">
@@ -354,7 +359,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {/* Work Experience */}
                 {data.workExperience && data.workExperience.length > 0 && (
                     <div className="mb-8">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-wide uppercase">
                             Work Experience
                         </h2>
                         <div className="space-y-8">
@@ -396,7 +401,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {/* Education */}
                 {data.education && data.education.length > 0 && (
                     <div className="mb-8">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-wide uppercase">
                             Education
                         </h2>
                         <div className="space-y-4">
@@ -427,7 +432,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {/* Education from timeline (fallback when education array is empty) */}
                 {(!data.education || data.education.length === 0) && data.timeline?.some(t => t.type === 'education') && (
                     <div className="mb-8">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-wide uppercase">
                             Education
                         </h2>
                         <div className="space-y-4">
@@ -455,7 +460,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {/* Project Portfolio */}
                 {data.projectPortfolio && (
                     <div className="mb-8">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-wide uppercase">
                             Project Portfolio
                         </h2>
 
@@ -538,12 +543,12 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {/* Skills */}
                 {data.skills && data.skills.length > 0 && (
                     <div className="mb-8">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-wide uppercase">
                             Skills
                         </h2>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5">
                             {data.skills.map((skill, i) => (
-                                <span key={i} className="px-3 py-1.5 bg-slate-100 text-slate-800 text-[9pt] rounded-lg border border-slate-200">
+                                <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-800 text-[8.5pt] rounded border border-slate-200">
                                     {skill}
                                 </span>
                             ))}
@@ -554,7 +559,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {/* Certifications */}
                 {data.certifications && data.certifications.length > 0 && (
                     <div className="mb-4">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-wide uppercase">
                             Certifications
                         </h2>
                         <div className="space-y-2">

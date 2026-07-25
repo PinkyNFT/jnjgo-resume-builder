@@ -7,6 +7,7 @@ import { ResumeData, ResumeVersion, Project, EvaluationResult } from '../types';
 import { evaluateResume } from '../services/geminiService';
 import { saveProject, createVersion } from '../services/storageService';
 import { VersionHistory } from './VersionHistory';
+import { ResumePhoto } from './ResumePhoto';
 import { Printer, Save, BarChart3, AlertTriangle, RefreshCcw, ArrowLeft, CheckCircle2, MessageSquare, Eye, X, RotateCcw, Share2 } from 'lucide-react';
 import { toast } from '../lib/toast';
 import { TimelineChart, TimelineChartItem } from './TimelineChart';
@@ -51,6 +52,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
     const [activeTab, setActiveTab] = useState<'preview' | 'edit'>('preview');
     const [showResumeInterviewConfirm, setShowResumeInterviewConfirm] = useState(false);
     const [previewVersion, setPreviewVersion] = useState<ResumeVersion | null>(null);
+    const [isExporting, setIsExporting] = useState(false);
 
     // When previewing a version, show its data read-only; otherwise show the live data
     const displayData = previewVersion ? previewVersion.data : data;
@@ -69,10 +71,12 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                         id: item.id,
                         label: item.organization,
                         startYear: parsed.startYear,
-                        endYear: parsed.endYear
+                        endYear: parsed.endYear,
+                        startMonth: parsed.startMonth,
+                        endMonth: parsed.endMonth
                     };
                 })
-                .filter((item): item is TimelineChartItem => item !== null);
+                .filter((item): item is NonNullable<typeof item> => item !== null);
 
             // Insert gaps
             return insertGapsInTimeline(items);
@@ -86,10 +90,12 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     id: work.id,
                     label: work.company,
                     startYear: parsed.startYear,
-                    endYear: parsed.endYear
+                    endYear: parsed.endYear,
+                    startMonth: parsed.startMonth,
+                    endMonth: parsed.endMonth
                 };
             })
-            .filter((item): item is TimelineChartItem => item !== null);
+            .filter((item): item is NonNullable<typeof item> => item !== null);
 
         // Insert gaps
         return insertGapsInTimeline(items);
@@ -109,10 +115,12 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     id: skill.id,
                     label: skill.skillName,
                     startYear: parsed.startYear,
-                    endYear: parsed.endYear
+                    endYear: parsed.endYear,
+                    startMonth: parsed.startMonth,
+                    endMonth: parsed.endMonth
                 };
             })
-            .filter((item): item is TimelineChartItem => item !== null);
+            .filter((item): item is NonNullable<typeof item> => item !== null);
 
         // Insert gaps
         return insertGapsInTimeline(items);
@@ -236,7 +244,74 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
     };
 
     const handlePrint = () => {
+        // The browser uses document.title as the suggested "Save as PDF" filename.
+        // Swap it to "Resume <name>" for the duration of the print, then restore.
+        const sanitize = (s: string) => s.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+        const original = document.title;
+        const name = sanitize(displayData.fullName || '');
+        document.title = name ? `Resume ${name}` : 'Resume';
+        const restore = () => { document.title = original; };
+        window.addEventListener('afterprint', restore, { once: true });
         window.print();
+        // Fallback restore in case afterprint doesn't fire (some browsers).
+        setTimeout(restore, 1000);
+    };
+
+    const sanitizeFileName = (s: string) => s.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+
+    // Export a guaranteed text-layer PDF via the server (headless Chromium).
+    // Falls back to the browser print dialog if the server export fails.
+    const handleExportPdf = async () => {
+        const fileName = sanitizeFileName(`Resume ${displayData.fullName || ''}`) || 'Resume';
+        setIsExporting(true);
+        try {
+            // Capture the rendered resume, not the edit form. Switch to the preview
+            // rendering first so inputs become plain text in the snapshot.
+            if (activeTab === 'edit') {
+                setActiveTab('preview');
+                await new Promise(r => setTimeout(r, 80));
+            }
+
+            const preview = document.getElementById('resume-preview');
+            if (!preview) { handlePrint(); return; }
+
+            // Clone and strip editor-only affordances (e.g. the "Add photo" button)
+            // so they never appear in the exported PDF.
+            const exportNode = preview.cloneNode(true) as HTMLElement;
+            exportNode.querySelectorAll('[data-export-exclude]').forEach(el => el.remove());
+
+            const res = await fetch('/api/export/pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    headHtml: document.head.innerHTML,
+                    bodyHtml: exportNode.outerHTML,
+                    origin: window.location.origin,
+                    fileName,
+                }),
+            });
+
+            if (!res.ok) {
+                const msg = (await res.json().catch(() => ({}))).error || 'Export failed';
+                throw new Error(msg);
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${fileName}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('PDF export failed, falling back to print dialog:', e);
+            toast.error('PDF export failed — opening the print dialog instead.');
+            handlePrint();
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     // --- Render Helpers ---
@@ -479,8 +554,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                             <Save className="w-4 h-4" /> {t('saveAsComplete')}
                         </button>
 
-                        <button onClick={handlePrint} className="w-full py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98]">
-                            <Printer className="w-4 h-4" /> {t('exportPDF')}
+                        <button onClick={handleExportPdf} disabled={isExporting} className="w-full py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed">
+                            {isExporting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />} {t('exportPDF')}
                         </button>
 
                         {onResumeInterview && (
@@ -599,46 +674,63 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                 )}
                 <div
                     id="resume-preview"
-                    className={`bg-white shadow-2xl min-h-[297mm] w-[210mm] mx-auto p-[15mm] text-slate-900 font-sans text-[9.5pt] leading-relaxed transition-all duration-300 ${isPreviewMode ? 'ring-4 ring-indigo-400/30' : activeTab === 'edit' ? 'ring-4 ring-indigo-500/10' : ''}`}
+                    className={`bg-white shadow-2xl min-h-[297mm] w-[210mm] mx-auto p-[15mm] text-slate-900 resume-doc text-[9.5pt] leading-relaxed transition-all duration-300 ${isPreviewMode ? 'ring-4 ring-indigo-400/30' : activeTab === 'edit' ? 'ring-4 ring-indigo-500/10' : ''}`}
                 >
 
                     {/* Header - Professional Layout */}
-                    <div className="border-b-2 border-slate-900 pb-4 mb-6">
-                        <div className="mb-3">
-                            <h1 className="text-[28pt] font-bold tracking-tight text-slate-900 mb-2 leading-none">
-                                {renderEditableText(displayData.fullName, val => setData({ ...data, fullName: val }), false, "font-sans", "")}
-                            </h1>
-                            <div className="text-[11pt] text-slate-700 leading-tight mb-1">
-                                {renderEditableText(displayData.currentRole, val => setData({ ...data, currentRole: val }), false, "", "")}
-                            </div>
-                            {displayData.contactInfo.department && (
-                                <div className="text-[10pt] italic text-slate-600">
-                                    {renderEditableText(displayData.contactInfo.department || "", val => setData({ ...data, contactInfo: { ...data.contactInfo, department: val } }), false, "", "")}
+                    <div className="border-b-2 border-slate-900 pb-3 mb-4">
+                        <div className="flex justify-between items-start gap-6">
+                            <div className="flex-1 min-w-0">
+                                <div className="mb-3">
+                                    <h1 className="text-[24pt] font-bold tracking-tight text-slate-900 mb-2 leading-none">
+                                        {renderEditableText(displayData.fullName, val => setData({ ...data, fullName: val }), false, "font-sans", "")}
+                                    </h1>
+                                    <div className="text-[11pt] text-slate-700 leading-tight mb-1">
+                                        {renderEditableText(displayData.currentRole, val => setData({ ...data, currentRole: val }), true, "", "")}
+                                    </div>
+                                    {displayData.contactInfo.department && (
+                                        <div className="text-[10pt] italic text-slate-600">
+                                            {renderEditableText(displayData.contactInfo.department || "", val => setData({ ...data, contactInfo: { ...data.contactInfo, department: val } }), false, "", "")}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-                        <div className="text-[9pt] text-slate-700 leading-tight flex gap-2 flex-wrap items-center">
-                            {displayData.contactInfo.email && (
-                                <>
-                                    <span className="flex items-center gap-1">Email: {renderEditableText(displayData.contactInfo.email, val => setData({ ...data, contactInfo: { ...data.contactInfo, email: val } }), false, "inline-block", "")}</span>
-                                    <span className="text-slate-400">|</span>
-                                </>
-                            )}
-                            {displayData.contactInfo.phone && (
-                                <>
-                                    <span className="flex items-center gap-1">Phone: {renderEditableText(displayData.contactInfo.phone, val => setData({ ...data, contactInfo: { ...data.contactInfo, phone: val } }), false, "inline-block", "")}</span>
-                                    <span className="text-slate-400">|</span>
-                                </>
-                            )}
-                            {displayData.contactInfo.location && (
-                                <span>{renderEditableText(displayData.contactInfo.location, val => setData({ ...data, contactInfo: { ...data.contactInfo, location: val } }), false, "inline-block", "")}</span>
-                            )}
+                                <div className="text-[9pt] text-slate-700 leading-tight flex gap-2 flex-wrap items-center">
+                                    {(() => {
+                                        // Render only the present fields, joined by separators (no trailing "|").
+                                        const parts: React.ReactNode[] = [];
+                                        if (displayData.contactInfo.email) parts.push(
+                                            <span key="email" className="flex items-center gap-1">Email: {renderEditableText(displayData.contactInfo.email, val => setData({ ...data, contactInfo: { ...data.contactInfo, email: val } }), false, "inline-block", "")}</span>
+                                        );
+                                        if (displayData.contactInfo.phone) parts.push(
+                                            <span key="phone" className="flex items-center gap-1">Phone: {renderEditableText(displayData.contactInfo.phone, val => setData({ ...data, contactInfo: { ...data.contactInfo, phone: val } }), false, "inline-block", "")}</span>
+                                        );
+                                        if (displayData.contactInfo.location) parts.push(
+                                            <span key="location">{renderEditableText(displayData.contactInfo.location, val => setData({ ...data, contactInfo: { ...data.contactInfo, location: val } }), false, "inline-block", "")}</span>
+                                        );
+                                        if (displayData.contactInfo.linkedin) parts.push(
+                                            <span key="linkedin" className="flex items-center gap-1">LinkedIn: {renderEditableText(displayData.contactInfo.linkedin, val => setData({ ...data, contactInfo: { ...data.contactInfo, linkedin: val } }), false, "inline-block", "")}</span>
+                                        );
+                                        return parts.map((node, i) => (
+                                            <React.Fragment key={i}>
+                                                {i > 0 && <span className="text-slate-400">|</span>}
+                                                {node}
+                                            </React.Fragment>
+                                        ));
+                                    })()}
+                                </div>
+                            </div>
+                            <ResumePhoto
+                                photo={displayData.photo}
+                                editable={activeTab === 'edit' && !isPreviewMode}
+                                onChange={(next) => setData({ ...data, photo: next })}
+                                onAddRequest={!isPreviewMode ? () => setActiveTab('edit') : undefined}
+                            />
                         </div>
                     </div>
 
                     {/* Professional Summary */}
-                    <div className="mb-7">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">{t('professionalSummary')}</h2>
+                    <div className="mb-5">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-2 pb-1 tracking-wide uppercase">{t('professionalSummary')}</h2>
                         <div className="text-[9.5pt] text-slate-800 leading-relaxed">
                             {renderEditableText(displayData.careerSummary, val => setData({ ...data, careerSummary: val }), true, "", t('professionalSummaryPlaceholder'))}
                         </div>
@@ -646,8 +738,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
                     {/* Employer Timeline Visualization - Positioned at top */}
                     {employerTimelineData.length > 0 && (
-                        <div className="mb-7 break-inside-avoid">
-                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">
+                        <div className="mb-5 break-inside-avoid">
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-2 pb-1 tracking-wide uppercase">
                                 {t('employerTimeline')}
                             </h2>
                             <TimelineChart
@@ -661,8 +753,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
                     {/* Skill Timeline Visualization - Positioned at top */}
                     {skillTimelineData.length > 0 && (
-                        <div className="mb-7 break-inside-avoid">
-                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">
+                        <div className="mb-5 break-inside-avoid">
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-2 pb-1 tracking-wide uppercase">
                                 {t('skillTimeline')}
                             </h2>
                             <TimelineChart
@@ -675,8 +767,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     )}
 
                     {/* Career Summary Timeline */}
-                    <div className="mb-7">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-tight uppercase">{t('careerSummary')}</h2>
+                    <div className="mb-5">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-2 pb-1 tracking-wide uppercase">{t('careerSummary')}</h2>
                         <div className="space-y-2 text-[9.5pt] mb-4">
                             {displayData.timeline && displayData.timeline.length > 0 ? (
                                 displayData.timeline.filter(t => t.type === 'work').map((item, i) => (
@@ -781,10 +873,10 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     </div>
 
                     {/* Work Experience */}
-                    <div className="mb-8">
-                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('workExperience')}</h2>
+                    <div className="mb-5">
+                        <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-wide uppercase">{t('workExperience')}</h2>
 
-                        <div className="space-y-8">
+                        <div className="space-y-5">
                             {displayData.workExperience && displayData.workExperience.length > 0 ? (
                                 displayData.workExperience.map((work, i) => (
                                     <div key={work.id} className="break-inside-avoid">
@@ -987,8 +1079,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
                     {/* Education Section */}
                     {displayData.education && displayData.education.length > 0 && (
-                        <div className="mb-8">
-                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('education')}</h2>
+                        <div className="mb-5">
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-wide uppercase">{t('education')}</h2>
                             <div className="space-y-4">
                                 {displayData.education.map((edu, i) => (
                                     <div key={edu.id} className="break-inside-avoid">
@@ -1036,18 +1128,18 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
                     {/* Skills Section */}
                     {displayData.skills && displayData.skills.length > 0 && (
-                        <div className="mb-8">
-                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('skills')}</h2>
-                            <div className="flex flex-wrap gap-2">
+                        <div className="mb-5">
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-wide uppercase">{t('skills')}</h2>
+                            <div className="flex flex-wrap gap-1.5">
                                 {displayData.skills.map((skill, i) => (
                                     <div key={i} className="inline-flex items-center">
                                         {(activeTab === 'preview' || isPreviewMode) ? (
-                                            <span className="px-3 py-1.5 bg-slate-100 text-slate-800 text-[9pt] rounded-lg border border-slate-200">
+                                            <span className="px-2 py-0.5 bg-slate-100 text-slate-800 text-[8.5pt] rounded border border-slate-200">
                                                 {skill}
                                             </span>
                                         ) : (
                                             <input
-                                                className="px-3 py-1.5 border border-indigo-200 bg-indigo-50/30 rounded-lg text-[9pt] focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-300 text-slate-800 transition-all duration-200"
+                                                className="px-2 py-0.5 border border-indigo-200 bg-indigo-50/30 rounded text-[8.5pt] focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-300 text-slate-800 transition-all duration-200"
                                                 value={skill}
                                                 onChange={(e) => {
                                                     const newSkills = [...(data.skills || [])];
@@ -1065,8 +1157,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
 
                     {/* Certifications Section */}
                     {displayData.certifications && displayData.certifications.length > 0 && (
-                        <div className="mb-8">
-                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-tight uppercase">{t('certifications')}</h2>
+                        <div className="mb-5">
+                            <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-wide uppercase">{t('certifications')}</h2>
                             <div className="space-y-2">
                                 {displayData.certifications.map((cert, i) => (
                                     <div key={i} className="flex gap-2 text-[9.5pt] text-slate-800">

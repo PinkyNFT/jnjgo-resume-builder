@@ -215,3 +215,31 @@ export const getParseResumePrompt = async (conversationText: string, importedTex
     GAP_THRESHOLD_DAYS: String(gapDays),
   });
 };
+
+// ===== PROFESSIONAL HEADSHOT (Image generation) =====
+
+/**
+ * Instruction prompt for the image model ("Nano Banana") to turn a user's photo
+ * into a professional business headshot WITHOUT changing the face.
+ *
+ * This is an instruction to the image model — it produces no visible text in the
+ * output image, so it is intentionally English-only and needs no i18n.
+ *
+ * Structure follows Google's official Gemini image-editing guidance ("change only
+ * X, keep everything else exactly the same") plus community face-consistency
+ * practice: lead with the identity lock, then enumerate the exact features to
+ * preserve. The model reinterprets rather than hard-locks faces, so the UI always
+ * keeps the original and offers regenerate/revert.
+ */
+export const getProfessionalHeadshotPrompt = (): string =>
+  `Using the provided photo, create a professional business headshot of the exact same person.
+
+CRITICAL — PRESERVE IDENTITY: Use the face, skin tone, facial features, and hair of the person in the uploaded photo exactly as shown. Keep their exact facial structure, face shape, facial proportions, eyes, nose, mouth, jawline, natural skin texture, and natural expression. Do NOT alter, beautify, slim, smooth, reshape, or retouch the face in any way. Do not change their age, gender, ethnicity, weight, or identity. It must remain unmistakably the same real person.
+
+Change ONLY the following, and keep everything about the face and head exactly the same:
+- Attire: dress the person in clean, well-fitted professional business attire (e.g. a dark tailored blazer over a crisp collared shirt) suitable for a corporate resume.
+- Background: replace the background with a clean, evenly lit, neutral studio backdrop (light gray or soft white).
+- Lighting: apply soft, flattering, professional studio lighting (soft key light with gentle fill) while keeping skin tones natural and true to the original.
+- Framing: a head-and-shoulders portrait in a square 1:1 aspect ratio, subject centered, facing the camera.
+
+Output a single photorealistic, high-resolution, square (1:1) headshot. Do not add any text, logos, watermarks, borders, or graphic elements.`;

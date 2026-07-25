@@ -101,7 +101,7 @@ export async function POST(req: Request) {
         const updatedProfile = await RecruiterProfileModel.findOneAndUpdate(
             { userId },
             { $set: data },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
+            { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
         );
 
         const serialized = {

@@ -4,6 +4,10 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
+  // Keep native/binary server-only packages external so the compiler doesn't bundle them:
+  // - pdf-parse v2 -> pdfjs-dist + native @napi-rs/canvas (resume import)
+  // - puppeteer-core + @sparticuz/chromium (server-side text-PDF export)
+  serverExternalPackages: ['pdf-parse', '@napi-rs/canvas', 'puppeteer-core', '@sparticuz/chromium'],
   env: {
     NEXT_PUBLIC_API_KEY: process.env.NEXT_PUBLIC_API_KEY,
   },

@@ -183,6 +183,7 @@ export const createNewProject = (roleType: RoleType, importData?: ImportData, pr
             location: profile.location,
             linkedin: profile.linkedin
         };
+        if (profile.photo) initialData.photo = profile.photo;
     }
 
     return {

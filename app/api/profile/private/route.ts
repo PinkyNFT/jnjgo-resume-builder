@@ -70,7 +70,7 @@ async function handleSaveOrUpdate(req: Request) {
         const updatedProfile = await CandidatePrivateProfileModel.findOneAndUpdate(
             { userId },
             { $set: data },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
+            { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
         );
 
         // FEAT C: Guarantee a permanent Public Page slug if published (for link injection)

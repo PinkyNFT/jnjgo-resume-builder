@@ -3,6 +3,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { Message, ResumeData, ImportData } from '@/types';
 import { GEMINI_MODEL } from '@/config/models';
 import { getParseResumePrompt } from '@/lib/prompts';
+import { parsePeriod } from '@/utils/dateParser';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 import { callWithRetry } from '@/lib/gemini-client';
@@ -229,6 +230,28 @@ export async function POST(request: NextRequest) {
                         projectCount: '',
                         typicalDuration: ''
                     };
+                }
+
+                // Default: surface the current employer in the headline (currentRole),
+                // e.g. "Senior Regional TAB Partner at Deloitte SEA" (JP: "… ／ Deloitte SEA").
+                // This is just a sensible default — the field stays fully editable.
+                const employerCandidates = (data.workExperience && data.workExperience.length
+                    ? data.workExperience.map(w => ({ name: w.company, parsed: parsePeriod(w.period) }))
+                    : data.timeline.filter(t => t.type === 'work').map(t => ({ name: t.organization, parsed: parsePeriod(t.period) }))
+                ).filter((c): c is { name: string; parsed: NonNullable<ReturnType<typeof parsePeriod>> } => !!c.name && !!c.parsed);
+
+                if (employerCandidates.length && data.currentRole) {
+                    const ongoing = employerCandidates.filter(c => c.parsed.isOngoing);
+                    const pool = ongoing.length ? ongoing : employerCandidates;
+                    pool.sort((a, b) => b.parsed.startYear - a.parsed.startYear);
+                    const employer = pool[0].name;
+
+                    if (employer && !data.currentRole.toLowerCase().includes(employer.toLowerCase())) {
+                        const connector = locale === 'ja' ? ' ／ ' : ' at ';
+                        const lines = data.currentRole.split('\n');
+                        lines[0] = `${lines[0].trim()}${connector}${employer}`;
+                        data.currentRole = lines.join('\n');
+                    }
                 }
 
                 // Additional gap detection from timeline with auto-generation of reasons

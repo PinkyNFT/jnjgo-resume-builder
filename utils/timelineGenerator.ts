@@ -1,5 +1,5 @@
 import { WorkExperience, SkillTimeline } from '../types';
-import { parsePeriod } from './dateParser';
+import { parsePeriod, toStartFraction, toEndFraction } from './dateParser';
 
 /**
  * Timeline generation utilities for converting work experience data
@@ -320,22 +320,19 @@ export function validateSkillTimelines(timelines: SkillTimeline[]): {
  * @param minGapYears - Minimum gap in years to be considered significant (default: 0.5 years)
  * @returns Array with both original items and gap items, sorted chronologically
  */
-export function insertGapsInTimeline<T extends { id: string; startYear: number; endYear: number | null; label: string }>(
+export function insertGapsInTimeline<T extends { id: string; startYear: number; endYear: number | null; label: string; startMonth?: number; endMonth?: number }>(
     items: T[],
     minGapYears: number = 0.5
 ): Array<T | (T & { isGap: boolean })> {
     if (items.length === 0) return [];
 
-    const currentYear = new Date().getFullYear();
-
-    // Sort items by start year (earliest first)
-    const sorted = [...items].sort((a, b) => a.startYear - b.startYear);
+    // Sort items by month-accurate start (earliest first)
+    const sorted = [...items].sort((a, b) => toStartFraction(a.startYear, a.startMonth) - toStartFraction(b.startYear, b.startMonth));
 
     const result: Array<T | (T & { isGap: boolean })> = [];
 
     for (let i = 0; i < sorted.length; i++) {
         const current = sorted[i];
-        const currentEnd = current.endYear || currentYear;
 
         // Add the current item
         result.push(current);
@@ -343,17 +340,25 @@ export function insertGapsInTimeline<T extends { id: string; startYear: number; 
         // Check if there's a next item to compare with
         if (i < sorted.length - 1) {
             const next = sorted[i + 1];
-            const gapStart = currentEnd;
-            const gapEnd = next.startYear;
-            const gapDuration = gapEnd - gapStart;
 
-            // If there's a significant gap, insert a gap item
+            // Ongoing positions have no trailing gap.
+            if (current.endYear == null) continue;
+
+            // Compare month-accurate end-of-current vs start-of-next
+            const gapStartFrac = toEndFraction(current.endYear, current.endMonth);
+            const gapEndFrac = toStartFraction(next.startYear, next.startMonth);
+            const gapDuration = gapEndFrac - gapStartFrac;
+
+            // If there's a significant gap, insert a gap item that spans the
+            // actual months between the two positions.
             if (gapDuration >= minGapYears) {
                 const gapItem = {
                     id: `gap-${current.id}-${next.id}`,
                     label: 'Gap',
-                    startYear: gapStart,
-                    endYear: gapEnd,
+                    startYear: current.endYear,
+                    endYear: next.startYear,
+                    startMonth: current.endMonth,
+                    endMonth: next.startMonth,
                     isGap: true
                 } as T & { isGap: boolean };
 

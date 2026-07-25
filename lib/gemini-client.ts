@@ -34,15 +34,26 @@ export async function callWithRetry<T>(fn: () => Promise<T>, context = 'gemini')
             return await fn();
         } catch (error) {
             lastError = error;
-            if (!isRetryable(error) || attempt === MAX_RETRIES - 1) break;
+            const message = error instanceof Error ? error.message : String(error);
+
+            // Non-retryable errors (e.g. 403 PERMISSION_DENIED) fail fast — retrying won't help.
+            if (!isRetryable(error)) {
+                console.error(`[${context}] Non-retryable error on attempt ${attempt + 1}/${MAX_RETRIES}:`, message);
+                break;
+            }
+
+            // Retryable, but out of attempts.
+            if (attempt === MAX_RETRIES - 1) {
+                console.error(`[${context}] Failed after ${MAX_RETRIES} attempt(s):`, message);
+                break;
+            }
 
             const jitter = Math.floor(Math.random() * 500);
             const backoff = BASE_DELAY_MS * Math.pow(2, attempt) + jitter;
-            console.warn(`[${context}] Attempt ${attempt + 1} failed, retrying in ${backoff}ms:`, error instanceof Error ? error.message : error);
+            console.warn(`[${context}] Attempt ${attempt + 1} failed, retrying in ${backoff}ms:`, message);
             await delay(backoff);
         }
     }
 
-    console.error(`[${context}] All ${MAX_RETRIES} attempts exhausted`);
     throw lastError;
 }

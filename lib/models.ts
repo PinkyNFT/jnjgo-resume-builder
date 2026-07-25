@@ -200,7 +200,8 @@ const ResumeDataSchema = new Schema<ResumeData>({
     education: [EducationSchema],
     skillTimelines: [SkillTimelineSchema],
     skills: [{ type: String }],
-    certifications: [{ type: String }]
+    certifications: [{ type: String }],
+    photo: { type: String } // Headshot as a data URL; must be declared or the strict schema strips it
 }, { _id: false });
 
 const EvaluationResultSchema = new Schema<EvaluationResult>({
@@ -226,7 +227,8 @@ const UserProfileSchema = new Schema<IUserProfileDocument>({
     email: { type: String, required: true },
     phone: { type: String, required: true },
     location: { type: String, required: true },
-    linkedin: { type: String }
+    linkedin: { type: String },
+    photo: { type: String }
 }, {
     timestamps: true,
     collection: 'userProfiles'

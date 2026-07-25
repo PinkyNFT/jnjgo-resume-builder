@@ -15,6 +15,8 @@ export interface ParsedDateRange {
     startYear: number;
     endYear: number | null; // null means "Present" or ongoing
     isOngoing: boolean;
+    startMonth?: number; // 1-12, when the period specifies a month
+    endMonth?: number; // 1-12, when the period specifies a month
 }
 
 /**
@@ -58,6 +60,70 @@ function extractYear(text: string): number | null {
 }
 
 /**
+ * Extract a month (1-12) from a single date fragment, when present.
+ * Handles English month names ("July", "Jul"), Japanese ("7月"),
+ * and numeric forms ("07/2015", "2015/07", "2015.07").
+ * Returns undefined when no month can be determined.
+ */
+function extractMonth(text: string): number | undefined {
+    const lower = text.toLowerCase();
+
+    // English month names (reuse MONTH_MAP)
+    const nameMatch = lower.match(/\b(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|jun(e)?|jul(y)?|aug(ust)?|sep(t|tember)?|oct(ober)?|nov(ember)?|dec(ember)?)\b/);
+    if (nameMatch) {
+        const m = MONTH_MAP[nameMatch[1]];
+        if (m) return m;
+    }
+
+    // Japanese "7月"
+    const jpMatch = text.match(/(\d{1,2})\s*月/);
+    if (jpMatch) {
+        const m = parseInt(jpMatch[1], 10);
+        if (m >= 1 && m <= 12) return m;
+    }
+
+    // Numeric MM/YYYY or MM.YYYY (month before a 4-digit year)
+    const mmYyyy = text.match(/\b(\d{1,2})[\/.](19|20)\d{2}\b/);
+    if (mmYyyy) {
+        const m = parseInt(mmYyyy[1], 10);
+        if (m >= 1 && m <= 12) return m;
+    }
+
+    // Numeric YYYY/MM or YYYY.MM (month after a 4-digit year)
+    const yyyyMm = text.match(/\b(19|20)\d{2}[\/.](\d{1,2})\b/);
+    if (yyyyMm) {
+        const m = parseInt(yyyyMm[2], 10);
+        if (m >= 1 && m <= 12) return m;
+    }
+
+    return undefined;
+}
+
+/**
+ * Convert a start point (year + optional month) to a fractional year.
+ * A known month maps to the *start* of that month: Jan -> +0, Dec -> +11/12.
+ * Missing month -> start of the year (+0), preserving year-only behavior.
+ */
+export function toStartFraction(startYear: number, startMonth?: number): number {
+    return startYear + (startMonth ? (startMonth - 1) / 12 : 0);
+}
+
+/**
+ * Convert an end point (year + optional month) to a fractional year.
+ * A known month maps to the *end* of that month: Jul -> +7/12.
+ * Missing month -> the year boundary (+0), preserving year-only behavior.
+ * Ongoing (endYear null) resolves to `now` (defaults to the current month).
+ */
+export function toEndFraction(endYear: number | null, endMonth?: number, now?: number): number {
+    if (endYear == null) {
+        if (now != null) return now;
+        const d = new Date();
+        return d.getFullYear() + d.getMonth() / 12;
+    }
+    return endYear + (endMonth ? endMonth / 12 : 0);
+}
+
+/**
  * Check if text indicates a present/ongoing position
  */
 function isPresent(text: string): boolean {
@@ -97,13 +163,17 @@ export function parsePeriod(period: string): ParsedDateRange | null {
     if (!startYear) {
         return null;
     }
+    const startMonth = extractMonth(parts[0]);
 
-    // Single part (just a year or "YYYY (X years)")
+    // Single part (just a year or "Month YYYY")
     if (parts.length === 1) {
         return {
             startYear,
             endYear: startYear,
-            isOngoing: false
+            isOngoing: false,
+            startMonth,
+            // A lone "Month YYYY" represents that single month
+            endMonth: startMonth
         };
     }
 
@@ -114,7 +184,8 @@ export function parsePeriod(period: string): ParsedDateRange | null {
         return {
             startYear,
             endYear: null,
-            isOngoing: true
+            isOngoing: true,
+            startMonth
         };
     }
 
@@ -124,14 +195,17 @@ export function parsePeriod(period: string): ParsedDateRange | null {
         return {
             startYear,
             endYear: null,
-            isOngoing: true
+            isOngoing: true,
+            startMonth
         };
     }
 
     return {
         startYear,
         endYear,
-        isOngoing: false
+        isOngoing: false,
+        startMonth,
+        endMonth: extractMonth(secondPart)
     };
 }
 

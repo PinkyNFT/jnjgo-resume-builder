@@ -129,6 +129,7 @@ export interface UserProfile {
     phone: string;
     location: string;
     linkedin?: string;
+    photo?: string; // Optional headshot (data URL); reused to prefill new resumes
 }
 
 // --- JNJGO Master Resume Schema ---
@@ -221,6 +222,7 @@ export interface ResumeData {
     skills?: string[]; // Skills array
     skillTimelines?: SkillTimeline[]; // Timeline of skill development/usage
     certifications?: string[]; // Certifications array
+    photo?: string; // Optional headshot, stored as a compressed data URL (data:image/jpeg;base64,...)
 }
 
 export interface EvaluationResult {

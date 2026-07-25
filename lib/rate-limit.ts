@@ -141,7 +141,7 @@ export async function applyRateLimitDB(
                     }
                 }
             }],
-            { upsert: true, new: true, updatePipeline: true } as any
+            { upsert: true, returnDocument: 'after', updatePipeline: true } as any
         ) as unknown as import('./models').IRateLimitDocument | null;
 
         if (entry && entry.count > limit) {

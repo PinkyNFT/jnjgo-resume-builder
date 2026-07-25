@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
             email: profile.email,
             phone: profile.phone,
             location: profile.location,
-            linkedin: profile.linkedin
+            linkedin: profile.linkedin,
+            photo: profile.photo
         };
 
         return NextResponse.json({ profile: userProfile }, { status: 200 });
@@ -81,7 +82,8 @@ export async function PUT(request: NextRequest) {
             email: profile.email,
             phone: profile.phone,
             location: profile.location,
-            linkedin: profile.linkedin
+            linkedin: profile.linkedin,
+            photo: profile.photo
         };
 
         return NextResponse.json({ profile: userProfile }, { status: 200 });

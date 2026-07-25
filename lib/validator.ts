@@ -482,12 +482,19 @@ export function throwIfErrors(errors: ValidationError[]): void {
  * Sanitize user profile input
  */
 export function sanitizeUserProfile(profile: UserProfile): UserProfile {
+    // Keep the photo only if it's a valid inline image data URL within the size cap.
+    const photo = typeof profile.photo === 'string'
+        && /^data:image\/(jpeg|jpg|png|webp);base64,/.test(profile.photo)
+        && profile.photo.length <= 3_000_000
+        ? profile.photo
+        : undefined;
     return {
         fullName: sanitizeString(profile.fullName),
         email: sanitizeString(profile.email.toLowerCase()),
         phone: sanitizeString(profile.phone),
         location: sanitizeString(profile.location),
-        linkedin: profile.linkedin ? sanitizeString(profile.linkedin) : undefined
+        linkedin: profile.linkedin ? sanitizeString(profile.linkedin) : undefined,
+        photo
     };
 }
 
@@ -558,6 +565,15 @@ export function sanitizeProject(project: Project): Project {
                 t.organization.trim() !== '' &&
                 t.role.trim() !== '';
         });
+    }
+
+    // Drop an invalid or oversized photo — must be an inline data:image/* URL, capped at ~3MB
+    if (sanitized.data?.photo !== undefined) {
+        const photo = sanitized.data.photo;
+        const isValidImageDataUrl = typeof photo === 'string' && /^data:image\/(jpeg|jpg|png|webp);base64,/.test(photo);
+        if (!isValidImageDataUrl || photo.length > 3_000_000) {
+            delete sanitized.data.photo;
+        }
     }
 
     return sanitized;

@@ -29,6 +29,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from '../../../lib/toast';
 import JobMatchingSection from '../../../components/JobMatchingSection';
+import { ResumePhoto } from '../../../components/ResumePhoto';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import AppNavbar from '../../../components/navigation/AppNavbar';
 import { DashboardSkeleton } from '../../../components/navigation/Skeletons';
@@ -213,7 +214,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
         const data = await analyzeImportMutation.mutateAsync({ text: importText, locale });
         onComplete(role, data);
       } catch {
-        toast.warning("Couldn't read the imported file — starting fresh.");
+        toast.warning(t('importReadError'));
         onComplete(role, undefined);
       } finally {
         setIsAnalyzing(false);
@@ -227,7 +228,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
     <div className="max-w-3xl mx-auto py-8 md:py-12 px-4 sm:px-6 page-transition">
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-4">
-          <Sparkles className="w-3 h-3" /> Step 1 of 3
+          <Sparkles className="w-3 h-3" /> {t('stepIndicator')}
         </div>
         <h2 className="text-3xl font-black text-slate-900">{t('title')}</h2>
       </div>
@@ -265,7 +266,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
             <UploadCloud className="w-4 h-4" /> {t('importTitle')}
           </label>
           <p className="text-sm text-slate-500 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
-            {t('importDesc')} You can upload a PDF/Word file or paste text directly.
+            {t('importDesc')} {t('importDescUpload')}
           </p>
 
           <Dropzone
@@ -278,6 +279,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
               try {
                 const formData = new FormData();
                 formData.append('file', file);
+                formData.append('locale', locale);
 
                 const response = await fetch('/api/extract-file', {
                   method: 'POST',
@@ -294,7 +296,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
                   setImportText(result.text);
                 }
               } catch (err: any) {
-                setUploadError(err.message || 'An error occurred while uploading. Please ensure your file is a valid PDF or DOCX under 5MB.');
+                setUploadError(err.message || t('uploadErrorGeneric'));
                 console.error('File upload error:', err);
               } finally {
                 setIsUploading(false);
@@ -320,15 +322,15 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
                 {isUploading ? (
                   <div className="flex flex-col items-center justify-center space-y-2">
                     <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-                    <p className="text-sm font-semibold text-slate-700">Extracting text...</p>
+                    <p className="text-sm font-semibold text-slate-700">{t('extractingText')}</p>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center space-y-2">
                     <File className={`w-8 h-8 ${isDragActive ? 'text-indigo-500' : 'text-slate-400'}`} />
                     <p className="text-sm font-semibold">
-                      {isDragActive ? "Drop the file here" : "Drag & drop a PDF or Word file here, or click to select"}
+                      {isDragActive ? t('dropFileActive') : t('dropFileIdle')}
                     </p>
-                    <p className="text-xs opacity-75">Maximum size: 5MB</p>
+                    <p className="text-xs opacity-75">{t('maxFileSize')}</p>
                   </div>
                 )}
               </div>
@@ -397,6 +399,17 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
 
       <form onSubmit={handleSubmit} className="bg-white p-5 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="col-span-full flex items-start gap-4">
+            <ResumePhoto
+              photo={profile.photo}
+              editable={true}
+              onChange={(next) => setProfile({ ...profile, photo: next })}
+            />
+            <div className="flex-1 pt-1">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">{t('photo')}</label>
+              <p className="text-xs text-slate-500 leading-relaxed">{t('photoDesc')}</p>
+            </div>
+          </div>
           <div className="col-span-full">
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{t('fullName')}</label>
             <div className="relative">
@@ -662,6 +675,11 @@ export default function Page() {
       if (currentProject?.data?.fullName) {
         data.fullName = currentProject.data.fullName;
         data.contactInfo = { ...data.contactInfo, ...currentProject.data.contactInfo };
+      }
+
+      // Preserve a photo added before generation — the parser doesn't produce one.
+      if (currentProject?.data?.photo) {
+        data.photo = currentProject.data.photo;
       }
 
       if (currentProject) {

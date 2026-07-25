@@ -43,6 +43,19 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── Resume document typography ─────────────────────────
+   One consistent Gothic (sans) family, per Japanese resume convention:
+   Latin renders in Inter; Japanese falls through to a professional Gothic
+   face — Hiragino on macOS, Yu Gothic / Meiryo on Windows, Noto Sans JP
+   elsewhere. `palt` tightens Japanese proportional spacing for a cleaner,
+   denser look. Applied to the resume surfaces only, not the whole app. */
+.resume-doc {
+  font-family: var(--font-inter), "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+    "Yu Gothic Medium", "Yu Gothic", "YuGothic", "Noto Sans JP", Meiryo,
+    system-ui, sans-serif;
+  font-feature-settings: "palt" 1;
+}
+
 /* ── Custom scrollbar ──────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
