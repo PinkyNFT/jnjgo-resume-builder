@@ -40,7 +40,7 @@ export async function POST(req: Request) {
         });
 
         // Call Gemini to generate the draft
-        const draftProfile = await generateProfileDraftWithGemini(candidateContext);
+        const draftProfile = await generateProfileDraftWithGemini(candidateContext, userId);
 
         if (!draftProfile) {
             throw new Error('Received empty draft from Gemini');

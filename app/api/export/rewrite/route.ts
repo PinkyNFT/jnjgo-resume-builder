@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { GoogleGenAI } from '@google/genai';
 import { GEMINI_MODEL } from '@/config/models';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
+import { auth } from '@/lib/auth';
+import { logAiUsage } from '@/lib/ai-usage';
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
@@ -48,6 +51,11 @@ export async function POST(request: NextRequest) {
         const aiConfig = await getAdminAIConfig();
         const model = aiConfig.model;
 
+        // Best-effort attribution for cost logging — this route has no auth gate,
+        // so userId is null (falls back to IP) for anonymous callers.
+        const session = await auth().catch(() => null);
+        const userId = session?.user?.id ?? null;
+
         const isJapanese = locale === 'ja' || locale === 'both';
 
         // Build the rewrite prompt
@@ -63,14 +71,25 @@ export async function POST(request: NextRequest) {
             ? `以下の職務経歴書セクションを${variant === 'short' ? '簡潔に要約' : '詳細に展開'}してください。\n各セクションは === ヘッダー (key: キー) === の形式です。\n同じ形式で出力してください。\n\n${sectionsText}`
             : `Rewrite the following resume sections in a ${variant === 'short' ? 'concise, condensed' : 'detailed, expanded'} style.\nEach section starts with === Header (key: key_name) ===.\nReturn in the same format.\n\n${sectionsText}`;
 
-        const response = await ai.models.generateContent({
-            model,
-            contents: userPrompt,
-            config: {
-                systemInstruction: systemPrompt,
-                temperature: variant === 'short' ? 0.3 : 0.5,
-            },
-        });
+        let response;
+        try {
+            response = await ai.models.generateContent({
+                model,
+                contents: userPrompt,
+                config: {
+                    systemInstruction: systemPrompt,
+                    temperature: variant === 'short' ? 0.3 : 0.5,
+                },
+            });
+        } catch (err) {
+            logAiUsage({
+                route: 'export/rewrite', model, userId, request, success: false,
+                errorMessage: err instanceof Error ? err.message : String(err),
+            });
+            Sentry.captureException(err, { tags: { aiRoute: 'export/rewrite', aiModel: model } });
+            throw err;
+        }
+        logAiUsage({ route: 'export/rewrite', model, userId, request, response, success: true });
 
         const responseText = response.text || '';
 

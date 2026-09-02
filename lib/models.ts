@@ -79,6 +79,24 @@ export interface IExportEventDocument extends Omit<Document, '_id'>, Omit<Export
     copiedAt: Date;
 }
 
+// Not a domain type (no types.ts counterpart) — same as IRateLimitDocument, this
+// is an internal analytics record, never sent to the client. Omits 'model' from
+// Document because Mongoose's Document.model() instance method would otherwise
+// collide with our own `model: string` field.
+export interface IAiUsageEventDocument extends Omit<Document, 'model'> {
+    userId: string | null;
+    ip?: string;
+    route: string;
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    estimatedCostUsd: number | null;
+    success: boolean;
+    errorMessage?: string;
+    createdAt: Date;
+}
+
 export interface IRecruiterProfileDocument extends Omit<Document, '_id'>, Omit<RecruiterProfile, 'id' | 'createdAt' | 'updatedAt'> {
     _id: Types.ObjectId;
     userId: string;
@@ -347,6 +365,26 @@ ExportEventSchema.index({ userId: 1, projectId: 1, copiedAt: -1 });
 // Single-field index for admin-wide timeline aggregations (no userId filter)
 ExportEventSchema.index({ copiedAt: -1 });
 
+const AiUsageEventSchema = new Schema<IAiUsageEventDocument>({
+    userId: { type: String, default: null, index: true },
+    ip: { type: String },
+    route: { type: String, required: true, index: true },
+    model: { type: String, required: true },
+    inputTokens: { type: Number, default: 0 },
+    outputTokens: { type: Number, default: 0 },
+    totalTokens: { type: Number, default: 0 },
+    estimatedCostUsd: { type: Number, default: null },
+    success: { type: Boolean, required: true },
+    errorMessage: { type: String },
+    createdAt: { type: Date, default: Date.now }
+}, {
+    collection: 'aiUsageEvents'
+});
+
+// Per-user cost lookups, and an unfiltered index for admin-wide timelines
+AiUsageEventSchema.index({ userId: 1, createdAt: -1 });
+AiUsageEventSchema.index({ createdAt: -1 });
+
 const RecruiterProfileSchema = new Schema<IRecruiterProfileDocument>({
     userId: { type: String, required: true, unique: true, index: true },
     companyName: { type: String, required: true },
@@ -459,6 +497,9 @@ export const CandidatePublicPageModel: Model<ICandidatePublicPageDocument> =
 
 export const ExportEventModel: Model<IExportEventDocument> =
     mongoose.models.ExportEvent || mongoose.model<IExportEventDocument>('ExportEvent', ExportEventSchema);
+
+export const AiUsageEventModel: Model<IAiUsageEventDocument> =
+    mongoose.models.AiUsageEvent || mongoose.model<IAiUsageEventDocument>('AiUsageEvent', AiUsageEventSchema);
 
 export const RecruiterProfileModel: Model<IRecruiterProfileDocument> =
     mongoose.models.RecruiterProfile || mongoose.model<IRecruiterProfileDocument>('RecruiterProfile', RecruiterProfileSchema);

@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     Settings, FileText, Users, Shield, BarChart3,
-    ArrowLeft, Loader2, AlertTriangle, RefreshCw, TrendingUp
+    ArrowLeft, Loader2, AlertTriangle, RefreshCw, TrendingUp, DollarSign
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import AppShell from '@/components/navigation/AppShell';
@@ -20,12 +20,13 @@ const tabLoader = () => (
 
 const AdminOverview  = dynamic(() => import('@/components/admin/AdminOverview').then(m => ({ default: m.AdminOverview })),   { ssr: false, loading: tabLoader });
 const AdminFunnel    = dynamic(() => import('@/components/admin/AdminFunnel'),                                                { ssr: false, loading: tabLoader });
+const AdminAiUsage   = dynamic(() => import('@/components/admin/AdminAiUsage'),                                               { ssr: false, loading: tabLoader });
 const AdminPrompts   = dynamic(() => import('@/components/admin/AdminPrompts').then(m => ({ default: m.AdminPrompts })),     { ssr: false, loading: tabLoader });
 const AdminSettings  = dynamic(() => import('@/components/admin/AdminSettings').then(m => ({ default: m.AdminSettings })),   { ssr: false, loading: tabLoader });
 const AdminUsers     = dynamic(() => import('@/components/admin/AdminUsers').then(m => ({ default: m.AdminUsers })),         { ssr: false, loading: tabLoader });
 const AdminAuditLog  = dynamic(() => import('@/components/admin/AdminAuditLog').then(m => ({ default: m.AdminAuditLog })),   { ssr: false, loading: tabLoader });
 
-type AdminTab = 'overview' | 'funnel' | 'settings' | 'prompts' | 'users' | 'audit';
+type AdminTab = 'overview' | 'funnel' | 'ai-usage' | 'settings' | 'prompts' | 'users' | 'audit';
 
 export default function AdminDashboardPage() {
     const { data: session, status } = useSession();
@@ -70,6 +71,7 @@ export default function AdminDashboardPage() {
     const tabs: { id: AdminTab; label: string; icon: React.ElementType }[] = [
         { id: 'overview', label: 'Overview', icon: BarChart3 },
         { id: 'funnel', label: 'Funnel', icon: TrendingUp },
+        { id: 'ai-usage', label: 'AI Usage', icon: DollarSign },
         { id: 'prompts', label: 'Prompts', icon: FileText },
         { id: 'settings', label: 'Settings', icon: Settings },
         { id: 'users', label: 'Users', icon: Users },
@@ -114,6 +116,7 @@ export default function AdminDashboardPage() {
             <div className="max-w-7xl mx-auto px-6 py-6">
                 {activeTab === 'overview' && <AdminOverview />}
                 {activeTab === 'funnel' && <AdminFunnel />}
+                {activeTab === 'ai-usage' && <AdminAiUsage />}
                 {activeTab === 'settings' && <AdminSettings />}
                 {activeTab === 'prompts' && <AdminPrompts />}
                 {activeTab === 'users' && <AdminUsers adminRole={adminRole} />}

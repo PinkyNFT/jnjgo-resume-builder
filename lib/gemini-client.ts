@@ -4,6 +4,10 @@
  * Retries up to MAX_RETRIES times before propagating the error.
  */
 
+import * as Sentry from '@sentry/nextjs';
+import type { NextRequest } from 'next/server';
+import { logAiUsage, type GeminiResponseLike } from './ai-usage';
+
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
 
@@ -26,12 +30,30 @@ function delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function callWithRetry<T>(fn: () => Promise<T>, context = 'gemini'): Promise<T> {
+/** Optional cost/observability attribution for a callWithRetry() call. */
+export interface UsageTrackingContext {
+    /** Call-site identifier, e.g. 'chat/sendMessage', 'analyze/evaluateResume'. */
+    route: string;
+    model: string;
+    userId?: string | null;
+    /** Used only to derive a fallback IP for calls with no authenticated user. */
+    request?: NextRequest;
+}
+
+export async function callWithRetry<T extends GeminiResponseLike>(
+    fn: () => Promise<T>,
+    context = 'gemini',
+    tracking?: UsageTrackingContext
+): Promise<T> {
     let lastError: unknown;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
-            return await fn();
+            const result = await fn();
+            if (tracking) {
+                logAiUsage({ ...tracking, response: result, success: true });
+            }
+            return result;
         } catch (error) {
             lastError = error;
             const message = error instanceof Error ? error.message : String(error);
@@ -53,6 +75,15 @@ export async function callWithRetry<T>(fn: () => Promise<T>, context = 'gemini')
             console.warn(`[${context}] Attempt ${attempt + 1} failed, retrying in ${backoff}ms:`, message);
             await delay(backoff);
         }
+    }
+
+    if (tracking) {
+        logAiUsage({
+            ...tracking,
+            success: false,
+            errorMessage: lastError instanceof Error ? lastError.message : String(lastError),
+        });
+        Sentry.captureException(lastError, { tags: { aiRoute: tracking.route, aiModel: tracking.model } });
     }
 
     throw lastError;

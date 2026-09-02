@@ -7,6 +7,7 @@ import { parsePeriod } from '@/utils/dateParser';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 import { callWithRetry } from '@/lib/gemini-client';
+import { auth } from '@/lib/auth';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -34,6 +35,11 @@ export async function POST(request: NextRequest) {
         // Read model from admin settings (cached)
         const aiConfig = await getAdminAIConfig();
         const model = aiConfig.model;
+
+        // Best-effort attribution for cost logging — this route has no auth gate,
+        // so userId is null (falls back to IP) for anonymous callers.
+        const session = await auth().catch(() => null);
+        const userId = session?.user?.id ?? null;
 
         const conversationText = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
         const importedText = importData ? `IMPORTED RESUME CONTENT:\n${importData.sourceText}\n\n` : '';
@@ -171,7 +177,7 @@ export async function POST(request: NextRequest) {
                     }
                 }
             }
-        }), 'parse');
+        }), 'parse', { route: 'parse', model, userId, request });
 
         if (response.text) {
             try {

@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from 'next-intl/plugin';
+import { withSentryConfig } from '@sentry/nextjs/config';
 
 const withNextIntl = createNextIntlPlugin();
 
@@ -8,9 +9,6 @@ const nextConfig: NextConfig = {
   // - pdf-parse v2 -> pdfjs-dist + native @napi-rs/canvas (resume import)
   // - puppeteer-core + @sparticuz/chromium (server-side text-PDF export)
   serverExternalPackages: ['pdf-parse', '@napi-rs/canvas', 'puppeteer-core', '@sparticuz/chromium'],
-  env: {
-    NEXT_PUBLIC_API_KEY: process.env.NEXT_PUBLIC_API_KEY,
-  },
   images: {
     remotePatterns: [
       {
@@ -55,4 +53,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default withSentryConfig(withNextIntl(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Only upload source maps / create releases when an auth token is present
+  // (e.g. in CI) — silent locally so a dev without Sentry set up sees no noise.
+  silent: !process.env.SENTRY_AUTH_TOKEN,
+  widenClientFileUpload: true,
+});

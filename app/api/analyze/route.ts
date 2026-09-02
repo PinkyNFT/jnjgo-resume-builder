@@ -6,6 +6,7 @@ import { getAnalyzeImportPrompt, getEvaluateResumePrompt } from '@/lib/prompts';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 import { callWithRetry } from '@/lib/gemini-client';
+import { auth } from '@/lib/auth';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -34,6 +35,11 @@ export async function POST(request: NextRequest) {
         const aiConfig = await getAdminAIConfig();
         const model = aiConfig.model;
 
+        // Best-effort attribution for cost logging — this route has no auth gate,
+        // so userId is null (falls back to IP) for anonymous callers.
+        const session = await auth().catch(() => null);
+        const userId = session?.user?.id ?? null;
+
         // Handle different analysis actions
         if (action === 'analyzeImport') {
             // Analyze imported resume text
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
                         }
                     }
                 }
-            }), 'analyze/analyzeImport');
+            }), 'analyze/analyzeImport', { route: 'analyze/analyzeImport', model, userId, request });
 
             const parsed = JSON.parse(response.text || "{}");
             const importData: ImportData = {
@@ -175,7 +181,7 @@ export async function POST(request: NextRequest) {
                         }
                     }
                 }
-            }), 'analyze/evaluateResume');
+            }), 'analyze/evaluateResume', { route: 'analyze/evaluateResume', model, userId, request });
 
             const result = JSON.parse(response.text || "{}");
 

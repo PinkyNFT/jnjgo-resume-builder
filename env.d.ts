@@ -62,6 +62,24 @@ declare global {
              * @optional
              */
             ADMIN_EMAILS?: string;
+
+            /**
+             * Sentry DSN for error monitoring. Read on both client and server.
+             * Leave unset to no-op the SDK (safe for local dev).
+             * @optional
+             */
+            NEXT_PUBLIC_SENTRY_DSN?: string;
+
+            /**
+             * Sentry org/project slugs and auth token — used only at build time
+             * to upload source maps and create a release. Omit locally; set in
+             * CI so stack traces in Sentry show real source instead of minified
+             * bundles.
+             * @optional
+             */
+            SENTRY_ORG?: string;
+            SENTRY_PROJECT?: string;
+            SENTRY_AUTH_TOKEN?: string;
         }
     }
 }

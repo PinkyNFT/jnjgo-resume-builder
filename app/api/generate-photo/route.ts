@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
                 // response (e.g. a refusal) falls through to the 422 "retry" path.
                 responseModalities: [Modality.IMAGE, Modality.TEXT],
             },
-        }), 'generate-photo');
+        }), 'generate-photo', { route: 'generate-photo', model: GEMINI_IMAGE_MODEL, userId: session.user.id, request });
 
         // Find the first inline image part in the response.
         const parts = response.candidates?.[0]?.content?.parts ?? [];

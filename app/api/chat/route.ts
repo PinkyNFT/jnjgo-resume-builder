@@ -6,6 +6,7 @@ import { getSystemInstruction } from '@/lib/prompts';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 import { callWithRetry } from '@/lib/gemini-client';
+import { auth } from '@/lib/auth';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -77,6 +78,11 @@ export async function POST(request: NextRequest) {
         const model = aiConfig.model;
         const temperature = aiConfig.temperature;
 
+        // Best-effort attribution for cost logging — this route has no auth gate,
+        // so userId is null (falls back to IP) for anonymous callers.
+        const session = await auth().catch(() => null);
+        const userId = session?.user?.id ?? null;
+
         // Handle different chat actions
         if (action === 'sendMessage') {
             // Resolve system instruction from DB (or fallback)
@@ -95,7 +101,9 @@ export async function POST(request: NextRequest) {
                 })) : []
             });
 
-            const response = await callWithRetry(() => chat.sendMessage({ message }), 'chat/sendMessage');
+            const response = await callWithRetry(() => chat.sendMessage({ message }), 'chat/sendMessage', {
+                route: 'chat/sendMessage', model, userId, request,
+            });
 
             // Auto-detect confirmation phase based on response content
             const responseText = response.text;
@@ -145,7 +153,9 @@ export async function POST(request: NextRequest) {
                 ? "ユーザーが助けを求めています。具体的な数字や詳細を含むフレンドリーな例を挙げてください。"
                 : "User needs help. Give a friendly example with specific numbers or details.";
 
-            const response = await callWithRetry(() => chat.sendMessage({ message: hintPrompt }), 'chat/generateHint');
+            const response = await callWithRetry(() => chat.sendMessage({ message: hintPrompt }), 'chat/generateHint', {
+                route: 'chat/generateHint', model, userId, request,
+            });
             return NextResponse.json({
                 hint: response.text || (locale === 'ja'
                     ? "例：「5人のエンジニアチームを率いた」や「収益を30%増加させた」"
