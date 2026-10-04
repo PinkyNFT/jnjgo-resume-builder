@@ -55,6 +55,9 @@ export default function RecruiterDashboardPage() {
     const searchParams = useSearchParams();
     const locale = useLocale();
     const t = useTranslations('RecruiterDashboard');
+    const tOnboarding = useTranslations('RecruiterOnboarding');
+    // companySize is stored as a fixed value (see recruiter onboarding); show its localized label
+    const SIZE_LABEL_KEYS: Record<string, string> = { startup: 'sizeStartup', small: 'sizeSmall', medium: 'sizeMedium', large: 'sizeLarge', enterprise: 'sizeEnterprise' };
 
     const [profile, setProfile] = useState<RecruiterProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -285,15 +288,14 @@ export default function RecruiterDashboardPage() {
             });
 
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Failed to send reply');
+                throw new Error(t('replyFailed'));
             }
 
             const data = await res.json();
             setThreadReplies(prev => [...prev, data.reply]);
             setReplyText('');
         } catch (error: any) {
-            toast.error(error.message || 'Failed to send reply.');
+            toast.error(error.message || t('replyFailed'));
         } finally {
             setIsReplying(false);
         }
@@ -567,7 +569,7 @@ export default function RecruiterDashboardPage() {
                                 {profile?.companySize && (
                                     <div className="flex items-center justify-between py-1.5">
                                         <span className="text-slate-500">{t('profileSize')}</span>
-                                        <span className="font-semibold text-slate-800 capitalize">{profile.companySize}</span>
+                                        <span className="font-semibold text-slate-800 capitalize">{SIZE_LABEL_KEYS[profile.companySize] ? tOnboarding(SIZE_LABEL_KEYS[profile.companySize]) : profile.companySize}</span>
                                     </div>
                                 )}
                             </div>

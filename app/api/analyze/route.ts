@@ -7,6 +7,7 @@ import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 import { callWithRetry } from '@/lib/gemini-client';
 import { auth } from '@/lib/auth';
+import { aiErrorPayload } from '@/lib/ai-errors';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -15,19 +16,19 @@ if (!API_KEY) {
 }
 
 export async function POST(request: NextRequest) {
+    let locale: string | undefined;
     try {
         const limited = await applyRateLimitDB(request, 'analyze', RATE_LIMITS.ai);
         if (limited) return limited;
 
-        if (!API_KEY) {
-            return NextResponse.json(
-                { error: 'Server configuration error: API key not configured' },
-                { status: 500 }
-            );
-        }
-
         const body = await request.json();
-        const { action, text, data, roleType, locale } = body;
+        const { action, text, data, roleType } = body;
+        locale = body.locale;
+
+        if (!API_KEY) {
+            const { body: errBody, status } = aiErrorPayload(null, locale, 'config');
+            return NextResponse.json(errBody, { status });
+        }
 
         const ai = new GoogleGenAI({ apiKey: API_KEY });
 
@@ -265,9 +266,7 @@ export async function POST(request: NextRequest) {
 
     } catch (error) {
         console.error('Analyze API error:', error);
-        return NextResponse.json(
-            { error: 'Failed to analyze', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        const { body, status } = aiErrorPayload(error, locale);
+        return NextResponse.json(body, { status });
     }
 }

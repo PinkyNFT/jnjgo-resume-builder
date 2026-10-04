@@ -20,7 +20,7 @@ export default function CandidateLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en">
+        <html lang="en" data-scroll-behavior="smooth">
             <body className={`${inter.variable} bg-slate-50 text-slate-900 antialiased`}>
                 <Providers>
                     {children}

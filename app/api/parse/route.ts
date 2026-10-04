@@ -3,11 +3,12 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { Message, ResumeData, ImportData } from '@/types';
 import { GEMINI_MODEL } from '@/config/models';
 import { getParseResumePrompt } from '@/lib/prompts';
-import { parsePeriod } from '@/utils/dateParser';
+import { withCurrentEmployer } from '@/utils/headline';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 import { callWithRetry } from '@/lib/gemini-client';
 import { auth } from '@/lib/auth';
+import { aiErrorPayload } from '@/lib/ai-errors';
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -16,19 +17,19 @@ if (!API_KEY) {
 }
 
 export async function POST(request: NextRequest) {
+    let locale: string | undefined;
     try {
         const limited = await applyRateLimitDB(request, 'parse', RATE_LIMITS.ai);
         if (limited) return limited;
 
-        if (!API_KEY) {
-            return NextResponse.json(
-                { error: 'Server configuration error: API key not configured' },
-                { status: 500 }
-            );
-        }
-
         const body = await request.json();
-        const { history, importData, locale }: { history: Message[], importData?: ImportData, locale?: string } = body;
+        const { history, importData }: { history: Message[], importData?: ImportData } = body;
+        locale = body.locale;
+
+        if (!API_KEY) {
+            const { body: errBody, status } = aiErrorPayload(null, locale, 'config');
+            return NextResponse.json(errBody, { status });
+        }
 
         const ai = new GoogleGenAI({ apiKey: API_KEY });
 
@@ -138,7 +139,10 @@ export async function POST(request: NextRequest) {
                                     position: { type: Type.STRING },
                                     period: { type: Type.STRING },
                                     responsibilities: { type: Type.ARRAY, items: { type: Type.STRING } }
-                                }
+                                },
+                                // Without these the model occasionally omits them (seen in testing),
+                                // which breaks the timeline bars and the default headline.
+                                required: ['company', 'position', 'period']
                             }
                         },
                         skillTimelines: {
@@ -174,7 +178,8 @@ export async function POST(request: NextRequest) {
                             type: Type.ARRAY,
                             items: { type: Type.STRING }
                         }
-                    }
+                    },
+                    required: ['fullName', 'currentRole', 'careerSummary', 'workExperience']
                 }
             }
         }), 'parse', { route: 'parse', model, userId, request });
@@ -241,24 +246,13 @@ export async function POST(request: NextRequest) {
                 // Default: surface the current employer in the headline (currentRole),
                 // e.g. "Senior Regional TAB Partner at Deloitte SEA" (JP: "… ／ Deloitte SEA").
                 // This is just a sensible default — the field stays fully editable.
-                const employerCandidates = (data.workExperience && data.workExperience.length
-                    ? data.workExperience.map(w => ({ name: w.company, parsed: parsePeriod(w.period) }))
-                    : data.timeline.filter(t => t.type === 'work').map(t => ({ name: t.organization, parsed: parsePeriod(t.period) }))
-                ).filter((c): c is { name: string; parsed: NonNullable<ReturnType<typeof parsePeriod>> } => !!c.name && !!c.parsed);
-
-                if (employerCandidates.length && data.currentRole) {
-                    const ongoing = employerCandidates.filter(c => c.parsed.isOngoing);
-                    const pool = ongoing.length ? ongoing : employerCandidates;
-                    pool.sort((a, b) => b.parsed.startYear - a.parsed.startYear);
-                    const employer = pool[0].name;
-
-                    if (employer && !data.currentRole.toLowerCase().includes(employer.toLowerCase())) {
-                        const connector = locale === 'ja' ? ' ／ ' : ' at ';
-                        const lines = data.currentRole.split('\n');
-                        lines[0] = `${lines[0].trim()}${connector}${employer}`;
-                        data.currentRole = lines.join('\n');
-                    }
-                }
+                data.currentRole = withCurrentEmployer(
+                    data.currentRole,
+                    data.workExperience.length
+                        ? data.workExperience.map(w => ({ employer: w.company, title: w.position, period: w.period }))
+                        : data.timeline.filter(t => t.type === 'work').map(t => ({ employer: t.organization, title: t.role, period: t.period })),
+                    locale
+                );
 
                 // Additional gap detection from timeline with auto-generation of reasons
                 const workTimeline = data.timeline.filter(t => t.type === 'work').sort((a, b) => {
@@ -391,10 +385,8 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ data });
             } catch (e) {
                 console.error("Failed to parse JSON", e);
-                return NextResponse.json(
-                    { error: 'Failed to parse resume data' },
-                    { status: 500 }
-                );
+                const { body: errBody, status } = aiErrorPayload(e, locale, 'unknown');
+                return NextResponse.json(errBody, { status });
             }
         }
 
@@ -431,16 +423,13 @@ export async function POST(request: NextRequest) {
             return `${months[date.getMonth()]} ${date.getFullYear()}`;
         }
 
-        return NextResponse.json(
-            { error: 'No data generated' },
-            { status: 500 }
-        );
+        console.error('Parse API error: empty response from model');
+        const { body: errBody, status } = aiErrorPayload(null, locale, 'unknown');
+        return NextResponse.json(errBody, { status });
 
     } catch (error) {
         console.error('Parse API error:', error);
-        return NextResponse.json(
-            { error: 'Failed to parse resume', details: error instanceof Error ? error.message : 'Unknown error' },
-            { status: 500 }
-        );
+        const { body: errBody, status } = aiErrorPayload(error, locale);
+        return NextResponse.json(errBody, { status });
     }
 }

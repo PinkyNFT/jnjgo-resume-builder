@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 import { launchBrowser } from '@/lib/pdf-browser';
+import { pdfAttachmentDisposition } from '@/utils/fileName';
 
 // Headless Chromium is native + needs the Node runtime; allow extra time for cold starts.
 export const runtime = 'nodejs';
@@ -47,7 +48,11 @@ export async function POST(request: NextRequest) {
     const safeHead = stripScripts(headHtml);
     const safeBody = stripScripts(bodyHtml);
 
+    // Serverless Chromium ships no CJK fonts, so Japanese text would render as
+    // empty boxes. Load Noto Sans JP (already in the .resume-doc font stack);
+    // Google Fonts only serves the unicode-range subsets the page actually uses.
     const html = `<!doctype html><html><head><base href="${origin}/">${safeHead}
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=block">
 <style>
   html, body { margin: 0; padding: 0; background: #fff; }
   /* Per-page margins come from page.pdf() so every page (incl. ones created by a
@@ -65,7 +70,6 @@ export async function POST(request: NextRequest) {
 </style>
 </head><body>${safeBody}</body></html>`;
 
-    const safeName = String(fileName || 'Resume').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim() || 'Resume';
 
     let browser;
     try {
@@ -110,7 +114,7 @@ export async function POST(request: NextRequest) {
             status: 200,
             headers: {
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="${safeName}.pdf"`,
+                'Content-Disposition': pdfAttachmentDisposition(String(fileName || '')),
                 'Cache-Control': 'no-store',
             },
         });

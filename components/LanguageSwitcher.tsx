@@ -2,6 +2,7 @@
 
 import { useLocale } from 'next-intl';
 import { useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { setUserLocale } from '@/services/locale';
 import { Locale } from '@/i18n/config';
 import { Globe } from 'lucide-react';
@@ -13,12 +14,17 @@ interface LanguageSwitcherProps {
 
 export default function LanguageSwitcher({ compact = false }: LanguageSwitcherProps) {
     const locale = useLocale();
+    const router = useRouter();
     const [isPending, startTransition] = useTransition();
 
     const switchLocale = (nextLocale: Locale) => {
         if (locale === nextLocale) return;
-        startTransition(() => {
-            setUserLocale(nextLocale);
+        startTransition(async () => {
+            await setUserLocale(nextLocale);
+            // The action's own re-render still uses the old locale (the proxy rewrote
+            // this request to /<old locale> before the cookie changed), so refresh to
+            // re-render through the proxy with the new cookie. Client state is kept.
+            router.refresh();
         });
     };
 

@@ -86,8 +86,8 @@ function OnboardingContent() {
             });
 
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Failed to save profile');
+                // 400 = missing company name / job title (see /api/recruiter/profile)
+                throw new Error(res.status === 400 ? t('requiredError') : t('saveFailed'));
             }
 
             if (session?.user?.role === 'pending_recruiter') {
@@ -96,7 +96,7 @@ function OnboardingContent() {
                 router.push(callbackUrl || '/recruiter/dashboard');
             }
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Something went wrong');
+            setError(err instanceof Error && err.message ? err.message : t('saveFailed'));
             setIsSubmitting(false);
         }
     };

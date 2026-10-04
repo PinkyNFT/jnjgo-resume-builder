@@ -20,7 +20,7 @@ const ResumeGeneratingView = dynamic(
   () => import('../../../components/ResumeGeneratingView').then(m => ({ default: m.ResumeGeneratingView })),
   { ssr: false, loading: () => <div className="flex items-center justify-center h-64"><DynLoader className="w-8 h-8 animate-spin text-indigo-400" /></div> }
 );
-import { Message, ResumeData, Project, RoleType, ImportData, UserProfile } from '../../../types';
+import { Message, ResumeData, Project, RoleType, ImportData, UserProfile, EvaluationResult } from '../../../types';
 import { useParseResume, useAnalyzeImport } from '../../../hooks/useGemini';
 import { getProjects, getProject, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile, createVersion } from '../../../services/storageService';
 import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/dataMigration';
@@ -144,7 +144,7 @@ const ProjectCard = ({ project, locale, onOpen, onDelete }: { project: Project, 
         </span>
         {isCompleted && project.evaluation && (
           <span className={`text-[10px] px-2.5 py-1 rounded-md font-bold tracking-wider border ${score >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-            SCORE: {score}
+            {t('scoreBadge', { score })}
           </span>
         )}
       </div>
@@ -181,7 +181,7 @@ const ProjectCard = ({ project, locale, onOpen, onDelete }: { project: Project, 
               href={`/${locale}/export?projectId=${project.id}`}
               onClick={(e) => e.stopPropagation()}
               className="px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 active:scale-[0.98]"
-              title="Export to job sites"
+              title={t('exportToJobSites')}
             >
               <Share2 className="w-4 h-4" />
             </Link>
@@ -210,12 +210,16 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
   const handleStart = async () => {
     if (importText.trim().length > 20) {
       setIsAnalyzing(true);
+      setUploadError('');
       try {
         const data = await analyzeImportMutation.mutateAsync({ text: importText, locale });
         onComplete(role, data);
-      } catch {
-        toast.warning(t('importReadError'));
-        onComplete(role, undefined);
+      } catch (err) {
+        // Stay on this step with the text intact so the user can retry; the
+        // message says why (quota, timeout, configuration…) — see lib/ai-errors.
+        const message = err instanceof Error && err.message ? err.message : t('importAnalyzeError');
+        setUploadError(message);
+        toast.error(message);
       } finally {
         setIsAnalyzing(false);
       }
@@ -270,8 +274,14 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
           </p>
 
           <Dropzone
-            onDrop={async (acceptedFiles) => {
-              if (acceptedFiles.length === 0) return;
+            onDrop={async (acceptedFiles, fileRejections) => {
+              if (acceptedFiles.length === 0) {
+                // Rejected by the dropzone (wrong type / too large) — say why instead of doing nothing.
+                const code = fileRejections[0]?.errors[0]?.code;
+                if (code === 'file-too-large') setUploadError(t('uploadTooLarge'));
+                else if (code) setUploadError(t('uploadUnsupported'));
+                return;
+              }
               const file = acceptedFiles[0];
               setIsUploading(true);
               setUploadError('');
@@ -286,17 +296,18 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
                   body: formData,
                 });
 
-                const result = await response.json();
+                // Non-JSON bodies happen too (e.g. the hosting platform's own 413/504 page).
+                const result = await response.json().catch(() => ({}));
 
                 if (!response.ok) {
-                  throw new Error(result.error || 'Failed to extract text from file.');
+                  throw new Error(result.error || (response.status === 413 ? t('uploadTooLarge') : t('uploadErrorGeneric')));
                 }
 
                 if (result.text) {
                   setImportText(result.text);
                 }
-              } catch (err: any) {
-                setUploadError(err.message || t('uploadErrorGeneric'));
+              } catch (err) {
+                setUploadError(err instanceof Error && err.message && !(err instanceof TypeError) ? err.message : t('uploadErrorGeneric'));
                 console.error('File upload error:', err);
               } finally {
                 setIsUploading(false);
@@ -304,8 +315,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
             }}
             accept={{
               'application/pdf': ['.pdf'],
-              'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-              'application/msword': ['.doc']
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
             }}
             maxSize={5 * 1024 * 1024} // 5MB limit
             multiple={false}
@@ -383,7 +393,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
       onComplete(profile);
     } catch (error) {
       console.error('Failed to save profile:', error);
-      toast.error('Failed to save profile. Please try again.');
+      toast.error(t('saveFailed'));
     }
   };
 
@@ -391,7 +401,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
     <div className="max-w-2xl mx-auto py-8 md:py-12 px-4 sm:px-6 page-transition">
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-4">
-          <User className="w-3 h-3" /> Step 2 of 3
+          <User className="w-3 h-3" /> {t('stepIndicator')}
         </div>
         <h2 className="text-3xl font-black text-slate-900 mb-2">{t('title')}</h2>
         <p className="text-slate-500">{t('subtitle')}</p>
@@ -417,7 +427,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
               <input
                 required
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all font-medium"
-                placeholder="Taro Yamada"
+                placeholder={t('placeholderName')}
                 value={profile.fullName}
                 onChange={e => setProfile({ ...profile, fullName: e.target.value })}
               />
@@ -432,7 +442,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
                 required
                 type="email"
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all font-medium"
-                placeholder="taro@example.com"
+                placeholder={t('placeholderEmail')}
                 value={profile.email}
                 onChange={e => setProfile({ ...profile, email: e.target.value })}
               />
@@ -461,7 +471,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
               <input
                 required
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all font-medium"
-                placeholder="Tokyo, Japan"
+                placeholder={t('placeholderLocation')}
                 value={profile.location}
                 onChange={e => setProfile({ ...profile, location: e.target.value })}
               />
@@ -474,7 +484,7 @@ const PersonalInfoView = ({ initialProfile, onComplete, onBack }: { initialProfi
               <Linkedin className="w-5 h-5 absolute left-3 top-3.5 text-slate-400" />
               <input
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all font-medium"
-                placeholder="linkedin.com/in/..."
+                placeholder={t('placeholderLinkedin')}
                 value={profile.linkedin || ''}
                 onChange={e => setProfile({ ...profile, linkedin: e.target.value })}
               />
@@ -598,7 +608,7 @@ export default function Page() {
       setStep('interview');
     } catch (error) {
       console.error('Failed to create project:', error);
-      toast.error('Failed to create project. Please try again.');
+      toast.error(t('createFailed'));
     }
   };
 
@@ -606,7 +616,7 @@ export default function Page() {
     // Fetch full project data (with history & resume data) on demand
     const fullProject = await getProject(project.id);
     if (!fullProject) {
-      toast.error('Failed to load project. Please try again.');
+      toast.error(t('loadFailed'));
       return;
     }
     setCurrentProject(fullProject);
@@ -628,10 +638,10 @@ export default function Page() {
     try {
       await deleteProject(id);
       setProjects(prev => prev.filter(p => p.id !== id));
-      toast.success('Resume deleted.');
+      toast.success(t('deleted'));
     } catch (error) {
       console.error('Failed to delete project:', error);
-      toast.error('Failed to delete project. Please try again.');
+      toast.error(t('deleteFailed'));
     }
   };
 
@@ -707,7 +717,7 @@ export default function Page() {
       setStep('editor');
     } catch (error: any) {
       console.error(error);
-      setGeneratingError(error?.message || 'Something went wrong generating the resume. Please try again.');
+      setGeneratingError(error?.message || t('generateFailed'));
     }
   };
 
@@ -717,12 +727,15 @@ export default function Page() {
     setStep('interview');
   };
 
-  const handleUpdateProjectData = async (data: ResumeData) => {
+  // Editor autosave. The editor passes its latest evaluation too, since it saves
+  // evaluations itself and our copy of the project may be older.
+  const handleUpdateProjectData = async (data: ResumeData, evaluation?: EvaluationResult) => {
     if (currentProject) {
       try {
         const updatedProject = {
           ...currentProject,
           data,
+          evaluation,
           updatedAt: Date.now()
         };
         await saveProject(updatedProject);
@@ -730,13 +743,13 @@ export default function Page() {
         setCurrentProject(updatedProject);
       } catch (error) {
         console.error('Failed to update project:', error);
-        toast.error('Failed to save changes. Please try again.');
+        toast.error(t('saveChangesFailed'));
       }
     }
   };
 
-  const handleResumeInterview = async () => {
-    if (!currentProject || !currentProject.data) return;
+  const handleResumeInterview = async (latestData: ResumeData, latestEvaluation?: EvaluationResult) => {
+    if (!currentProject) return;
 
     try {
       // Auto-save the current resume as a version before returning to interview
@@ -744,13 +757,15 @@ export default function Page() {
         currentProject.id,
         `Pre-Interview — ${new Date().toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
         'auto_pre_interview',
-        currentProject.data,
-        currentProject.evaluation
+        latestData,
+        latestEvaluation
       );
 
-      // Update project status back to interviewing
+      // Update project status back to interviewing (with the editor's latest edits)
       const updatedProject: Project = {
         ...currentProject,
+        data: latestData,
+        evaluation: latestEvaluation,
         status: 'interviewing',
         updatedAt: Date.now(),
       };
@@ -760,7 +775,7 @@ export default function Page() {
       setStep('interview');
     } catch (error) {
       console.error('Failed to resume interview:', error);
-      toast.error('Failed to resume interview. Please try again.');
+      toast.error(t('resumeInterviewFailed'));
     }
   };
 
@@ -811,7 +826,7 @@ export default function Page() {
                           <Plus className="w-5 h-5 text-indigo-600" />
                         </div>
                         <div className="text-sm font-bold text-slate-800">{t('createNewProject')}</div>
-                        <div className="text-xs text-slate-500 mt-0.5">AI-guided interview</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{t('aiGuidedInterview')}</div>
                       </button>
 
                       <Link
@@ -821,8 +836,8 @@ export default function Page() {
                         <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center mb-3 group-hover:bg-purple-100 transition-colors">
                           <UserCircle className="w-5 h-5 text-purple-600" />
                         </div>
-                        <div className="text-sm font-bold text-slate-800">Recruiter Profile</div>
-                        <div className="text-xs text-slate-500 mt-0.5">Private conditions</div>
+                        <div className="text-sm font-bold text-slate-800">{t('quickRecruiterProfile')}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{t('quickRecruiterProfileDesc')}</div>
                       </Link>
 
                       {projects.filter(p => p.status === 'completed' || p.status === 'generated').length > 0 && (
@@ -833,8 +848,8 @@ export default function Page() {
                           <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center mb-3 group-hover:bg-green-100 transition-colors">
                             <Share2 className="w-5 h-5 text-green-600" />
                           </div>
-                          <div className="text-sm font-bold text-slate-800">Export Resume</div>
-                          <div className="text-xs text-slate-500 mt-0.5">Job site formats</div>
+                          <div className="text-sm font-bold text-slate-800">{t('quickExport')}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{t('quickExportDesc')}</div>
                         </Link>
                       )}
 
@@ -846,8 +861,8 @@ export default function Page() {
                           <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center mb-3 group-hover:bg-amber-100 transition-colors">
                             <Shield className="w-5 h-5 text-amber-600" />
                           </div>
-                          <div className="text-sm font-bold text-slate-800">Admin Panel</div>
-                          <div className="text-xs text-slate-500 mt-0.5">Settings & users</div>
+                          <div className="text-sm font-bold text-slate-800">{t('quickAdmin')}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{t('quickAdminDesc')}</div>
                         </Link>
                       )}
                     </div>
@@ -859,7 +874,7 @@ export default function Page() {
                     <div className="space-y-5">
                       <div className="flex items-center justify-between">
                         <h2 className="text-lg font-bold text-slate-800">{t('myResumes')}</h2>
-                        <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full tabular-nums">{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span>
+                        <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full tabular-nums">{t('projectCount', { n: projects.length })}</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
                         {projects.map(project => (
@@ -881,7 +896,7 @@ export default function Page() {
                             <Plus className="w-7 h-7 opacity-50 group-hover:opacity-100 transition-opacity" />
                           </div>
                           <span className="font-bold text-sm">{t('createNewProject')}</span>
-                          <span className="text-xs text-slate-400 mt-1 group-hover:text-indigo-400 transition-colors">AI-guided interview</span>
+                          <span className="text-xs text-slate-400 mt-1 group-hover:text-indigo-400 transition-colors">{t('aiGuidedInterview')}</span>
                         </button>
                       </div>
                     </div>
@@ -951,10 +966,10 @@ export default function Page() {
       {/* Delete confirmation dialog */}
       <ConfirmDialog
         isOpen={confirmDeleteId !== null}
-        title="Delete this resume?"
-        message="This action cannot be undone. All interview history and resume data will be permanently removed."
-        confirmLabel="Delete"
-        cancelLabel="Keep it"
+        title={t('deleteTitle')}
+        message={t('deleteMessage')}
+        confirmLabel={tCommon('delete')}
+        cancelLabel={t('deleteKeep')}
         variant="danger"
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDeleteId(null)}

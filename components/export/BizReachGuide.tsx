@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { ResumeData } from '../../types';
 import { BIZREACH_QUESTIONS } from '../../config/bizreachQuestions';
 import {
@@ -32,30 +32,26 @@ import {
     Layers,
 } from 'lucide-react';
 
-const FIELD_TYPE_META: Record<string, { icon: React.ElementType; label: string }> = {
-    text: { icon: Type, label: 'Text input' },
-    textarea: { icon: PenLine, label: 'Long text' },
-    radio: { icon: ToggleLeft, label: 'Select one' },
-    dropdown: { icon: ChevronDown, label: 'Dropdown' },
-    select: { icon: ListFilter, label: 'Select' },
-    date: { icon: Calendar, label: 'Date picker' },
-    checkbox: { icon: List, label: 'Multi-select' },
-    buttons: { icon: LayoutGrid, label: 'Choose option' },
-    multi: { icon: Layers, label: 'Multiple fields' },
-    number: { icon: Type, label: 'Number input' },
-    none: { icon: Minus, label: 'No input' },
+// Labels: BizReach.field_<type>
+const FIELD_TYPE_META: Record<string, { icon: React.ElementType }> = {
+    text: { icon: Type },
+    textarea: { icon: PenLine },
+    radio: { icon: ToggleLeft },
+    dropdown: { icon: ChevronDown },
+    select: { icon: ListFilter },
+    date: { icon: Calendar },
+    checkbox: { icon: List },
+    buttons: { icon: LayoutGrid },
+    multi: { icon: Layers },
+    number: { icon: Type },
+    none: { icon: Minus },
 };
 
 // Section metadata for descriptions and icons
-const SECTION_META: Record<string, { icon: React.ElementType; description: string }> = {
-    'Basic Information': {
-        icon: UserCheck,
-        description: 'Personal info, contact details, and current employment basics.',
-    },
-    'Detailed Information': {
-        icon: FileText,
-        description: 'Work history, career summary, skills, and preferences.',
-    },
+// Section ids come from config/bizreachQuestions; labels/descriptions: BizReach.<key>, <key>Desc
+const SECTION_META: Record<string, { icon: React.ElementType; key: string }> = {
+    'Basic Information': { icon: UserCheck, key: 'sectionBasic' },
+    'Detailed Information': { icon: FileText, key: 'sectionDetailed' },
 };
 
 interface BizReachGuideProps {
@@ -65,6 +61,10 @@ interface BizReachGuideProps {
 
 export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProps) {
     const t = useTranslations('Export');
+    const tb = useTranslations('BizReach');
+    const tCommon = useTranslations('Common');
+    const locale = useLocale();
+    const sectionLabel = (section: string) => (SECTION_META[section] ? tb(SECTION_META[section].key) : section);
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
     const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -81,7 +81,8 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
 
     const completedCount = useMemo(() => completedSteps.size, [completedSteps]);
     const progressPct = showSummary ? 100 : ((currentStepIndex + 1) / totalQuestions) * 100;
-    const fieldMeta = FIELD_TYPE_META[question.fieldType] || FIELD_TYPE_META.none;
+    const fieldType = FIELD_TYPE_META[question.fieldType] ? question.fieldType : 'none';
+    const fieldMeta = FIELD_TYPE_META[fieldType];
     const FieldIcon = fieldMeta.icon;
 
     // Ordered list of unique sections
@@ -240,13 +241,13 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
             <div className="px-6 py-4 border-b border-slate-100">
                 <div className="flex items-center justify-between mb-3">
                     <div>
-                        <h2 className="text-base font-bold text-slate-900">BizReach Registration Assistant</h2>
+                        <h2 className="text-base font-bold text-slate-900">{tb('assistantTitle')}</h2>
                         <p className="text-xs text-slate-500 mt-0.5">
                             {showSummary
-                                ? 'Review & Complete'
+                                ? tb('reviewComplete')
                                 : showSectionTransition
-                                    ? 'Section Transition'
-                                    : `Step ${stepWithinSection + 1} of ${totalInSection}`
+                                    ? tb('sectionTransition')
+                                    : tb('stepOf', { current: stepWithinSection + 1, total: totalInSection })
                             }
                         </p>
                     </div>
@@ -255,11 +256,11 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                             onClick={handleOpenBizReach}
                             className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all duration-200"
                         >
-                            Open BizReach <ExternalLink className="w-3 h-3" />
+                            {tb('openBizReach')} <ExternalLink className="w-3 h-3" />
                         </button>
                         {onClose && (
                             <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-sm font-bold px-2 py-1.5 transition-colors">
-                                Close
+                                {tCommon('close')}
                             </button>
                         )}
                     </div>
@@ -274,7 +275,7 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                         />
                     </div>
                     <span className="text-[11px] text-slate-400 font-bold tabular-nums whitespace-nowrap">
-                        {completedCount}/{totalQuestions} done
+                        {tb('doneCount', { done: completedCount, total: totalQuestions })}
                     </span>
                 </div>
 
@@ -300,10 +301,10 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                             >
                                 <SectionIcon className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-500' : 'text-slate-400'}`} />
                                 <div className="min-w-0 flex-1">
-                                    <div className="text-xs font-bold truncate">{section}</div>
+                                    <div className="text-xs font-bold truncate">{sectionLabel(section)}</div>
                                     <div className="text-[10px] text-slate-400 font-medium">
                                         {allDone ? (
-                                            <span className="text-emerald-500">Complete</span>
+                                            <span className="text-emerald-500">{tb('sectionComplete')}</span>
                                         ) : (
                                             `${progress.completed}/${progress.total}`
                                         )}
@@ -325,7 +326,7 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                         `}
                     >
                         <Flag className={`w-4 h-4 shrink-0 ${showSummary ? 'text-indigo-500' : 'text-slate-400'}`} />
-                        <div className="text-xs font-bold">Review</div>
+                        <div className="text-xs font-bold">{tb('review')}</div>
                     </button>
                 </div>
             </div>
@@ -344,19 +345,19 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                             {prevProgress && (
                                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold mb-5">
                                     <CheckCircle2 className="w-3.5 h-3.5" />
-                                    {prevSection}: {prevProgress.completed}/{prevProgress.total} completed
+                                    {tb('sectionCompleted', { section: sectionLabel(prevSection), done: prevProgress.completed, total: prevProgress.total })}
                                 </div>
                             )}
 
                             <div className="w-14 h-14 bg-indigo-50 border border-indigo-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                 <TransitionIcon className="w-7 h-7 text-indigo-600" />
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-1">Up Next: {showSectionTransition}</h3>
+                            <h3 className="text-xl font-bold text-slate-900 mb-1">{tb('upNext', { section: sectionLabel(showSectionTransition) })}</h3>
                             <p className="text-sm text-slate-500 max-w-sm mx-auto mb-6">
-                                {meta.description}
+                                {tb(`${meta.key}Desc`)}
                             </p>
                             <div className="text-xs text-slate-400 mb-6">
-                                {sectionGroups[showSectionTransition]?.indices.length} fields in this section
+                                {tb('fieldsInSection', { n: sectionGroups[showSectionTransition]?.indices.length ?? 0 })}
                             </div>
 
                             <div className="flex items-center justify-center gap-3">
@@ -364,13 +365,13 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                                     onClick={() => setShowSectionTransition(null)}
                                     className="text-slate-500 hover:text-slate-800 text-sm font-bold px-4 py-2 rounded-xl transition-all duration-200"
                                 >
-                                    Go Back
+                                    {tb('goBack')}
                                 </button>
                                 <button
                                     onClick={handleContinueToSection}
                                     className="bg-slate-900 text-white hover:bg-indigo-600 text-sm font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-200"
                                 >
-                                    Continue <ArrowRight className="w-4 h-4" />
+                                    {tb('continue')} <ArrowRight className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
@@ -386,10 +387,9 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                         <div className="w-14 h-14 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
                             <Flag className="w-7 h-7 text-emerald-600" />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 mb-1">All Steps Reviewed</h3>
+                        <h3 className="text-xl font-bold text-slate-900 mb-1">{tb('allReviewed')}</h3>
                         <p className="text-sm text-slate-500 max-w-md mx-auto">
-                            You&apos;ve gone through all {totalQuestions} BizReach registration fields.
-                            Open BizReach and paste your data step by step.
+                            {tb('allReviewedDesc', { n: totalQuestions })}
                         </p>
                     </div>
 
@@ -397,15 +397,15 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                     <div className="grid grid-cols-3 border-b border-slate-100">
                         <div className="px-4 py-4 text-center border-r border-slate-100">
                             <div className="text-2xl font-bold text-emerald-600">{summaryStats.withData.length}</div>
-                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Auto-filled</div>
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{tb('autoFilled')}</div>
                         </div>
                         <div className="px-4 py-4 text-center border-r border-slate-100">
                             <div className="text-2xl font-bold text-amber-500">{summaryStats.manual.length}</div>
-                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Manual</div>
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{tb('manual')}</div>
                         </div>
                         <div className="px-4 py-4 text-center">
                             <div className="text-2xl font-bold text-indigo-500">{completedCount}</div>
-                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Completed</div>
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{tb('completed')}</div>
                         </div>
                     </div>
 
@@ -414,12 +414,12 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                         {Object.entries(sectionGroups).map(([section, group]) => (
                             <div key={section}>
                                 <div className="flex items-center justify-between mb-2">
-                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{section}</h4>
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{sectionLabel(section)}</h4>
                                     <button
                                         onClick={() => handleJumpToSection(section)}
                                         className="text-[11px] font-bold text-indigo-500 hover:text-indigo-700 transition-colors"
                                     >
-                                        Go to section
+                                        {tb('goToSection')}
                                     </button>
                                 </div>
                                 <div className="space-y-1">
@@ -456,12 +456,12 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                                                 </div>
                                                 {!qHasData && (
                                                     <span className="text-[10px] font-bold text-amber-500 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-lg shrink-0">
-                                                        Manual
+                                                        {tb('manual')}
                                                     </span>
                                                 )}
                                                 {qHasData && !isCompleted && (
                                                     <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-lg shrink-0">
-                                                        Ready
+                                                        {tb('ready')}
                                                     </span>
                                                 )}
                                             </button>
@@ -478,13 +478,13 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                             onClick={() => setShowSummary(false)}
                             className="text-slate-500 hover:text-slate-800 text-sm font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition-all duration-200"
                         >
-                            <RotateCcw className="w-3.5 h-3.5" /> Back to Steps
+                            <RotateCcw className="w-3.5 h-3.5" /> {tb('backToSteps')}
                         </button>
                         <button
                             onClick={handleOpenBizReach}
                             className="bg-slate-900 text-white hover:bg-indigo-600 text-sm font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-200"
                         >
-                            Open BizReach & Start <ExternalLink className="w-4 h-4" />
+                            {tb('openAndStart')} <ExternalLink className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -496,14 +496,14 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                         <div className="flex items-start justify-between gap-4">
                             <div className="min-w-0">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-                                    {question.section} — {stepWithinSection + 1}/{totalInSection}
+                                    {sectionLabel(question.section)} — {stepWithinSection + 1}/{totalInSection}
                                 </span>
                                 <h3 className="text-lg font-bold text-slate-900 leading-snug">{question.questionJa}</h3>
                                 <p className="text-xs text-slate-500 mt-1">{question.questionEn}</p>
                             </div>
                             <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 shrink-0">
                                 <FieldIcon className="w-3.5 h-3.5 text-slate-400" />
-                                <span className="text-[11px] font-medium text-slate-500">{fieldMeta.label}</span>
+                                <span className="text-[11px] font-medium text-slate-500">{tb(`field_${fieldType}`)}</span>
                             </div>
                         </div>
                     </div>
@@ -513,7 +513,7 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
 
                         {/* Tip */}
                         <div className="bg-indigo-50/80 border border-indigo-100 px-4 py-3 rounded-xl text-sm text-indigo-800">
-                            {t(question.tipKey as any) || `This field requires a ${question.fieldType} input on BizReach.`}
+                            {t(question.tipKey as any) || tb('tipFallback', { type: tb(`field_${fieldType}`) })}
                         </div>
 
                         {/* Data Extraction */}
@@ -521,11 +521,11 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                             <div className="flex items-center justify-between mb-2">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                                     <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                                    Extracted Data
+                                    {tb('extractedData')}
                                 </label>
                                 {copiedStates[question.id] && (
                                     <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
-                                        <Check className="w-3 h-3" /> Copied — advancing...
+                                        <Check className="w-3 h-3" /> {tb('copiedAdvancing')}
                                     </span>
                                 )}
                             </div>
@@ -550,9 +550,9 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                                     <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/80 flex items-center gap-3">
                                         <AlertCircle className="w-4 h-4 text-slate-400 shrink-0" />
                                         <div>
-                                            <h4 className="text-sm font-bold text-slate-600">No data extracted</h4>
+                                            <h4 className="text-sm font-bold text-slate-600">{tb('noData')}</h4>
                                             <p className="text-xs text-slate-500">
-                                                This field needs to be filled manually on BizReach.
+                                                {tb('noDataDesc')}
                                             </p>
                                         </div>
                                     </div>
@@ -570,7 +570,7 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                                                 : 'bg-white border-slate-200 text-slate-400 hover:text-slate-700 hover:border-slate-300 hover:shadow-sm opacity-0 group-hover:opacity-100'
                                             }
                                         `}
-                                        title="Copy to clipboard"
+                                        title={tb('copyToClipboard')}
                                     >
                                         {copiedStates[question.id] ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                                     </button>
@@ -587,7 +587,7 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                             disabled={currentStepIndex === 0}
                             className="text-slate-500 hover:text-slate-800 text-sm font-bold px-3 py-2 rounded-xl flex items-center gap-1 transition-all duration-200 disabled:opacity-30 disabled:hover:text-slate-500"
                         >
-                            <ChevronLeft className="w-4 h-4" /> Previous
+                            <ChevronLeft className="w-4 h-4" /> {tb('previous')}
                         </button>
 
                         {/* In-section step dots */}
@@ -603,7 +603,7 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                                         {isHovered && (
                                             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
                                                 <div className="bg-slate-800 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-lg">
-                                                    <span className="font-bold">{i + 1}.</span> {BIZREACH_QUESTIONS[globalIdx].questionEn}
+                                                    <span className="font-bold">{i + 1}.</span> {locale === 'ja' ? BIZREACH_QUESTIONS[globalIdx].questionJa : BIZREACH_QUESTIONS[globalIdx].questionEn}
                                                 </div>
                                                 <div className="w-2 h-2 bg-slate-800 rotate-45 mx-auto -mt-1" />
                                             </div>
@@ -634,7 +634,7 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                                 onClick={handleFinish}
                                 className="bg-emerald-600 text-white hover:bg-emerald-500 text-sm font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all duration-200"
                             >
-                                Finish & Review <Flag className="w-4 h-4" />
+                                {tb('finishReview')} <Flag className="w-4 h-4" />
                             </button>
                         ) : (
                             <button
@@ -645,8 +645,8 @@ export default function BizReachGuide({ resumeData, onClose }: BizReachGuideProp
                                 className="bg-slate-900 text-white hover:bg-indigo-600 text-sm font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all duration-200"
                             >
                                 {hasData && !copiedStates[question.id] && !completedSteps.has(currentStepIndex)
-                                    ? 'Skip & Next'
-                                    : 'Next Step'} <ChevronRight className="w-4 h-4" />
+                                    ? tb('skipNext')
+                                    : tb('nextStep')} <ChevronRight className="w-4 h-4" />
                             </button>
                         )}
                     </div>

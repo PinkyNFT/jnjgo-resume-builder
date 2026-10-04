@@ -150,15 +150,14 @@ export default function MessagesPage() {
             });
 
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Failed to send reply');
+                throw new Error(t('replyFailed'));
             }
 
             const data = await res.json();
             setThreadReplies(prev => [...prev, data.reply]);
             setReplyText('');
         } catch (error: any) {
-            toast.error(error.message || 'Failed to send reply.');
+            toast.error(error.message || t('replyFailed'));
         } finally {
             setIsReplying(false);
         }

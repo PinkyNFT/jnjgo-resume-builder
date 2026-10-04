@@ -54,8 +54,12 @@ function SelectRoleContent() {
             });
 
             if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.error || 'Failed to set role');
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(
+                    errorData.code === 'PERSONAL_EMAIL' ? t('errorPersonalEmail')
+                        : errorData.code === 'ROLE_ALREADY_SET' ? t('errorRoleAlreadySet')
+                            : t('errorGeneric')
+                );
             }
 
             const data = await res.json();
@@ -74,7 +78,7 @@ function SelectRoleContent() {
                 router.push(callbackUrl || '/dashboard');
             }
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Something went wrong');
+            setError(err instanceof Error && err.message ? err.message : t('errorGeneric'));
             setIsSubmitting(false);
         }
     };

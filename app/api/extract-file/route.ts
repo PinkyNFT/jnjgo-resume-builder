@@ -59,8 +59,9 @@ export async function POST(request: NextRequest) {
                 await parser.destroy();
             }
         }
+        // Legacy binary .doc (application/msword) isn't supported by mammoth — it
+        // falls through to the "unsupported format" message below.
         else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-            file.type === 'application/msword' ||
             file.name.toLowerCase().endsWith('.docx')) {
             try {
                 // Parse DOCX

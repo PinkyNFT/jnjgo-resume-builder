@@ -1,5 +1,5 @@
 import { WorkExperience, SkillTimeline } from '../types';
-import { parsePeriod, toStartFraction, toEndFraction } from './dateParser';
+import { parsePeriod, toStartFraction, toSpan } from './dateParser';
 
 /**
  * Timeline generation utilities for converting work experience data
@@ -331,41 +331,63 @@ export function insertGapsInTimeline<T extends { id: string; startYear: number; 
 
     const result: Array<T | (T & { isGap: boolean })> = [];
 
-    for (let i = 0; i < sorted.length; i++) {
-        const current = sorted[i];
+    // The item whose end is latest so far. Comparing against it (not just the
+    // previous item) keeps a long overlapping role from being reported as a gap
+    // just because a shorter role inside it ended earlier.
+    let latest: T | null = null;
 
-        // Add the current item
-        result.push(current);
+    for (const current of sorted) {
+        if (latest) {
+            // Ongoing positions cover everything after them — no gaps.
+            if (latest.endYear == null) {
+                result.push(current);
+                continue;
+            }
 
-        // Check if there's a next item to compare with
-        if (i < sorted.length - 1) {
-            const next = sorted[i + 1];
+            const gapStartFrac = toSpan(latest).end;
+            const gapEndFrac = toStartFraction(current.startYear, current.startMonth);
 
-            // Ongoing positions have no trailing gap.
-            if (current.endYear == null) continue;
-
-            // Compare month-accurate end-of-current vs start-of-next
-            const gapStartFrac = toEndFraction(current.endYear, current.endMonth);
-            const gapEndFrac = toStartFraction(next.startYear, next.startMonth);
-            const gapDuration = gapEndFrac - gapStartFrac;
-
-            // If there's a significant gap, insert a gap item that spans the
-            // actual months between the two positions.
-            if (gapDuration >= minGapYears) {
+            // If there's a significant gap, insert a gap item that spans exactly
+            // the months between the two positions (month after the earlier one
+            // ends .. month before the next one starts).
+            if (gapEndFrac - gapStartFrac >= minGapYears) {
+                const withMonths = !!latest.endMonth || !!current.startMonth;
                 const gapItem = {
-                    id: `gap-${current.id}-${next.id}`,
+                    id: `gap-${latest.id}-${current.id}`,
                     label: 'Gap',
-                    startYear: current.endYear,
-                    endYear: next.startYear,
-                    startMonth: current.endMonth,
-                    endMonth: next.startMonth,
+                    ...gapBoundary(gapStartFrac, gapEndFrac, withMonths),
                     isGap: true
                 } as T & { isGap: boolean };
 
                 result.push(gapItem);
             }
         }
+
+        result.push(current);
+
+        if (!latest || latest.endYear != null && (current.endYear == null || toSpan(current).end > toSpan(latest).end)) {
+            latest = current;
+        }
     }
 
     return result;
+}
+
+/**
+ * Convert a gap's fractional [start, end] back to year/month fields that
+ * round-trip through toStartFraction / toEndFraction. Without month info the
+ * gap keeps year granularity (fractions are whole years in that case).
+ */
+function gapBoundary(startFrac: number, endFrac: number, withMonths: boolean) {
+    if (!withMonths) {
+        return { startYear: Math.floor(startFrac), endYear: Math.round(endFrac), startMonth: undefined, endMonth: undefined };
+    }
+    const startAbs = Math.round(startFrac * 12); // first month of the gap (0-based absolute)
+    const endAbs = Math.round(endFrac * 12) - 1; // last month of the gap
+    return {
+        startYear: Math.floor(startAbs / 12),
+        startMonth: (startAbs % 12) + 1,
+        endYear: Math.floor(endAbs / 12),
+        endMonth: (endAbs % 12) + 1
+    };
 }

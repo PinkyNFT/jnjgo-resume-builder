@@ -20,7 +20,10 @@ export function Providers({ children }: PropsWithChildren) {
                 const now = Date.now();
                 if (now - lastWarnAt > 30_000) {
                     lastWarnAt = now;
-                    toast.warning('Our servers are temporarily unavailable. Please try again in a moment.', 8000);
+                    // Providers is also used outside the next-intl provider (app/c), so pick by <html lang>.
+                    toast.warning(document.documentElement.lang === 'ja'
+                        ? 'サーバーが一時的に利用できません。しばらくしてから、もう一度お試しください。'
+                        : 'Our servers are temporarily unavailable. Please try again in a moment.', 8000);
                 }
             }
             return res;

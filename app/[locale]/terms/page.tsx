@@ -33,7 +33,7 @@ export default async function TermsPage() {
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-800">
-            <strong>Beta:</strong> {t('betaNotice')}
+            <strong>{t('betaLabel')}</strong> {t('betaNotice')}
           </div>
 
           <section className="space-y-3">

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react';
 import { toast, ToastItem } from '../../lib/toast';
+import { useTranslations } from 'next-intl';
 
 const ICONS = {
   success: CheckCircle2,
@@ -19,6 +20,7 @@ const STYLES: Record<ToastItem['type'], string> = {
 };
 
 export function Toaster() {
+  const tCommon = useTranslations('Common');
   const [items, setItems] = useState<ToastItem[]>([]);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export function Toaster() {
   return (
     <div
       aria-live="polite"
-      aria-label="Notifications"
+      aria-label={tCommon('notifications')}
       className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 pointer-events-none"
     >
       {items.map(item => {
@@ -53,7 +55,7 @@ export function Toaster() {
             <span className="text-sm font-semibold flex-1 leading-snug">{item.message}</span>
             <button
               onClick={() => dismiss(item.id)}
-              aria-label="Dismiss"
+              aria-label={tCommon('dismiss')}
               className="ml-1 p-0.5 opacity-70 hover:opacity-100 transition-opacity shrink-0"
             >
               <X className="w-4 h-4" />

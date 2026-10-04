@@ -68,7 +68,7 @@ export async function POST(req: Request) {
         // 1. Prevent role changes
         if (user?.role) {
             return NextResponse.json(
-                { error: 'Your role is already set and cannot be changed. Please contact support if you need assistance.' },
+                { error: 'Your role is already set and cannot be changed. Please contact support if you need assistance.', code: 'ROLE_ALREADY_SET' },
                 { status: 400 }
             );
         }
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
 
             if (emailPart && personalDomains.includes(emailPart)) {
                 return NextResponse.json(
-                    { error: 'Please use a professional work email address. Personal email providers are not allowed for recruiter accounts.' },
+                    { error: 'Please use a professional work email address. Personal email providers are not allowed for recruiter accounts.', code: 'PERSONAL_EMAIL' },
                     { status: 400 }
                 );
             }

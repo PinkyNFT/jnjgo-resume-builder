@@ -4,8 +4,10 @@ import { useSession, signIn, signOut } from 'next-auth/react';
 import { LayoutDashboard, LogOut, ChevronDown } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 export function AuthButton() {
+    const t = useTranslations('Nav');
     const { data: session, status } = useSession();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -86,14 +88,14 @@ export function AuthButton() {
                                 className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors"
                             >
                                 <LayoutDashboard className="w-4 h-4" />
-                                Go to Dashboard
+                                {t('goToDashboard')}
                             </Link>
                             <button
                                 onClick={() => { setIsOpen(false); signOut({ callbackUrl: '/' }); }}
                                 className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
                             >
                                 <LogOut className="w-4 h-4" />
-                                Sign out
+                                {t('signOut')}
                             </button>
                         </div>
                     </div>
@@ -107,7 +109,7 @@ export function AuthButton() {
             onClick={() => signIn()}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-indigo-600 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
         >
-            Sign in
+            {t('signIn')}
         </button>
     );
 }

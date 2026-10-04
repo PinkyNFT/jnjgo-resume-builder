@@ -8,6 +8,7 @@ import {
     Zap, Target, TrendingUp, Eye, Link2, Copy, Check, ExternalLink, Save, Trash2, Users, Clock,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { CandidatePrivateProfile } from '../../types';
 import { usePrivateProfile, useSavePrivateProfile } from '../../hooks/usePrivateProfile';
 import { useProjects } from '../../hooks/useProjects';
@@ -17,16 +18,18 @@ import { useProfileViews } from '../../hooks/useProfileViews';
 /* ─── Constants ──────────────────────────────────────────── */
 
 const ORIENTATION_OPTIONS = [
-    { value: 'tech-driven', label: 'Tech / Specialist', description: 'Deep technical focus', icon: Zap, color: 'bg-blue-600' },
-    { value: 'business-driven', label: 'Business / Strategy', description: 'Growth & strategy', icon: TrendingUp, color: 'bg-emerald-600' },
-    { value: 'management-driven', label: 'Management / Lead', description: 'Team & delivery', icon: Briefcase, color: 'bg-violet-600' },
-    { value: 'balanced', label: 'Balanced / Hybrid', description: 'Cross-functional', icon: Globe, color: 'bg-amber-600' },
+    // labelKey → PrivateProfile.<labelKey> / <labelKey>Desc
+    { value: 'tech-driven', labelKey: 'orientationTech', icon: Zap, color: 'bg-blue-600' },
+    { value: 'business-driven', labelKey: 'orientationBusiness', icon: TrendingUp, color: 'bg-emerald-600' },
+    { value: 'management-driven', labelKey: 'orientationManagement', icon: Briefcase, color: 'bg-violet-600' },
+    { value: 'balanced', labelKey: 'orientationBalanced', icon: Globe, color: 'bg-amber-600' },
 ] as const;
 
 const INTENT_OPTIONS = [
-    { value: 'now', label: 'Actively looking', badge: 'Now', description: 'Ready for interviews', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-    { value: 'within_3_months', label: 'Within 3 months', badge: '3m', description: 'Planning to move soon', color: 'text-blue-700 bg-blue-50 border-blue-200' },
-    { value: 'open_to_offers', label: 'Open to offers', badge: 'Passive', description: 'Right offer only', color: 'text-slate-700 bg-slate-50 border-slate-200' },
+    // labelKey → PrivateProfile.<labelKey> / <labelKey>Badge / <labelKey>Desc
+    { value: 'now', labelKey: 'intentNow', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+    { value: 'within_3_months', labelKey: 'intent3m', color: 'text-blue-700 bg-blue-50 border-blue-200' },
+    { value: 'open_to_offers', labelKey: 'intentOpen', color: 'text-slate-700 bg-slate-50 border-slate-200' },
 ] as const;
 
 /* ─── Animation variants ─────────────────────────────────── */
@@ -102,6 +105,8 @@ function InputField({
 /* ─── Main Component ─────────────────────────────────────── */
 
 export default function PrivateProfileEditor() {
+    const t = useTranslations('PrivateProfile');
+    const tCommon = useTranslations('Common');
     // ── Server state via React Query (deduplicated + cached) ──────────────
     const { data: serverProfile, isPending: profilePending } = usePrivateProfile();
     const { mutateAsync: saveProfile, isPending: isSaving } = useSavePrivateProfile();
@@ -153,15 +158,15 @@ export default function PrivateProfileEditor() {
         try {
             const res = await fetch('/api/profile/private/generate', { method: 'POST' });
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Failed to generate profile');
+                // 400 = no completed resume yet (see /api/profile/private/generate)
+                throw new Error(res.status === 400 ? t('noResumeForProfile') : t('generateFailed'));
             }
             const data = await res.json();
             setProfile(data);
             initialProfileRef.current = JSON.stringify(data);
-            setSuccessMessage('Draft created. Review and publish when ready.');
+            setSuccessMessage(t('draftCreated'));
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Something went wrong');
+            setError(err instanceof Error ? err.message : t('generateFailed'));
         } finally {
             setIsGenerating(false);
         }
@@ -177,11 +182,11 @@ export default function PrivateProfileEditor() {
             initialProfileRef.current = JSON.stringify(data);
             setSuccessMessage(
                 status === 'published'
-                    ? 'Profile is live — recruiters can now see it from your link.'
-                    : 'Draft saved.'
+                    ? t('publishedMessage')
+                    : t('draftSaved')
             );
         } catch {
-            setError('Could not save. Try again.');
+            setError(t('saveFailed'));
         }
     };
 
@@ -191,7 +196,7 @@ export default function PrivateProfileEditor() {
             : `/c/${publicSlug}`;
         navigator.clipboard.writeText(url);
         setCopied(true);
-        setSuccessMessage('Link copied to clipboard');
+        setSuccessMessage(t('linkCopied'));
         setTimeout(() => {
             setCopied(false);
             setSuccessMessage('');
@@ -206,7 +211,7 @@ export default function PrivateProfileEditor() {
             if (!res.ok) throw new Error('Deletion failed');
             await signOut({ callbackUrl: '/' });
         } catch {
-            setError('Failed to delete account. Please try again or contact support.');
+            setError(t('deleteAccountFailed'));
             setIsDeleting(false);
             setShowDeleteModal(false);
         }
@@ -227,7 +232,7 @@ export default function PrivateProfileEditor() {
                     <div className="w-12 h-12 rounded-full border-[3px] border-slate-200" />
                     <div className="w-12 h-12 rounded-full border-[3px] border-transparent border-t-indigo-500 absolute inset-0 animate-[spinner_0.8s_linear_infinite]" />
                 </div>
-                <p className="text-sm font-medium text-slate-500 animate-pulse-soft">Loading profile…</p>
+                <p className="text-sm font-medium text-slate-500 animate-pulse-soft">{t('loadingProfile')}</p>
             </div>
         );
     }
@@ -251,13 +256,13 @@ export default function PrivateProfileEditor() {
                         className="inline-flex items-center gap-2 rounded-full bg-indigo-600 text-white px-3.5 py-1.5 text-xs font-bold tracking-wide"
                     >
                         <Sparkles className="w-3.5 h-3.5" />
-                        AI-powered
+                        {t('aiPowered')}
                     </motion.div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                        Recruiter-only profile
+                        {t('title')}
                     </h1>
                     <p className="text-slate-600 text-base max-w-xl leading-relaxed">
-                        Share intent, salary range, and deal-breakers only with recruiters who open your JNJGO link. You control what&apos;s visible.
+                        {t('emptyDesc')}
                     </p>
                 </div>
 
@@ -277,10 +282,10 @@ export default function PrivateProfileEditor() {
                     </motion.div>
 
                     <h2 className="text-xl font-bold text-slate-900 mb-2">
-                        Create your recruiter profile
+                        {t('createTitle')}
                     </h2>
                     <p className="text-slate-500 text-sm max-w-md mx-auto mb-8 leading-relaxed">
-                        AI will suggest fields from your resume and interview. You edit and publish when you&apos;re ready.
+                        {t('createDesc')}
                     </p>
 
                     <motion.button
@@ -291,11 +296,11 @@ export default function PrivateProfileEditor() {
                         className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors"
                     >
                         <Sparkles className="w-4 h-4" />
-                        Generate draft with AI
+                        {t('generateWithAi')}
                     </motion.button>
 
                     <p className="mt-5 text-xs text-slate-400 font-medium">
-                        Requires at least one completed resume project
+                        {t('requiresResume')}
                     </p>
                 </motion.div>
             </motion.div>
@@ -317,10 +322,10 @@ export default function PrivateProfileEditor() {
                     <Sparkles className="w-5 h-5 text-indigo-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
                 <h2 className="text-lg font-bold text-slate-900 mb-2">
-                    Building your profile
+                    {t('buildingTitle')}
                 </h2>
                 <p className="text-slate-500 text-sm">
-                    Analyzing your resume and interview history…
+                    {t('buildingDesc')}
                 </p>
                 <div className="mt-6 flex justify-center gap-1.5">
                     {[0, 1, 2].map((i) => (
@@ -349,10 +354,10 @@ export default function PrivateProfileEditor() {
             >
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                        Recruiter-only profile
+                        {t('title')}
                     </h1>
                     <p className="mt-1 text-slate-600 text-sm max-w-xl">
-                        Only recruiters who open your JNJGO link can see this. You control visibility.
+                        {t('headerDesc')}
                     </p>
                 </div>
                 <motion.div
@@ -369,18 +374,18 @@ export default function PrivateProfileEditor() {
                             className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-3.5 py-1.5 rounded-full hover:bg-indigo-100 transition-colors"
                         >
                             <ExternalLink className="w-3 h-3" />
-                            Preview
+                            {t('preview')}
                         </a>
                     )}
                     {isPublished ? (
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-full">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-soft" />
-                            Live
+                            {t('live')}
                         </span>
                     ) : (
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 border border-slate-200 px-3.5 py-1.5 rounded-full">
                             <FileText className="w-3 h-3" />
-                            Draft
+                            {t('draft')}
                         </span>
                     )}
                 </motion.div>
@@ -399,7 +404,7 @@ export default function PrivateProfileEditor() {
                     >
                         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                         <span className="flex-1 font-medium">{error}</span>
-                        <button type="button" onClick={() => setError('')} className="text-red-400 hover:text-red-600 transition-colors" aria-label="Dismiss">
+                        <button type="button" onClick={() => setError('')} className="text-red-400 hover:text-red-600 transition-colors" aria-label={t('dismiss')}>
                             <XCircle className="w-4 h-4" />
                         </button>
                     </motion.div>
@@ -415,7 +420,7 @@ export default function PrivateProfileEditor() {
                     >
                         <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
                         <span className="flex-1 font-medium">{successMessage}</span>
-                        <button type="button" onClick={() => setSuccessMessage('')} className="text-emerald-400 hover:text-emerald-600 transition-colors" aria-label="Dismiss">
+                        <button type="button" onClick={() => setSuccessMessage('')} className="text-emerald-400 hover:text-emerald-600 transition-colors" aria-label={t('dismiss')}>
                             <XCircle className="w-4 h-4" />
                         </button>
                     </motion.div>
@@ -427,9 +432,9 @@ export default function PrivateProfileEditor() {
 
                 {/* ── Recruiter Link ── */}
                 {isPublished && publicSlug && (
-                    <SectionCard title="Your recruiter link" icon={Link2} index={0}>
+                    <SectionCard title={t('linkTitle')} icon={Link2} index={0}>
                         <p className="text-slate-600 text-sm mb-3">
-                            Add this URL to your exported resume so recruiters can see your preferences.
+                            {t('linkDesc')}
                         </p>
                         <div className="flex items-center gap-2">
                             <code className="flex-1 px-4 py-2.5 bg-slate-50 rounded-lg text-sm text-slate-800 font-mono truncate border border-slate-200">
@@ -442,26 +447,26 @@ export default function PrivateProfileEditor() {
                                 className="shrink-0 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors inline-flex items-center gap-2"
                             >
                                 {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                                {copied ? 'Copied' : 'Copy'}
+                                {copied ? t('copied') : t('copy')}
                             </motion.button>
                         </div>
                     </SectionCard>
                 )}
 
                 {/* ── Highlighted Resume (top) ── */}
-                <SectionCard title="Highlighted resume" icon={FileText} badge="Recommended" index={1}>
+                <SectionCard title={t('highlightedTitle')} icon={FileText} badge={t('recommended')} index={1}>
                     <div className="space-y-3">
                         <p className="text-xs text-slate-500 leading-relaxed">
-                            Attach a completed resume so recruiters can see your skills and career summary at a glance.
+                            {t('highlightedDesc')}
                         </p>
                         {projectsLoading ? (
                             <div className="flex items-center gap-2 py-3">
                                 <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-                                <span className="text-xs text-slate-500">Loading your resumes…</span>
+                                <span className="text-xs text-slate-500">{t('loadingResumes')}</span>
                             </div>
                         ) : projects.length === 0 ? (
                             <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-center">
-                                <p className="text-xs text-slate-500">No completed resumes available. Complete a resume project first to attach it here.</p>
+                                <p className="text-xs text-slate-500">{t('noResumes')}</p>
                             </div>
                         ) : (
                             <div className="space-y-2">
@@ -470,10 +475,10 @@ export default function PrivateProfileEditor() {
                                     onChange={(e) => updateProfile({ highlightedProjectId: e.target.value || null })}
                                     className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm text-slate-900 focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all duration-200 bg-white"
                                 >
-                                    <option value="">None — don&apos;t show a resume</option>
+                                    <option value="">{t('noneOption')}</option>
                                     {projects.map(p => (
                                         <option key={p.id} value={p.id}>
-                                            {p.title} ({p.status})
+                                            {p.title} ({t(`status_${p.status}`)})
                                         </option>
                                     ))}
                                 </select>
@@ -484,7 +489,7 @@ export default function PrivateProfileEditor() {
                                         className="text-xs text-emerald-600 font-medium flex items-center gap-1.5"
                                     >
                                         <CheckCircle2 className="w-3.5 h-3.5" />
-                                        Resume will be visible to recruiters browsing your profile
+                                        {t('resumeVisible')}
                                     </motion.p>
                                 )}
                             </div>
@@ -493,7 +498,7 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
                 {/* ── Career Orientation ── */}
-                <SectionCard title="Career orientation" icon={Target} index={2}>
+                <SectionCard title={t('orientationTitle')} icon={Target} index={2}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {ORIENTATION_OPTIONS.map((opt) => {
                             const active = profile!.orientation === opt.value;
@@ -513,8 +518,8 @@ export default function PrivateProfileEditor() {
                                         <opt.icon className="w-5 h-5 text-white" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <span className="font-semibold text-slate-900 text-sm block">{opt.label}</span>
-                                        <span className="text-xs text-slate-500">{opt.description}</span>
+                                        <span className="font-semibold text-slate-900 text-sm block">{t(opt.labelKey)}</span>
+                                        <span className="text-xs text-slate-500">{t(`${opt.labelKey}Desc`)}</span>
                                     </div>
                                     {active && (
                                         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
@@ -528,7 +533,7 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
                 {/* ── Job Change Intent ── */}
-                <SectionCard title="Job change intent" icon={TrendingUp} index={3}>
+                <SectionCard title={t('intentTitle')} icon={TrendingUp} index={3}>
                     <div className="flex flex-col sm:flex-row gap-3">
                         {INTENT_OPTIONS.map((opt) => {
                             const active = profile!.jobChangeIntent === opt.value;
@@ -546,7 +551,7 @@ export default function PrivateProfileEditor() {
                                 >
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${active ? 'text-indigo-700 bg-indigo-100 border-indigo-200' : opt.color}`}>
-                                            {opt.badge}
+                                            {t(`${opt.labelKey}Badge`)}
                                         </span>
                                         {active && (
                                             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
@@ -554,8 +559,8 @@ export default function PrivateProfileEditor() {
                                             </motion.div>
                                         )}
                                     </div>
-                                    <span className="font-semibold text-slate-900 text-sm block">{opt.label}</span>
-                                    <span className="text-xs text-slate-500">{opt.description}</span>
+                                    <span className="font-semibold text-slate-900 text-sm block">{t(opt.labelKey)}</span>
+                                    <span className="text-xs text-slate-500">{t(`${opt.labelKey}Desc`)}</span>
                                 </motion.button>
                             );
                         })}
@@ -563,22 +568,22 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
                 {/* ── AI Objective Review ── */}
-                <SectionCard title="Objective summary" icon={Sparkles} badge="Recruiter sees this" index={4}>
-                    <InputField hint="2–3 sentences on your strengths and what you're looking for.">
+                <SectionCard title={t('objectiveTitle')} icon={Sparkles} badge={t('recruiterSees')} index={4}>
+                    <InputField hint={t('objectiveHint')}>
                         <textarea
                             value={profile!.aiObjectiveReview || ''}
                             onChange={(e) => updateProfile({ aiObjectiveReview: e.target.value })}
                             rows={4}
-                            placeholder="e.g. Full-stack engineer with 8 years of experience in SaaS products. Looking for a senior role at a product-led company."
+                            placeholder={t('objectivePlaceholder')}
                             className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 resize-none transition-all duration-200"
                         />
                     </InputField>
                 </SectionCard>
 
                 {/* ── Salary Expectations ── */}
-                <SectionCard title="Salary expectations (JPY)" icon={DollarSign} index={5}>
+                <SectionCard title={t('salaryTitle')} icon={DollarSign} index={5}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <InputField label="Minimum">
+                        <InputField label={t('salaryMinimum')}>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-medium">¥</span>
                                 <input
@@ -597,7 +602,7 @@ export default function PrivateProfileEditor() {
                                 <p className="mt-1.5 text-xs font-medium text-slate-500">{formatSalary(profile!.desiredSalary.minimum)}</p>
                             ) : null}
                         </InputField>
-                        <InputField label="Target">
+                        <InputField label={t('salaryTarget')}>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-medium">¥</span>
                                 <input
@@ -620,7 +625,7 @@ export default function PrivateProfileEditor() {
                 </SectionCard>
 
                 {/* ── Deal Breakers ── */}
-                <SectionCard title="Deal breakers" icon={Ban} index={6}>
+                <SectionCard title={t('dealBreakersTitle')} icon={Ban} index={6}>
                     {(profile!.dealBreakers?.filter(Boolean).length ?? 0) > 0 ? (
                         <div className="flex flex-wrap gap-2 mb-3">
                             {profile!.dealBreakers!.map((db, i) =>
@@ -640,7 +645,7 @@ export default function PrivateProfileEditor() {
                                                 updateProfile({ dealBreakers: next });
                                             }}
                                             className="text-red-400 hover:text-red-600 transition-colors -mr-0.5"
-                                            aria-label="Remove"
+                                            aria-label={t('remove')}
                                         >
                                             <XCircle className="w-3.5 h-3.5" />
                                         </button>
@@ -649,42 +654,43 @@ export default function PrivateProfileEditor() {
                             )}
                         </div>
                     ) : null}
-                    <InputField hint="Comma-separated. Helps recruiters quickly filter fit.">
+                    <InputField hint={t('dealBreakersHint')}>
                         <input
                             type="text"
                             value={profile!.dealBreakers?.join(', ') || ''}
                             onChange={(e) =>
                                 updateProfile({
-                                    dealBreakers: e.target.value.split(',').map((s) => s.trim()),
+                                    // Also split on Japanese commas (、，) so JP input works as described in the hint
+                                    dealBreakers: e.target.value.split(/[,、，]/).map((s) => s.trim()),
                                 })
                             }
-                            placeholder="e.g. Legacy tech, no equity, no remote"
+                            placeholder={t('dealBreakersPlaceholder')}
                             className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all duration-200"
                         />
                     </InputField>
                 </SectionCard>
 
                 {/* ── Interview Availability ── */}
-                <SectionCard title="Interview availability" icon={CalendarCheck} index={7}>
-                    <InputField hint="When are you generally available for interviews?">
+                <SectionCard title={t('availabilityTitle')} icon={CalendarCheck} index={7}>
+                    <InputField hint={t('availabilityHint')}>
                         <input
                             type="text"
                             value={profile!.interviewAvailability || ''}
                             onChange={(e) => updateProfile({ interviewAvailability: e.target.value })}
-                            placeholder="e.g. Weekday evenings after 18:00, weekends"
+                            placeholder={t('availabilityPlaceholder')}
                             className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all duration-200"
                         />
                     </InputField>
                 </SectionCard>
 
                 {/* ── Working Conditions ── */}
-                <SectionCard title="Working conditions" icon={Globe} index={8}>
-                    <InputField hint="Remote, hybrid, office-based, location preferences.">
+                <SectionCard title={t('conditionsTitle')} icon={Globe} index={8}>
+                    <InputField hint={t('conditionsHint')}>
                         <input
                             type="text"
                             value={profile!.workingConditions || ''}
                             onChange={(e) => updateProfile({ workingConditions: e.target.value })}
-                            placeholder="e.g. Remote preferred, hybrid OK, Tokyo area"
+                            placeholder={t('conditionsPlaceholder')}
                             className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-3 focus:ring-indigo-100 transition-all duration-200"
                         />
                     </InputField>
@@ -692,24 +698,24 @@ export default function PrivateProfileEditor() {
 
                 {/* ── Profile Views ── */}
                 {isPublished && profileViews && profileViews.totalViews > 0 && (
-                    <SectionCard title="Who viewed your profile" icon={Users} index={9}>
+                    <SectionCard title={t('viewsTitle')} icon={Users} index={9}>
                         <div className="space-y-4">
                             <div className="flex items-center gap-6">
                                 <div className="text-center">
                                     <p className="text-2xl font-black text-slate-900">{profileViews.totalViews}</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">Total views</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">{t('totalViews')}</p>
                                 </div>
                                 <div className="w-px h-10 bg-slate-200" />
                                 <div className="text-center">
                                     <p className="text-2xl font-black text-indigo-600">{profileViews.uniqueRecruiters}</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">Identified recruiters</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">{t('identifiedRecruiters')}</p>
                                 </div>
                                 {profileViews.anonymousCount > 0 && (
                                     <>
                                         <div className="w-px h-10 bg-slate-200" />
                                         <div className="text-center">
                                             <p className="text-2xl font-black text-slate-400">{profileViews.anonymousCount}</p>
-                                            <p className="text-xs text-slate-500 mt-0.5">Anonymous</p>
+                                            <p className="text-xs text-slate-500 mt-0.5">{t('anonymous')}</p>
                                         </div>
                                     </>
                                 )}
@@ -723,10 +729,10 @@ export default function PrivateProfileEditor() {
                                             : '?';
                                         const relativeTime = (() => {
                                             const diff = Date.now() - v.viewedAt;
-                                            if (diff < 60_000) return 'just now';
-                                            if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-                                            if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
-                                            return `${Math.floor(diff / 86_400_000)}d ago`;
+                                            if (diff < 60_000) return t('justNow');
+                                            if (diff < 3_600_000) return t('minutesAgo', { n: Math.floor(diff / 60_000) });
+                                            if (diff < 86_400_000) return t('hoursAgo', { n: Math.floor(diff / 3_600_000) });
+                                            return t('daysAgo', { n: Math.floor(diff / 86_400_000) });
                                         })();
                                         return (
                                             <motion.div
@@ -740,7 +746,7 @@ export default function PrivateProfileEditor() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-semibold text-slate-800 truncate">
-                                                        {v.recruiterName || 'Recruiter'}
+                                                        {v.recruiterName || t('recruiterFallback')}
                                                     </p>
                                                     <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                                                         <Clock className="w-3 h-3" />
@@ -756,7 +762,7 @@ export default function PrivateProfileEditor() {
                                 </div>
                             ) : (
                                 <p className="text-xs text-slate-500">
-                                    No identified recruiter views yet. Views are attributed once a recruiter signs in.
+                                    {t('noViewers')}
                                 </p>
                             )}
                         </div>
@@ -764,11 +770,11 @@ export default function PrivateProfileEditor() {
                 )}
 
                 {/* ── Visibility ── */}
-                <SectionCard title="Visibility" icon={Eye} index={isPublished && profileViews ? 10 : 9}>
+                <SectionCard title={t('visibilityTitle')} icon={Eye} index={isPublished && profileViews ? 10 : 9}>
                     <div className="flex items-center justify-between gap-4">
                         <div>
-                            <p className="font-semibold text-slate-900 text-sm">Show to recruiters via your link</p>
-                            <p className="text-xs text-slate-500 mt-0.5">Only visible when status is Live</p>
+                            <p className="font-semibold text-slate-900 text-sm">{t('visibilityLabel')}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{t('visibilityHint')}</p>
                         </div>
                         <motion.button
                             type="button"
@@ -806,9 +812,9 @@ export default function PrivateProfileEditor() {
                             <Trash2 className="w-4 h-4 text-red-600" />
                         </div>
                         <div>
-                            <h3 className="text-sm font-bold text-red-900">Danger Zone</h3>
+                            <h3 className="text-sm font-bold text-red-900">{t('dangerZone')}</h3>
                             <p className="text-xs text-red-700 mt-0.5">
-                                Permanently delete your account and all associated data — resumes, projects, profile, and conversation history. This cannot be undone.
+                                {t('dangerDesc')}
                             </p>
                         </div>
                     </div>
@@ -817,7 +823,7 @@ export default function PrivateProfileEditor() {
                         onClick={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
                         className="text-sm font-semibold text-red-700 border border-red-300 bg-white hover:bg-red-50 px-4 py-2 rounded-lg transition-colors"
                     >
-                        Delete my account
+                        {t('deleteMyAccount')}
                     </button>
                 </div>
             </div>
@@ -843,18 +849,18 @@ export default function PrivateProfileEditor() {
                                     <Trash2 className="w-5 h-5 text-red-600" />
                                 </div>
                                 <div>
-                                    <h2 className="text-base font-bold text-slate-900">Delete account</h2>
-                                    <p className="text-xs text-slate-500">This action is permanent and cannot be reversed.</p>
+                                    <h2 className="text-base font-bold text-slate-900">{t('deleteAccountTitle')}</h2>
+                                    <p className="text-xs text-slate-500">{t('deletePermanent')}</p>
                                 </div>
                             </div>
                             <p className="text-sm text-slate-600 mb-4">
-                                All your resumes, projects, candidate profile, and conversation history will be permanently deleted. Type <strong className="font-mono">DELETE</strong> to confirm.
+                                {t.rich('deleteModalBody', { strong: (chunks) => <strong className="font-mono">{chunks}</strong> })}
                             </p>
                             <input
                                 type="text"
                                 value={deleteConfirmText}
                                 onChange={(e) => setDeleteConfirmText(e.target.value)}
-                                placeholder="Type DELETE to confirm"
+                                placeholder={t('deletePlaceholder')}
                                 className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-400 mb-4"
                             />
                             <div className="flex gap-3 justify-end">
@@ -864,7 +870,7 @@ export default function PrivateProfileEditor() {
                                     disabled={isDeleting}
                                     className="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors disabled:opacity-50"
                                 >
-                                    Cancel
+                                    {tCommon('cancel')}
                                 </button>
                                 <button
                                     type="button"
@@ -873,7 +879,7 @@ export default function PrivateProfileEditor() {
                                     className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-40 inline-flex items-center gap-2"
                                 >
                                     {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
-                                    {isDeleting ? 'Deleting…' : 'Delete my account'}
+                                    {isDeleting ? t('deleting') : t('deleteMyAccount')}
                                 </button>
                             </div>
                         </motion.div>
@@ -899,7 +905,7 @@ export default function PrivateProfileEditor() {
                             className="text-sm font-semibold text-slate-500 hover:text-indigo-600 flex items-center gap-2 transition-colors disabled:opacity-40"
                         >
                             <Sparkles className="w-4 h-4" />
-                            Regenerate with AI
+                            {t('regenerate')}
                         </motion.button>
                         {!isDirty && !isSaving && (
                             <motion.span
@@ -908,7 +914,7 @@ export default function PrivateProfileEditor() {
                                 className="text-xs font-medium text-slate-400 flex items-center gap-1"
                             >
                                 <CheckCircle2 className="w-3 h-3" />
-                                Saved
+                                {t('saved')}
                             </motion.span>
                         )}
                         {isDirty && (
@@ -918,7 +924,7 @@ export default function PrivateProfileEditor() {
                                 className="text-xs font-medium text-amber-600 flex items-center gap-1"
                             >
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                Unsaved changes
+                                {t('unsaved')}
                             </motion.span>
                         )}
                     </div>
@@ -932,7 +938,7 @@ export default function PrivateProfileEditor() {
                                 whileTap={{ scale: 0.97 }}
                                 className="px-5 py-2.5 text-sm font-bold text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 transition-colors"
                             >
-                                Unpublish
+                                {t('unpublish')}
                             </motion.button>
                         )}
                         <motion.button
@@ -954,14 +960,12 @@ export default function PrivateProfileEditor() {
                                 <Save className="w-4 h-4" />
                             )}
                             {isSaving
-                                ? 'Saving…'
+                                ? t('saving')
                                 : !isDirty && isPublished
-                                    ? 'Up to date'
-                                    : isDirty && isPublished
-                                        ? 'Save changes'
-                                        : isPublished
-                                            ? 'Save changes'
-                                            : 'Publish'}
+                                    ? t('upToDate')
+                                    : isPublished
+                                        ? t('saveChanges')
+                                        : t('publish')}
                         </motion.button>
                     </div>
                 </div>

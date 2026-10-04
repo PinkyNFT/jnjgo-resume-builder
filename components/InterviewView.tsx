@@ -678,7 +678,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                             <ClipboardCheck className="w-4 h-4 shrink-0" />
                         )}
                         <span className="hidden sm:inline">{isReadyToGenerate ? t('generateResume') : t('generateEarly')}</span>
-                        {isReadyToGenerate && <span className="sm:hidden text-[11px]">Generate</span>}
+                        {isReadyToGenerate && <span className="sm:hidden text-[11px]">{t('generateShort')}</span>}
                     </motion.button>
                 </div>
             </div>
@@ -852,9 +852,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                         <div>
                             <p className="font-semibold">{tCommon('error')}</p>
                             <p>{error}</p>
-                            {error.includes('overloaded') && (
-                                <button onClick={() => { sendMessageMutation.reset(); generateHintMutation.reset(); }} className="mt-2 text-xs underline hover:no-underline">{tCommon('reload')}</button>
-                            )}
+                            {/* Shown for every error: AI errors are localized now, so matching on "overloaded" no longer works */}
+                            <button onClick={() => { sendMessageMutation.reset(); generateHintMutation.reset(); }} className="mt-2 text-xs underline hover:no-underline">{tCommon('reload')}</button>
                         </div>
                     </div>
                 )}

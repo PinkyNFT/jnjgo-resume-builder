@@ -6,6 +6,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { Message, ResumeData, RoleType, ImportData, EvaluationResult } from '../types';
+import { readAiErrorMessage } from '../lib/ai-errors';
 
 interface SendMessageParams {
     message: string;
@@ -49,8 +50,7 @@ export function useSendMessage() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to send message');
+                throw new Error(await readAiErrorMessage(response, params.locale));
             }
 
             const data = await response.json();
@@ -92,8 +92,7 @@ export function useGenerateHint() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to generate hint');
+                throw new Error(await readAiErrorMessage(response, params.locale));
             }
 
             const data = await response.json();
@@ -125,8 +124,7 @@ export function useParseResume() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to parse resume');
+                throw new Error(await readAiErrorMessage(response, locale));
             }
 
             const result = await response.json();
@@ -160,8 +158,7 @@ export function useAnalyzeImport() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to analyze imported text');
+                throw new Error(await readAiErrorMessage(response, locale));
             }
 
             const result = await response.json();
@@ -198,8 +195,7 @@ export function useEvaluateResume() {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to evaluate resume');
+                throw new Error(await readAiErrorMessage(response, locale));
             }
 
             const result = await response.json();

@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const tCommon = useTranslations('Common');
   // Lock body scroll while open
   useEffect(() => {
     if (!isOpen) return;
@@ -51,7 +53,7 @@ export function ConfirmDialog({
       <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl shadow-slate-900/20 p-6 animate-[scale-in_0.2s_ease-out]">
         <button
           onClick={onCancel}
-          aria-label="Close"
+          aria-label={tCommon('close')}
           className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
         >
           <X className="w-4 h-4" />

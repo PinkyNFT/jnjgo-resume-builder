@@ -13,6 +13,7 @@
  */
 
 import { Message, ResumeData, RoleType, ImportData, EvaluationResult } from "../types";
+import { readAiErrorMessage } from "../lib/ai-errors";
 
 /**
  * Client-side chat session wrapper
@@ -222,10 +223,12 @@ export const analyzeImportedText = async (text: string): Promise<ImportData> => 
  * Evaluate resume quality and provide feedback
  * @param data - The resume data to evaluate
  * @param roleType - The target role type
+ * @param locale - UI locale; feedback and error messages are returned in this language
  */
 export const evaluateResume = async (
     data: ResumeData,
-    roleType: RoleType
+    roleType: RoleType,
+    locale?: string
 ): Promise<EvaluationResult> => {
     const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -236,12 +239,12 @@ export const evaluateResume = async (
             action: 'evaluateResume',
             data,
             roleType,
+            locale,
         }),
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to evaluate resume');
+        throw new Error(await readAiErrorMessage(response, locale));
     }
 
     const result = await response.json();

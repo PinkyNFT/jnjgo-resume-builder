@@ -68,7 +68,7 @@ export default function LandingPage() {
                   href={dashboardHref}
                   className="group relative inline-flex items-center justify-center px-8 py-4 font-bold text-white text-lg transition-all duration-300 bg-indigo-600 rounded-2xl hover:bg-indigo-700 hover:shadow-2xl hover:shadow-indigo-500/25 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 active:scale-[0.98]"
                 >
-                  Go to Dashboard
+                  {t('goToDashboard')}
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Link>
               ) : (
@@ -109,40 +109,40 @@ export default function LandingPage() {
                         <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
                           <Zap className="w-4 h-4 text-indigo-600" />
                         </div>
-                        <span className="font-bold text-sm text-slate-800">AI Interview</span>
+                        <span className="font-bold text-sm text-slate-800">{t('mockInterview')}</span>
                       </div>
                       <div className="space-y-3">
                         <div className="bg-indigo-50 rounded-lg p-3 text-sm text-slate-700 max-w-[80%]">
-                          What was your biggest professional achievement?
+                          {t('mockQuestion1')}
                         </div>
                         <div className="bg-slate-100 rounded-lg p-3 text-sm text-slate-600 max-w-[75%] ml-auto">
-                          Led a team of 12 engineers to deliver...
+                          {t('mockAnswer1')}
                         </div>
                         <div className="bg-indigo-50 rounded-lg p-3 text-sm text-slate-700 max-w-[85%]">
-                          That&apos;s impressive! What metrics did you use to measure success?
+                          {t('mockQuestion2')}
                         </div>
                       </div>
                     </div>
                     {/* Score preview */}
                     <div className="space-y-4">
                       <div className="bg-white rounded-xl border border-slate-200 p-5">
-                        <div className="text-xs font-bold text-slate-500 uppercase mb-3">Quality Score</div>
+                        <div className="text-xs font-bold text-slate-500 uppercase mb-3">{t('mockQualityScore')}</div>
                         <div className="text-4xl font-black text-green-600 mb-1">87</div>
-                        <div className="text-xs text-green-600 font-semibold">PASSING</div>
+                        <div className="text-xs text-green-600 font-semibold">{t('mockPassing')}</div>
                       </div>
                       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
-                        <div className="text-xs font-bold text-slate-500 uppercase">Breakdown</div>
+                        <div className="text-xs font-bold text-slate-500 uppercase">{t('mockBreakdown')}</div>
                         <div className="space-y-2">
                           <div>
-                            <div className="flex justify-between text-xs mb-1"><span className="text-slate-600">Structure</span><span className="font-bold text-slate-800">92%</span></div>
+                            <div className="flex justify-between text-xs mb-1"><span className="text-slate-600">{t('mockStructure')}</span><span className="font-bold text-slate-800">92%</span></div>
                             <div className="h-1.5 bg-slate-100 rounded-full"><div className="h-full bg-green-500 rounded-full" style={{ width: '92%' }}></div></div>
                           </div>
                           <div>
-                            <div className="flex justify-between text-xs mb-1"><span className="text-slate-600">Impact</span><span className="font-bold text-slate-800">85%</span></div>
+                            <div className="flex justify-between text-xs mb-1"><span className="text-slate-600">{t('mockImpact')}</span><span className="font-bold text-slate-800">85%</span></div>
                             <div className="h-1.5 bg-slate-100 rounded-full"><div className="h-full bg-indigo-500 rounded-full" style={{ width: '85%' }}></div></div>
                           </div>
                           <div>
-                            <div className="flex justify-between text-xs mb-1"><span className="text-slate-600">Role Fit</span><span className="font-bold text-slate-800">80%</span></div>
+                            <div className="flex justify-between text-xs mb-1"><span className="text-slate-600">{t('mockRoleFit')}</span><span className="font-bold text-slate-800">80%</span></div>
                             <div className="h-1.5 bg-slate-100 rounded-full"><div className="h-full bg-purple-500 rounded-full" style={{ width: '80%' }}></div></div>
                           </div>
                         </div>
@@ -260,30 +260,30 @@ export default function LandingPage() {
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100/80 border border-emerald-200 text-emerald-700 text-sm font-semibold">
                 <Search className="w-4 h-4" />
-                For Recruiters
+                {t('forRecruiters')}
               </div>
               <h2 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight">
-                Access Verified
-                <span className="block text-emerald-600">Candidate Profiles</span>
+                {t('recruiterTitle1')}
+                <span className="block text-emerald-600">{t('recruiterTitle2')}</span>
               </h2>
               <p className="text-lg text-slate-500 leading-relaxed">
-                Stop guessing. See salary expectations, career intent, deal-breakers, and AI-verified career data — before your first conversation.
+                {t('recruiterDesc')}
               </p>
               <Link
                 href="/auth/signin?intent=recruiter"
                 className="group inline-flex items-center justify-center px-8 py-4 font-bold text-white text-lg transition-all duration-300 bg-emerald-600 rounded-2xl hover:bg-emerald-700 hover:shadow-2xl hover:shadow-emerald-500/25 hover:-translate-y-1 active:scale-[0.98]"
               >
-                Sign Up as Recruiter
+                {t('recruiterCta')}
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <p className="text-sm text-slate-400">Free forever · No credit card required</p>
+              <p className="text-sm text-slate-400">{t('recruiterFree')}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { icon: DollarSign, title: 'Salary Expectations', desc: 'Minimum and target salary visible upfront', color: 'bg-green-50 text-green-600 border-green-100' },
-                { icon: Users, title: 'Career Intent', desc: 'Actively looking, passive, or planning to move', color: 'bg-blue-50 text-blue-600 border-blue-100' },
-                { icon: Shield, title: 'AI-Verified Data', desc: 'Career history verified through AI interview', color: 'bg-violet-50 text-violet-600 border-violet-100' },
-                { icon: Search, title: 'Deal Breakers', desc: 'Working conditions and non-negotiables', color: 'bg-red-50 text-red-600 border-red-100' },
+                { icon: DollarSign, title: t('recruiterCard1Title'), desc: t('recruiterCard1Desc'), color: 'bg-green-50 text-green-600 border-green-100' },
+                { icon: Users, title: t('recruiterCard2Title'), desc: t('recruiterCard2Desc'), color: 'bg-blue-50 text-blue-600 border-blue-100' },
+                { icon: Shield, title: t('recruiterCard3Title'), desc: t('recruiterCard3Desc'), color: 'bg-violet-50 text-violet-600 border-violet-100' },
+                { icon: Search, title: t('recruiterCard4Title'), desc: t('recruiterCard4Desc'), color: 'bg-red-50 text-red-600 border-red-100' },
               ].map((item) => (
                 <div key={item.title} className="bg-white rounded-xl border border-slate-100 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
                   <div className={`w-10 h-10 rounded-lg ${item.color} flex items-center justify-center mb-3 border`}>
@@ -308,7 +308,7 @@ export default function LandingPage() {
             href={session?.user ? dashboardHref : '/auth/signin'}
             className="group inline-flex items-center justify-center px-10 py-5 font-bold text-white text-lg transition-all duration-300 bg-slate-900 rounded-2xl hover:bg-indigo-600 hover:shadow-2xl hover:shadow-indigo-500/25 hover:-translate-y-1 active:scale-[0.98]"
           >
-            {session?.user ? 'Go to Dashboard' : t('getStarted')}
+            {session?.user ? t('goToDashboard') : t('getStarted')}
             <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>

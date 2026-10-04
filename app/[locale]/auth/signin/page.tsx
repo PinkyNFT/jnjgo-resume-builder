@@ -14,6 +14,7 @@ function SignInContent() {
     const isRecruiterIntent = intent === 'recruiter';
     const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
     const tLanding = useTranslations('Landing');
+    const t = useTranslations('SignIn');
 
     const errorParam = searchParams.get('error');
 
@@ -21,11 +22,11 @@ function SignInContent() {
     const getErrorMessage = (error: string) => {
         switch (error) {
             case 'OAuthAccountNotLinked':
-                return 'To confirm your identity, sign in with the same provider you used originally.';
+                return t('errorAccountNotLinked');
             case 'AccessDenied':
-                return 'You do not have permission to sign in.';
+                return t('errorAccessDenied');
             default:
-                return 'An error occurred during sign in. Please try again.';
+                return t('errorDefault');
         }
     };
 
@@ -69,25 +70,25 @@ function SignInContent() {
                             {isRecruiterIntent ? (
                                 <>
                                     <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight">
-                                        Unlock Verified
+                                        {t('recruiterHeadline1')}
                                         <span className="block text-transparent bg-clip-text bg-linear-to-r from-emerald-400 via-teal-400 to-cyan-400">
-                                            Candidate Profiles
+                                            {t('recruiterHeadline2')}
                                         </span>
                                     </h1>
                                     <p className="text-lg text-slate-400 leading-relaxed">
-                                        Access salary expectations, career intent, and deal-breakers — all verified through AI-powered interviews.
+                                        {t('recruiterSubtitle')}
                                     </p>
                                 </>
                             ) : (
                                 <>
                                     <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight">
-                                        Build Resumes That
+                                        {t('candidateHeadline1')}
                                         <span className="block text-transparent bg-clip-text bg-linear-to-r from-indigo-400 via-purple-400 to-pink-400">
-                                            Win Interviews
+                                            {t('candidateHeadline2')}
                                         </span>
                                     </h1>
                                     <p className="text-lg text-slate-400 leading-relaxed">
-                                        AI-powered resume builder that helps IT professionals create decision-making documents, not just job listings.
+                                        {t('candidateSubtitle')}
                                     </p>
                                 </>
                             )}
@@ -102,8 +103,8 @@ function SignInContent() {
                                             <DollarSign className="w-5 h-5 text-emerald-400" />
                                         </div>
                                         <div>
-                                            <h3 className="text-white font-semibold mb-0.5">Salary Expectations</h3>
-                                            <p className="text-sm text-slate-400">See minimum and target salary upfront — no guessing.</p>
+                                            <h3 className="text-white font-semibold mb-0.5">{t('recruiterFeature1Title')}</h3>
+                                            <p className="text-sm text-slate-400">{t('recruiterFeature1Desc')}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-4 group">
@@ -111,8 +112,8 @@ function SignInContent() {
                                             <Users className="w-5 h-5 text-teal-400" />
                                         </div>
                                         <div>
-                                            <h3 className="text-white font-semibold mb-0.5">Career Intent & Timing</h3>
-                                            <p className="text-sm text-slate-400">Know if they&apos;re actively looking, open to offers, or planning to move soon.</p>
+                                            <h3 className="text-white font-semibold mb-0.5">{t('recruiterFeature2Title')}</h3>
+                                            <p className="text-sm text-slate-400">{t('recruiterFeature2Desc')}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-4 group">
@@ -120,8 +121,8 @@ function SignInContent() {
                                             <Ban className="w-5 h-5 text-cyan-400" />
                                         </div>
                                         <div>
-                                            <h3 className="text-white font-semibold mb-0.5">Deal Breakers</h3>
-                                            <p className="text-sm text-slate-400">Avoid mismatched roles — see working conditions and non-negotiables.</p>
+                                            <h3 className="text-white font-semibold mb-0.5">{t('recruiterFeature3Title')}</h3>
+                                            <p className="text-sm text-slate-400">{t('recruiterFeature3Desc')}</p>
                                         </div>
                                     </div>
                                 </>
@@ -132,8 +133,8 @@ function SignInContent() {
                                             <Zap className="w-5 h-5 text-indigo-400" />
                                         </div>
                                         <div>
-                                            <h3 className="text-white font-semibold mb-0.5">AI Interview Process</h3>
-                                            <p className="text-sm text-slate-400">Smart AI guides you through structured questions to capture your full career impact.</p>
+                                            <h3 className="text-white font-semibold mb-0.5">{t('candidateFeature1Title')}</h3>
+                                            <p className="text-sm text-slate-400">{t('candidateFeature1Desc')}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-4 group">
@@ -141,8 +142,8 @@ function SignInContent() {
                                             <FileText className="w-5 h-5 text-purple-400" />
                                         </div>
                                         <div>
-                                            <h3 className="text-white font-semibold mb-0.5">Master Resume Format</h3>
-                                            <p className="text-sm text-slate-400">Professional format emphasizing decision-making, metrics, and career progression.</p>
+                                            <h3 className="text-white font-semibold mb-0.5">{t('candidateFeature2Title')}</h3>
+                                            <p className="text-sm text-slate-400">{t('candidateFeature2Desc')}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-4 group">
@@ -150,8 +151,8 @@ function SignInContent() {
                                             <Shield className="w-5 h-5 text-pink-400" />
                                         </div>
                                         <div>
-                                            <h3 className="text-white font-semibold mb-0.5">Quality Scoring</h3>
-                                            <p className="text-sm text-slate-400">Built-in evaluation ensures your resume meets professional standards.</p>
+                                            <h3 className="text-white font-semibold mb-0.5">{t('candidateFeature3Title')}</h3>
+                                            <p className="text-sm text-slate-400">{t('candidateFeature3Desc')}</p>
                                         </div>
                                     </div>
                                 </>
@@ -163,8 +164,8 @@ function SignInContent() {
                     <div className="border-t border-white/10 pt-6">
                         <p className="text-slate-500 text-sm italic">
                             {isRecruiterIntent
-                                ? '"The best hires start with the best information."'
-                                : '"Stop telling stories; start showing impact."'
+                                ? t('quoteRecruiter')
+                                : t('quoteCandidate')
                             }
                         </p>
                     </div>
@@ -177,7 +178,7 @@ function SignInContent() {
                 <div className="p-6 lg:p-8">
                     <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
                         <ArrowLeft className="w-4 h-4" />
-                        Back to home
+                        {t('backToHome')}
                     </Link>
                 </div>
 
@@ -194,12 +195,12 @@ function SignInContent() {
                         {/* Header */}
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                                {isRecruiterIntent ? 'Recruiter Sign In' : 'Welcome back'}
+                                {isRecruiterIntent ? t('titleRecruiter') : t('titleCandidate')}
                             </h2>
                             <p className="text-slate-500">
                                 {isRecruiterIntent
-                                    ? 'Create your free recruiter account to access candidate profiles'
-                                    : 'Sign in to your account to continue building your resume'
+                                    ? t('subtitleRecruiter')
+                                    : t('subtitleCandidate')
                                 }
                             </p>
                         </div>
@@ -210,7 +211,7 @@ function SignInContent() {
                                     <Ban className="w-4 h-4 text-red-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-semibold text-red-900">Sign in failed</h3>
+                                    <h3 className="text-sm font-semibold text-red-900">{t('signInFailed')}</h3>
                                     <p className="text-sm text-red-700 mt-0.5">{getErrorMessage(errorParam)}</p>
                                 </div>
                             </div>
@@ -233,19 +234,19 @@ function SignInContent() {
                                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                                     </svg>
                                 )}
-                                <span className="font-medium text-slate-700 group-hover:text-slate-900">Continue with Google</span>
+                                <span className="font-medium text-slate-700 group-hover:text-slate-900">{t('continueWithGoogle')}</span>
                             </button>
 
                             {/* Coming soon providers */}
                             <div className="pt-2">
-                                <p className="text-xs text-slate-400 text-center mb-3">More sign-in options coming soon</p>
+                                <p className="text-xs text-slate-400 text-center mb-3">{t('moreOptionsSoon')}</p>
                                 <div className="flex justify-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center opacity-40 cursor-not-allowed" title="GitHub - Coming soon">
+                                    <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center opacity-40 cursor-not-allowed" title={t('githubSoon')}>
                                         <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 24 24">
                                             <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
                                         </svg>
                                     </div>
-                                    <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center opacity-40 cursor-not-allowed" title="LinkedIn - Coming soon">
+                                    <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center opacity-40 cursor-not-allowed" title={t('linkedinSoon')}>
                                         <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                                         </svg>
@@ -260,7 +261,7 @@ function SignInContent() {
                                 <div className="w-full border-t border-slate-200"></div>
                             </div>
                             <div className="relative flex justify-center text-xs">
-                                <span className="bg-slate-50 px-4 text-slate-400 uppercase tracking-wider font-medium">Secure sign-in</span>
+                                <span className="bg-slate-50 px-4 text-slate-400 uppercase tracking-wider font-medium">{t('secureSignIn')}</span>
                             </div>
                         </div>
 
@@ -270,7 +271,7 @@ function SignInContent() {
                                 <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
                                     <Shield className="w-4 h-4 text-green-600" />
                                 </div>
-                                <span>Your data is encrypted and securely stored</span>
+                                <span>{t('trustEncrypted')}</span>
                             </div>
                             <div className="flex items-center gap-3 text-sm text-slate-500">
                                 <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
@@ -278,7 +279,7 @@ function SignInContent() {
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                     </svg>
                                 </div>
-                                <span>We never post anything on your behalf</span>
+                                <span>{t('trustNoPosting')}</span>
                             </div>
                         </div>
 
@@ -297,12 +298,13 @@ function SignInContent() {
 }
 
 export default function SignIn() {
+    const t = useTranslations('SignIn');
     return (
         <Suspense fallback={
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
                 <div className="text-center space-y-4">
                     <div className="w-10 h-10 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
-                    <p className="text-slate-500 font-medium">Loading...</p>
+                    <p className="text-slate-500 font-medium">{t('loading')}</p>
                 </div>
             </div>
         }>

@@ -29,7 +29,7 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
+    <html lang={locale} data-scroll-behavior="smooth">
       <body className={`${inter.variable} bg-slate-50 text-slate-900 antialiased`}>
         <NextIntlClientProvider messages={messages}>
           <Providers>

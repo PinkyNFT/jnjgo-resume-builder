@@ -113,7 +113,7 @@ export default function AppNavbar({ minimal = false }: AppNavbarProps) {
                                         JNJGO Resume
                                     </span>
                                     <span className="hidden sm:block text-[10px] font-medium text-slate-400 tracking-wide leading-none">
-                                        AI Resume Builder
+                                        {t('tagline')}
                                     </span>
                                 </div>
                             </Link>
@@ -160,7 +160,7 @@ export default function AppNavbar({ minimal = false }: AppNavbarProps) {
                                                         </span>
                                                     )}
                                                 </div>
-                                                Messages
+                                                {t('messages')}
                                                 {active && (
                                                     <span className="absolute -bottom-3.25 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-indigo-600 rounded-full" />
                                                 )}
@@ -277,9 +277,9 @@ export default function AppNavbar({ minimal = false }: AppNavbarProps) {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    Messages
+                                                    {t('messages')}
                                                     {unreadMessages > 0 && (
-                                                        <span className="ml-auto text-[10px] font-bold text-red-500">{unreadMessages} new</span>
+                                                        <span className="ml-auto text-[10px] font-bold text-red-500">{t('unreadCount', { n: unreadMessages })}</span>
                                                     )}
                                                 </Link>
                                                 {isAdmin && (
@@ -298,7 +298,7 @@ export default function AppNavbar({ minimal = false }: AppNavbarProps) {
 
                                             {/* Language switcher — visible on mobile inside dropdown */}
                                             <div className="md:hidden border-t border-slate-100 px-4 py-3">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Language</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">{t('language')}</p>
                                                 <LanguageSwitcher compact />
                                             </div>
 
@@ -374,7 +374,7 @@ export default function AppNavbar({ minimal = false }: AppNavbarProps) {
                                             </span>
                                         )}
                                     </div>
-                                    <span>Messages</span>
+                                    <span>{t('messages')}</span>
                                     {active && !unreadMessages && <span className="w-1 h-1 rounded-full bg-indigo-600 mt-0.5" />}
                                 </Link>
                             );

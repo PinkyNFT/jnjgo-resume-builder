@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { toStartFraction, toEndFraction } from '../utils/dateParser';
+import { toSpan } from '../utils/dateParser';
 
 // useLayoutEffect warns during SSR; fall back to useEffect on the server.
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
@@ -31,6 +31,8 @@ interface TimelineChartProps {
     className?: string;
     editable?: boolean; // Enable inline editing of labels
     onItemLabelChange?: (itemId: string, newLabel: string) => void; // Callback when label changes
+    // Localized UI words (the chart is also rendered outside the i18n provider, so it can't call useTranslations)
+    labels?: { present?: string; gap?: string; labelPlaceholder?: string };
 }
 
 /**
@@ -52,37 +54,60 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({
     maxYear: providedMaxYear,
     className = '',
     editable = false,
-    onItemLabelChange
+    onItemLabelChange,
+    labels
 }) => {
+    const presentLabel = labels?.present ?? 'Present';
+    const gapLabel = labels?.gap ?? 'Gap';
+
     // Track which (non-editable) labels overflow their bar so we can render the
     // full name beside the bar instead of truncating it. Japanese names vary a lot
     // in pixel width, so we measure rather than estimate from character count.
+    // Value = the label's natural width as a % of the track, used to pick the
+    // side of the bar that has room for it.
+    const rootRef = React.useRef<HTMLDivElement>(null);
     const labelRefs = React.useRef<Map<string, HTMLSpanElement | null>>(new Map());
-    const [overflowing, setOverflowing] = React.useState<Set<string>>(new Set());
+    const [overflowing, setOverflowing] = React.useState<Map<string, number>>(new Map());
 
-    useIsomorphicLayoutEffect(() => {
-        const next = new Set<string>();
+    const measure = React.useCallback(() => {
+        const next = new Map<string, number>();
         labelRefs.current.forEach((el, id) => {
-            if (el && el.scrollWidth - el.clientWidth > 1) next.add(id);
+            if (!el || el.scrollWidth - el.clientWidth <= 1) return;
+            const trackWidth = el.parentElement?.parentElement?.clientWidth || 0; // span -> bar -> track
+            // +12px for the outside label's padding and a little breathing room
+            next.set(id, trackWidth ? Math.round(((el.scrollWidth + 12) / trackWidth) * 1000) / 10 : 100);
         });
         setOverflowing(prev => {
-            if (prev.size === next.size && [...next].every(id => prev.has(id))) return prev;
+            if (prev.size === next.size && [...next].every(([id, w]) => prev.get(id) === w)) return prev;
             return next;
         });
-        // Re-measure whenever the items or their labels change.
-    }, [items]);
+    }, []);
+
+    // Re-measure whenever the items or their labels change...
+    useIsomorphicLayoutEffect(measure, [items, measure]);
+
+    // ...and when the chart is resized (responsive containers) or web fonts finish
+    // loading (text width changes after the fallback font is swapped out).
+    React.useEffect(() => {
+        let cancelled = false;
+        document.fonts?.ready.then(() => { if (!cancelled) measure(); }).catch(() => { });
+        if (typeof ResizeObserver === 'undefined' || !rootRef.current) return () => { cancelled = true; };
+        const ro = new ResizeObserver(() => measure());
+        ro.observe(rootRef.current);
+        return () => { cancelled = true; ro.disconnect(); };
+    }, [measure]);
 
     if (!items || items.length === 0) {
         return null;
     }
 
+    // "Now" = end of the current month, so ongoing roles include this month.
     const today = new Date();
-    const currentYear = today.getFullYear();
-    const nowFraction = currentYear + today.getMonth() / 12;
+    const nowFraction = today.getFullYear() + (today.getMonth() + 1) / 12;
 
     // Fractional (month-accurate) start/end for each item
-    const startFrac = (item: TimelineChartItem) => toStartFraction(item.startYear, item.startMonth);
-    const endFrac = (item: TimelineChartItem) => toEndFraction(item.endYear, item.endMonth, nowFraction);
+    const startFrac = (item: TimelineChartItem) => toSpan(item, nowFraction).start;
+    const endFrac = (item: TimelineChartItem) => toSpan(item, nowFraction).end;
 
     // Calculate min and max years from data if not provided. Bounds use the
     // fractional extents (then snap out to whole years) so month-accurate bars
@@ -136,11 +161,10 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({
         return { leftPct, widthPct, style: { left: `${leftPct}%`, width: `${widthPct}%` } };
     };
 
-    /** Format a year + optional month for tooltips, e.g. "Jul 2012" or "2012". */
-    const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    /** Format a year + optional month for tooltips, matching the axis: "07/2012" or "2012". */
     const formatPoint = (year: number | null, month?: number): string => {
-        if (year == null) return 'Present';
-        return month ? `${MONTH_ABBR[month - 1]} ${year}` : `${year}`;
+        if (year == null) return presentLabel;
+        return month ? `${month < 10 ? `0${month}` : month}/${year}` : `${year}`;
     };
 
     /**
@@ -155,14 +179,14 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({
             'bg-slate-600',
             'bg-slate-500',
             'bg-slate-800',
-            'bg-slate-650'
+            'bg-slate-900' // was 'bg-slate-650', which isn't a Tailwind color → every 5th bar was invisible
         ];
 
         return colors[index % colors.length];
     };
 
     return (
-        <div className={`${className}`}>
+        <div ref={rootRef} className={`${className}`}>
             {title && (
                 <h3 className="text-[10pt] font-bold text-slate-900 mb-3">
                     {title}
@@ -204,12 +228,20 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({
                     {items.map((item, index) => {
                         const position = calculateBarPosition(item);
                         const barColor = getBarColor(item, index);
+                        const label = item.isGap ? gapLabel : item.label;
                         // When a non-editable label is wider than its bar, show the full
                         // name beside the bar instead of an ellipsis.
-                        const showOutside = !editable && !item.isGap && overflowing.has(item.id);
-                        // Place the outside label to the left when the bar ends near the
-                        // right edge, otherwise to the right of the bar.
-                        const outsideLeft = position.leftPct + position.widthPct > 72;
+                        const labelNeed = overflowing.get(item.id);
+                        const showOutside = !editable && !item.isGap && labelNeed !== undefined;
+                        // Prefer the right of the bar; use the left only when the label
+                        // doesn't fit on the right and the left has more room. If it fits
+                        // on neither side, let it wrap within the available space rather
+                        // than run off the edge of the chart.
+                        const rightSpace = 100 - (position.leftPct + position.widthPct);
+                        const leftSpace = position.leftPct;
+                        const outsideLeft = (labelNeed ?? 0) > rightSpace && leftSpace > rightSpace;
+                        const outsideSpace = outsideLeft ? leftSpace : rightSpace;
+                        const outsideFits = (labelNeed ?? 0) <= outsideSpace;
 
                         return (
                             <div
@@ -230,25 +262,27 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({
                                         {editable && onItemLabelChange ? (
                                             <input
                                                 type="text"
-                                                value={item.label || ''}
+                                                value={label || ''}
                                                 onChange={(e) => onItemLabelChange(item.id, e.target.value)}
                                                 className={`text-[8pt] font-medium leading-tight bg-transparent border-none outline-none focus:ring-1 focus:ring-white/50 rounded px-1 w-full ${item.isGap ? 'text-slate-500 italic' : 'text-white placeholder-white/60'
                                                     }`}
-                                                placeholder={item.isGap ? 'Gap' : 'Label'}
+                                                placeholder={item.isGap ? gapLabel : (labels?.labelPlaceholder ?? 'Label')}
                                             />
                                         ) : (
                                             <span
                                                 ref={(el) => { labelRefs.current.set(item.id, el); }}
-                                                className={`text-[8pt] font-medium leading-tight truncate ${showOutside ? 'invisible' : ''} ${item.isGap ? 'text-slate-500 italic' : 'text-white'
+                                                // Hidden when shown beside the bar; a gap label that doesn't fit is
+                                                // hidden too (the dashed bar + tooltip already mark the gap).
+                                                className={`text-[8pt] font-medium leading-tight truncate ${showOutside || (item.isGap && labelNeed !== undefined) ? 'invisible' : ''} ${item.isGap ? 'text-slate-500 italic' : 'text-white'
                                                     }`}>
-                                                {item.label}
+                                                {label}
                                             </span>
                                         )}
 
                                         {/* Hover tooltip with exact dates */}
                                         {!editable && (
                                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-slate-900 text-white text-[7pt] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-lg print:hidden">
-                                                {item.label}: {formatPoint(item.startYear, item.startMonth)} - {formatPoint(item.endYear, item.endMonth)}
+                                                {label}: {formatPoint(item.startYear, item.startMonth)} - {formatPoint(item.endYear, item.endMonth)}
                                             </div>
                                         )}
                                     </div>
@@ -256,10 +290,19 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({
                                     {/* Full label beside the bar when it doesn't fit inside */}
                                     {showOutside && (
                                         <span
-                                            className="absolute top-1/2 -translate-y-1/2 text-[8pt] font-medium leading-tight text-slate-900 whitespace-nowrap pointer-events-none px-1"
-                                            style={outsideLeft
-                                                ? { right: `${100 - position.leftPct}%`, textAlign: 'right' }
-                                                : { left: `${position.leftPct + position.widthPct}%` }}
+                                            className="absolute top-1/2 -translate-y-1/2 text-[8pt] font-medium leading-tight text-slate-900 pointer-events-none px-1"
+                                            style={{
+                                                // The bar's px-2 padding makes it at least 16px wide, so on narrow
+                                                // charts a short bar renders wider than its % width — anchor to that.
+                                                ...(outsideLeft
+                                                    ? { right: `${100 - position.leftPct}%`, textAlign: 'right' as const, maxWidth: `${outsideSpace}%` }
+                                                    : {
+                                                        left: `calc(${position.leftPct}% + max(${position.widthPct}%, 16px))`,
+                                                        maxWidth: `calc(${100 - position.leftPct}% - max(${position.widthPct}%, 16px))`
+                                                    }),
+                                                whiteSpace: outsideFits ? 'nowrap' : 'normal',
+                                                overflowWrap: outsideFits ? undefined : 'anywhere'
+                                            }}
                                         >
                                             {item.label}
                                         </span>

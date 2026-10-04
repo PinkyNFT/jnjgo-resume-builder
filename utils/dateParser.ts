@@ -28,9 +28,16 @@ const PRESENT_PATTERNS = [
     'now',
     '現在',
     '在職中',
+    '在籍中',
     'currently',
     'enrolled'
 ];
+
+/**
+ * Range separators: hyphen/en/em dashes and other dash look-alikes, ASCII and
+ * full-width/wave tildes (common in Japanese: "2015年4月～2018年3月"), "|" and "to".
+ */
+const RANGE_SEPARATORS = /[–—―‒‐−\-~～〜|]|\s+to\s+/i;
 
 /**
  * Month name to number mapping
@@ -112,15 +119,32 @@ export function toStartFraction(startYear: number, startMonth?: number): number 
  * Convert an end point (year + optional month) to a fractional year.
  * A known month maps to the *end* of that month: Jul -> +7/12.
  * Missing month -> the year boundary (+0), preserving year-only behavior.
- * Ongoing (endYear null) resolves to `now` (defaults to the current month).
+ * Ongoing (endYear null) resolves to `now` (defaults to the end of the current
+ * month, so "Present" includes this month just like any other end month).
  */
 export function toEndFraction(endYear: number | null, endMonth?: number, now?: number): number {
     if (endYear == null) {
         if (now != null) return now;
         const d = new Date();
-        return d.getFullYear() + d.getMonth() / 12;
+        return d.getFullYear() + (d.getMonth() + 1) / 12;
     }
     return endYear + (endMonth ? endMonth / 12 : 0);
+}
+
+/**
+ * Month-accurate [start, end] of a period as fractional years, for drawing bars.
+ * A year-only end that doesn't fall after the start ("2012", "2012 – 2012",
+ * "Jul 2012 – 2012") extends to the end of that year so the bar is never
+ * zero- or negative-width.
+ */
+export function toSpan(
+    p: { startYear: number; startMonth?: number; endYear: number | null; endMonth?: number },
+    now?: number
+): { start: number; end: number } {
+    const start = toStartFraction(p.startYear, p.startMonth);
+    let end = toEndFraction(p.endYear, p.endMonth, now);
+    if (p.endYear != null && !p.endMonth && end <= start) end = p.endYear + 1;
+    return { start, end };
 }
 
 /**
@@ -148,11 +172,14 @@ export function parsePeriod(period: string): ParsedDateRange | null {
         return null;
     }
 
-    const normalized = period.trim();
+    // Rewrite ISO-style "2015-04" as "2015/04" so its hyphen isn't taken as a
+    // range separator (only when the part after the hyphen is a valid month).
+    const normalized = period.trim().replace(
+        /\b((?:19|20)\d{2})-(\d{1,2})(?!\d)/g,
+        (match, y: string, m: string) => (+m >= 1 && +m <= 12 ? `${y}/${m}` : match)
+    );
 
-    // Split on common separators: – (en dash), - (hyphen), ~, to, |
-    const separators = /[–\-~|]|\s+to\s+/i;
-    const parts = normalized.split(separators).map(p => p.trim());
+    const parts = normalized.split(RANGE_SEPARATORS).map(p => p.trim());
 
     if (parts.length === 0) {
         return null;

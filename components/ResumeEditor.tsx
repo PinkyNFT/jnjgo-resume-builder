@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
 import { ResumeData, ResumeVersion, Project, EvaluationResult } from '../types';
@@ -13,13 +13,17 @@ import { toast } from '../lib/toast';
 import { TimelineChart, TimelineChartItem } from './TimelineChart';
 import { parsePeriod } from '../utils/dateParser';
 import { insertGapsInTimeline } from '../utils/timelineGenerator';
+import { resumeFileName } from '../utils/fileName';
 
 interface ResumeEditorProps {
     project: Project;
-    onUpdate: (data: ResumeData) => void;
+    // Autosave: called (debounced) with the latest edits
+    onUpdate: (data: ResumeData, evaluation?: EvaluationResult) => void;
     onBack: () => void;
-    onResumeInterview?: () => void;
+    onResumeInterview?: (data: ResumeData, evaluation?: EvaluationResult) => void;
 }
+
+const AUTOSAVE_DELAY_MS = 1500;
 
 const ScoreBar = ({ label, score, max, colorClass, description }: { label: string, score: number, max: number, colorClass: string, description?: string }) => (
     <div className="group relative">
@@ -57,6 +61,29 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
     // When previewing a version, show its data read-only; otherwise show the live data
     const displayData = previewVersion ? previewVersion.data : data;
     const isPreviewMode = previewVersion !== null;
+
+    // Autosave edits (debounced) so they survive "Back to Dashboard", reloads and
+    // resuming the interview. Score analysis and Save as Complete still save
+    // immediately and cancel any pending autosave so it can't overwrite them.
+    const onUpdateRef = useRef(onUpdate);
+    const pendingSave = useRef<{ data: ResumeData; evaluation?: EvaluationResult } | null>(null);
+    useEffect(() => { onUpdateRef.current = onUpdate; }, [onUpdate]);
+    useEffect(() => {
+        if (data === project.data && evaluation === project.evaluation) return; // nothing changed since load/last save
+        pendingSave.current = { data, evaluation };
+        const timer = setTimeout(() => {
+            const pending = pendingSave.current;
+            pendingSave.current = null;
+            if (pending) onUpdateRef.current(pending.data, pending.evaluation);
+        }, AUTOSAVE_DELAY_MS);
+        return () => clearTimeout(timer);
+    }, [data, evaluation, project.data, project.evaluation]);
+    // Flush a pending autosave when the editor closes.
+    useEffect(() => () => {
+        const pending = pendingSave.current;
+        pendingSave.current = null;
+        if (pending) onUpdateRef.current(pending.data, pending.evaluation);
+    }, []);
 
     // Generate employer timeline data from work experience
     const employerTimelineData = useMemo((): TimelineChartItem[] => {
@@ -129,8 +156,9 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
     const handleRunEvaluation = async () => {
         setIsEvaluating(true);
         try {
-            const result = await evaluateResume(data, project.roleType);
+            const result = await evaluateResume(data, project.roleType, locale);
             setEvaluation(result);
+            pendingSave.current = null; // saved below
             const updatedProject = { ...project, evaluation: result, data: data };
             await saveProject(updatedProject);
             // Auto-version after evaluation
@@ -143,11 +171,16 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             );
         } catch (e) {
             console.error(e);
-            toast.error('Evaluation failed. Please try again.');
+            toast.error(e instanceof Error && e.message ? e.message : t('evaluationFailed'));
         } finally {
             setIsEvaluating(false);
         }
     };
+
+    const timelineLabels = useMemo(
+        () => ({ present: t('timelinePresent'), gap: t('timelineGapLabel'), labelPlaceholder: t('timelineLabelPlaceholder') }),
+        [t]
+    );
 
     // Handle employer timeline label changes
     const handleEmployerLabelChange = (itemId: string, newLabel: string) => {
@@ -184,6 +217,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
     };
 
     const handleSaveComplete = async () => {
+        pendingSave.current = null; // saved below — a late autosave would revert the status
         try {
             const updatedProject = {
                 ...project,
@@ -201,11 +235,11 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                 data,
                 evaluation
             );
-            toast.success(t('saved') || 'Resume saved!');
+            toast.success(t('saved'));
             onBack();
         } catch (error) {
             console.error('Failed to save project:', error);
-            toast.error('Failed to save project. Please try again.');
+            toast.error(t('saveFailed'));
         }
     };
 
@@ -246,10 +280,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
     const handlePrint = () => {
         // The browser uses document.title as the suggested "Save as PDF" filename.
         // Swap it to "Resume <name>" for the duration of the print, then restore.
-        const sanitize = (s: string) => s.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
         const original = document.title;
-        const name = sanitize(displayData.fullName || '');
-        document.title = name ? `Resume ${name}` : 'Resume';
+        document.title = resumeFileName(displayData.fullName);
         const restore = () => { document.title = original; };
         window.addEventListener('afterprint', restore, { once: true });
         window.print();
@@ -257,12 +289,10 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
         setTimeout(restore, 1000);
     };
 
-    const sanitizeFileName = (s: string) => s.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
-
     // Export a guaranteed text-layer PDF via the server (headless Chromium).
     // Falls back to the browser print dialog if the server export fails.
     const handleExportPdf = async () => {
-        const fileName = sanitizeFileName(`Resume ${displayData.fullName || ''}`) || 'Resume';
+        const fileName = resumeFileName(displayData.fullName);
         setIsExporting(true);
         try {
             // Capture the rendered resume, not the edit form. Switch to the preview
@@ -307,7 +337,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             URL.revokeObjectURL(url);
         } catch (e) {
             console.error('PDF export failed, falling back to print dialog:', e);
-            toast.error('PDF export failed — opening the print dialog instead.');
+            toast.error(t('pdfExportFailed'));
             handlePrint();
         } finally {
             setIsExporting(false);
@@ -621,8 +651,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                         <Share2 className="w-4 h-4 text-indigo-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-900">Export for Platforms</p>
-                        <p className="text-xs text-slate-500 mt-0.5">One-click copy for job platforms</p>
+                        <p className="text-sm font-bold text-slate-900">{t('exportForPlatforms')}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{t('exportForPlatformsDesc')}</p>
                     </div>
                     <ArrowLeft className="w-4 h-4 text-slate-400 rotate-180 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
@@ -687,6 +717,9 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                     </h1>
                                     <div className="text-[11pt] text-slate-700 leading-tight mb-1">
                                         {renderEditableText(displayData.currentRole, val => setData({ ...data, currentRole: val }), true, "", "")}
+                                        {activeTab === 'edit' && !isPreviewMode && (
+                                            <p className="text-[8pt] text-slate-400 mt-1 print:hidden" data-export-exclude>{t('headlineHint')}</p>
+                                        )}
                                     </div>
                                     {displayData.contactInfo.department && (
                                         <div className="text-[10pt] italic text-slate-600">
@@ -699,16 +732,16 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                         // Render only the present fields, joined by separators (no trailing "|").
                                         const parts: React.ReactNode[] = [];
                                         if (displayData.contactInfo.email) parts.push(
-                                            <span key="email" className="flex items-center gap-1">Email: {renderEditableText(displayData.contactInfo.email, val => setData({ ...data, contactInfo: { ...data.contactInfo, email: val } }), false, "inline-block", "")}</span>
+                                            <span key="email" className="flex items-center gap-1">{t('contactEmail')} {renderEditableText(displayData.contactInfo.email, val => setData({ ...data, contactInfo: { ...data.contactInfo, email: val } }), false, "inline-block", "")}</span>
                                         );
                                         if (displayData.contactInfo.phone) parts.push(
-                                            <span key="phone" className="flex items-center gap-1">Phone: {renderEditableText(displayData.contactInfo.phone, val => setData({ ...data, contactInfo: { ...data.contactInfo, phone: val } }), false, "inline-block", "")}</span>
+                                            <span key="phone" className="flex items-center gap-1">{t('contactPhone')} {renderEditableText(displayData.contactInfo.phone, val => setData({ ...data, contactInfo: { ...data.contactInfo, phone: val } }), false, "inline-block", "")}</span>
                                         );
                                         if (displayData.contactInfo.location) parts.push(
                                             <span key="location">{renderEditableText(displayData.contactInfo.location, val => setData({ ...data, contactInfo: { ...data.contactInfo, location: val } }), false, "inline-block", "")}</span>
                                         );
                                         if (displayData.contactInfo.linkedin) parts.push(
-                                            <span key="linkedin" className="flex items-center gap-1">LinkedIn: {renderEditableText(displayData.contactInfo.linkedin, val => setData({ ...data, contactInfo: { ...data.contactInfo, linkedin: val } }), false, "inline-block", "")}</span>
+                                            <span key="linkedin" className="flex items-center gap-1">{t('contactLinkedIn')} {renderEditableText(displayData.contactInfo.linkedin, val => setData({ ...data, contactInfo: { ...data.contactInfo, linkedin: val } }), false, "inline-block", "")}</span>
                                         );
                                         return parts.map((node, i) => (
                                             <React.Fragment key={i}>
@@ -747,6 +780,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                 className="bg-slate-50/30 p-4 rounded-lg"
                                 editable={activeTab === 'edit' && !isPreviewMode}
                                 onItemLabelChange={handleEmployerLabelChange}
+                                labels={timelineLabels}
                             />
                         </div>
                     )}
@@ -762,6 +796,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                                 className="bg-slate-50/30 p-4 rounded-lg"
                                 editable={activeTab === 'edit' && !isPreviewMode}
                                 onItemLabelChange={handleSkillLabelChange}
+                                labels={timelineLabels}
                             />
                         </div>
                     )}
@@ -1201,7 +1236,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                             <button
                                 onClick={() => {
                                     setShowResumeInterviewConfirm(false);
-                                    onResumeInterview();
+                                    pendingSave.current = null; // the handler saves the latest data itself
+                                    onResumeInterview(data, evaluation);
                                 }}
                                 className="px-5 py-2.5 bg-amber-500 text-white font-bold text-sm rounded-xl hover:bg-amber-600 shadow-lg shadow-amber-500/25 hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 active:scale-[0.98]"
                             >

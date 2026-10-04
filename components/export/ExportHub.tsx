@@ -189,7 +189,7 @@ export default function ExportHub({ resumeData, candidateSlug, projectId, projec
                                 className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-bold text-[#0A66C2] bg-blue-50 hover:bg-blue-100 rounded-xl transition-all duration-200 border border-blue-100"
                             >
                                 <ExternalLink className="w-3.5 h-3.5" />
-                                Open LinkedIn
+                                {t('openLinkedIn')}
                             </button>
                         </div>
                     </div>
@@ -235,9 +235,9 @@ export default function ExportHub({ resumeData, candidateSlug, projectId, projec
                                     <div className="p-4 bg-amber-50 text-amber-700 text-xs rounded-xl border border-amber-100 flex items-start gap-3">
                                         <AlertCircle size={16} className="shrink-0 mt-0.5" />
                                         <div>
-                                            <p className="mb-3 text-[13px] leading-relaxed font-medium">You must publish your <strong>Recruiter-Only Profile</strong> to enable direct recruiter scouting links.</p>
+                                            <p className="mb-3 text-[13px] leading-relaxed font-medium">{t.rich('publishProfileForLink', { strong: (chunks) => <strong>{chunks}</strong> })}</p>
                                             <a href={`/${locale}/profile/private`} target="_blank" className="inline-block bg-white border border-amber-200 text-amber-800 font-bold px-4 py-2 rounded-xl hover:bg-amber-100 transition-all duration-200 shadow-sm">
-                                                Create Private Profile
+                                                {t('createPrivateProfile')}
                                             </a>
                                         </div>
                                     </div>
@@ -259,7 +259,7 @@ export default function ExportHub({ resumeData, candidateSlug, projectId, projec
                                             <div className="flex-1">
                                                 <span className="text-sm font-bold text-slate-800 block mb-0.5">{t('linkToggleTooltip')}</span>
                                                 <span className="text-xs text-slate-400 font-medium leading-relaxed block">
-                                                    Append a secure link to your private profile for recruiters.
+                                                    {t('linkAppendDesc')}
                                                 </span>
                                             </div>
                                         </div>
@@ -288,7 +288,7 @@ export default function ExportHub({ resumeData, candidateSlug, projectId, projec
                                 <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
                                     <span className="text-sm font-bold text-slate-600 flex items-center gap-2">
                                         <FileText className="w-4 h-4 text-slate-400" />
-                                        Output Preview
+                                        {t('outputPreview')}
                                     </span>
                                     <button
                                         onClick={handleCopy}
