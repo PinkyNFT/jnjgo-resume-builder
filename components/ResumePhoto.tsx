@@ -2,10 +2,11 @@
 
 import React, { useRef, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { Upload, Sparkles, RotateCcw, Trash2, User, RefreshCcw } from 'lucide-react';
+import { Upload, Sparkles, RotateCcw, Trash2, User, RefreshCcw, Crop } from 'lucide-react';
 import { compressImageToDataUrl, isSupportedImageType, MAX_UPLOAD_BYTES } from '../utils/imageUtils';
 import { generateProfessionalPhoto } from '../services/photoService';
 import { PHOTO_ENHANCE_ENABLED } from '../config/models';
+import { PhotoCropDialog } from './PhotoCropDialog';
 
 interface ResumePhotoProps {
     /** The committed photo shown on the resume (a data URL), if any. */
@@ -22,12 +23,12 @@ interface ResumePhotoProps {
 }
 
 /**
- * Resume headshot: upload a photo and — when PHOTO_ENHANCE_ENABLED (config/models)
- * is on — turn it into a professional headshot via "Nano Banana" without changing
- * the face. The AI enhancement is currently OFF, so only upload / change / remove
- * are shown; flip the flag to bring back Make Professional / Regenerate / Use
- * original. The original upload is kept in local state so those never lose it;
- * only the chosen image is committed via onChange (and thus saved + printed).
+ * Resume headshot. Beta: upload, crop (square, in a dialog) and remove — nothing
+ * else. Picking a file opens the crop dialog; nothing is saved until "Apply".
+ *
+ * The AI "Make Professional" headshot (Nano Banana) is saved for later behind
+ * PHOTO_ENHANCE_ENABLED in config/models (see docs/COMING_SOON.md); while it's
+ * off those controls and the API route are hidden/disabled.
  */
 export const ResumePhoto: React.FC<ResumePhotoProps> = ({ photo, editable, onChange, onAddRequest }) => {
     const t = useTranslations('Editor');
@@ -40,6 +41,9 @@ export const ResumePhoto: React.FC<ResumePhotoProps> = ({ photo, editable, onCha
     const [isGenerated, setIsGenerated] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // Higher-resolution copy of this session's upload, so re-cropping keeps quality.
+    const [cropSource, setCropSource] = useState<string | undefined>();
+    const [cropOpen, setCropOpen] = useState(false);
 
     const openPicker = () => fileInputRef.current?.click();
 
@@ -53,14 +57,20 @@ export const ResumePhoto: React.FC<ResumePhotoProps> = ({ photo, editable, onCha
         if (file.size > MAX_UPLOAD_BYTES) { setError(t('photoTooLarge')); return; }
 
         try {
-            const compressed = await compressImageToDataUrl(file, { square: true });
-            setOriginalPhoto(compressed);
-            setIsGenerated(false);
-            onChange(compressed);
+            // Apply EXIF orientation and downscale; the crop dialog makes the final square.
+            setCropSource(await compressImageToDataUrl(file, { maxSize: 1600, quality: 0.9 }));
+            setCropOpen(true);
         } catch (err) {
             console.error('Image processing failed:', err);
             setError(t('photoErrorGeneric'));
         }
+    };
+
+    const handleCropApply = (cropped: string) => {
+        setCropOpen(false);
+        setOriginalPhoto(cropped);
+        setIsGenerated(false);
+        onChange(cropped);
     };
 
     const handleGenerate = async () => {
@@ -92,6 +102,7 @@ export const ResumePhoto: React.FC<ResumePhotoProps> = ({ photo, editable, onCha
 
     const handleRemove = () => {
         setOriginalPhoto(undefined);
+        setCropSource(undefined);
         setIsGenerated(false);
         setError(null);
         onChange(undefined);
@@ -185,6 +196,18 @@ export const ResumePhoto: React.FC<ResumePhotoProps> = ({ photo, editable, onCha
                     {photo && (
                         <button
                             type="button"
+                            onClick={() => setCropOpen(true)}
+                            disabled={isGenerating}
+                            title={t('photoCrop')}
+                            aria-label={t('photoCrop')}
+                            className="inline-flex items-center justify-center py-1.5 px-2 text-[10px] font-semibold rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                        >
+                            <Crop className="w-3 h-3" />
+                        </button>
+                    )}
+                    {photo && (
+                        <button
+                            type="button"
                             onClick={handleRemove}
                             disabled={isGenerating}
                             title={t('photoRemove')}
@@ -209,6 +232,14 @@ export const ResumePhoto: React.FC<ResumePhotoProps> = ({ photo, editable, onCha
                 className="hidden"
                 onChange={handleFileSelect}
             />
+
+            {cropOpen && (cropSource || photo) && (
+                <PhotoCropDialog
+                    source={(cropSource || photo)!}
+                    onApply={handleCropApply}
+                    onCancel={() => setCropOpen(false)}
+                />
+            )}
         </div>
     );
 };

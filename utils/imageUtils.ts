@@ -81,6 +81,29 @@ export async function compressImageToDataUrl(
     }
 }
 
+/**
+ * Draw a square region of an already-loaded image into a `size`×`size` JPEG
+ * data URL (the stored resume photo). Used by the crop dialog.
+ */
+export function cropToDataUrl(
+    image: CanvasImageSource,
+    rect: { sx: number; sy: number; side: number },
+    size = DEFAULTS.maxSize,
+    quality = DEFAULTS.quality
+): string {
+    const target = Math.max(1, Math.round(Math.min(size, rect.side)));
+    const canvas = document.createElement('canvas');
+    canvas.width = target;
+    canvas.height = target;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D context unavailable');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, target, target);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(image, rect.sx, rect.sy, rect.side, rect.side, 0, 0, target, target);
+    return canvas.toDataURL('image/jpeg', quality);
+}
+
 /** Split a data URL into its raw base64 payload and MIME type (for API calls). */
 export function splitDataUrl(dataUrl: string): { base64: string; mimeType: string } | null {
     const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/);
