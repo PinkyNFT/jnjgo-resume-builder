@@ -1,5 +1,6 @@
 import { RoleType, ImportData, ResumeData, ValidationResult } from '@/types';
 import { getAdminPromptContent, getAdminSetting } from '@/lib/admin-settings-reader';
+import { resumeForPrompt } from '@/lib/ai-guards';
 
 const DEFAULT_GAP_THRESHOLD = 90;
 
@@ -172,7 +173,8 @@ export const getEvaluateResumePrompt = async (resumeData: ResumeData, role: Role
   // Build variable map for template substitution
   const vars: Record<string, string> = {
     LOCALE_INSTRUCTION: isJa ? 'IMPORTANT: Provide "missingItems" and "suggestions" in Japanese.' : '',
-    RESUME_DATA: JSON.stringify(resumeData, null, 2),
+    // Compact JSON without the photo (a base64 data URL worth 38k–77k tokens).
+    RESUME_DATA: resumeForPrompt(resumeData),
     ROLE_NAME: roleName,
     HAS_BASIC_PROFILE: hasBasicProfile ? 'YES' : 'NO',
     HAS_WORK_HISTORY: hasWorkHistory ? 'YES' : 'NO',

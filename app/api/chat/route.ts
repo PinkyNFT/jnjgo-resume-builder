@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import { Message, RoleType, ImportData, ResumeData } from '@/types';
-import { GEMINI_MODEL } from '@/config/models';
 import { getSystemInstruction } from '@/lib/prompts';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 import { callWithRetry } from '@/lib/gemini-client';
-import { auth } from '@/lib/auth';
 import { aiErrorPayload } from '@/lib/ai-errors';
+import { AI_LIMITS, cleanHistory, requireAiUser, tooLarge, withinChars } from '@/lib/ai-guards';
+
+// Explicit cap so a stuck AI call ends instead of running to the platform limit. One interview turn.
+export const maxDuration = 60;
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -59,13 +60,24 @@ function detectAgentProgress(text: string): { completedSections: string[]; agent
 export async function POST(request: NextRequest) {
     let locale: string | undefined;
     try {
-        // Rate limit AI calls — these are the most expensive operations
-        const limited = await applyRateLimitDB(request, 'chat', RATE_LIMITS.ai);
+        const body = await request.json().catch(() => null);
+        locale = body?.locale;
+
+        // Signed-in users only, then a per-user limit (these are the most expensive calls).
+        const userId = await requireAiUser(locale);
+        if (userId instanceof NextResponse) return userId;
+        const limited = await applyRateLimitDB(request, 'chat', RATE_LIMITS.ai, userId);
         if (limited) return limited;
 
-        const body = await request.json();
-        const { action, message, history, roleType, importData, initialData } = body;
-        locale = body.locale;
+        const { action, message, roleType, importData, initialData } = body ?? {};
+        const history = cleanHistory(body?.history);
+        if (
+            !history ||
+            (action === 'sendMessage' && !withinChars(message, AI_LIMITS.messageChars)) ||
+            (importData && !withinChars(importData.sourceText, AI_LIMITS.importChars))
+        ) {
+            return tooLarge(locale);
+        }
 
         if (!API_KEY) {
             const { body: errBody, status } = aiErrorPayload(null, locale, 'config');
@@ -79,11 +91,6 @@ export async function POST(request: NextRequest) {
         const model = aiConfig.model;
         const temperature = aiConfig.temperature;
 
-        // Best-effort attribution for cost logging — this route has no auth gate,
-        // so userId is null (falls back to IP) for anonymous callers.
-        const session = await auth().catch(() => null);
-        const userId = session?.user?.id ?? null;
-
         // Handle different chat actions
         if (action === 'sendMessage') {
             // Resolve system instruction from DB (or fallback)
@@ -96,10 +103,7 @@ export async function POST(request: NextRequest) {
                     systemInstruction,
                     temperature,
                 },
-                history: history ? history.map((h: Message) => ({
-                    role: h.role,
-                    parts: [{ text: h.text }]
-                })) : []
+                history: history.map(h => ({ role: h.role, parts: [{ text: h.text }] }))
             });
 
             const response = await callWithRetry(() => chat.sendMessage({ message }), 'chat/sendMessage', {
@@ -144,10 +148,7 @@ export async function POST(request: NextRequest) {
                     systemInstruction,
                     temperature,
                 },
-                history: history ? history.map((h: Message) => ({
-                    role: h.role,
-                    parts: [{ text: h.text }]
-                })) : []
+                history: history.map(h => ({ role: h.role, parts: [{ text: h.text }] }))
             });
 
             const hintPrompt = locale === 'ja'

@@ -195,31 +195,6 @@ export const parseResumeFromChat = async (
 };
 
 /**
- * Analyze imported resume text
- * @param text - The raw text from imported resume
- */
-export const analyzeImportedText = async (text: string): Promise<ImportData> => {
-    const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            action: 'analyzeImport',
-            text,
-        }),
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to analyze imported text');
-    }
-
-    const result = await response.json();
-    return result.data;
-};
-
-/**
  * Evaluate resume quality and provide feedback
  * @param data - The resume data to evaluate
  * @param roleType - The target role type

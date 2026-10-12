@@ -21,7 +21,7 @@ const ResumeGeneratingView = dynamic(
   { ssr: false, loading: () => <div className="flex items-center justify-center h-64"><DynLoader className="w-8 h-8 animate-spin text-indigo-400" /></div> }
 );
 import { Message, ResumeData, Project, RoleType, ImportData, UserProfile, EvaluationResult } from '../../../types';
-import { useParseResume, useAnalyzeImport } from '../../../hooks/useGemini';
+import { useParseResume } from '../../../hooks/useGemini';
 import { getProjects, getProject, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile, createVersion } from '../../../services/storageService';
 import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/dataMigration';
 import { Loader2, ArrowRight, Plus, FileText, Clock, Trash2, Edit3, Eye, UploadCloud, File, User, MapPin, Mail, Phone, Linkedin, FolderOpen, CheckCircle, PenLine, BarChart3, Shield, UserCircle, Share2, Sparkles } from 'lucide-react';
@@ -202,27 +202,19 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
   const locale = useLocale();
   const [role, setRole] = useState<RoleType>('consultant');
   const [importText, setImportText] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  const analyzeImportMutation = useAnalyzeImport();
 
-  const handleStart = async () => {
-    if (importText.trim().length > 20) {
-      setIsAnalyzing(true);
-      setUploadError('');
-      try {
-        const data = await analyzeImportMutation.mutateAsync({ text: importText, locale });
-        onComplete(role, data);
-      } catch (err) {
-        // Stay on this step with the text intact so the user can retry; the
-        // message says why (quota, timeout, configuration…) — see lib/ai-errors.
-        const message = err instanceof Error && err.message ? err.message : t('importAnalyzeError');
-        setUploadError(message);
-        toast.error(message);
-      } finally {
-        setIsAnalyzing(false);
-      }
+  // No AI call here: the interview's first turn already reads the imported text.
+  // (A separate "analyze import" call used to produce a summary nobody read.)
+  const handleStart = () => {
+    const text = importText.trim();
+    if (text.length > 20) {
+      onComplete(role, {
+        sourceText: text.slice(0, 50000),
+        parsedSummary: text.slice(0, 280),
+        extractionDate: Date.now(),
+      });
     } else {
       onComplete(role, undefined);
     }
@@ -291,7 +283,7 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
                 formData.append('file', file);
                 formData.append('locale', locale);
 
-                const response = await fetch('/api/extract-file', {
+                const response = await fetch(`/api/extract-file?locale=${locale}`, {
                   method: 'POST',
                   body: formData,
                 });
@@ -366,14 +358,10 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
           <button onClick={onCancel} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all duration-200">{tCommon('cancel')}</button>
           <button
             onClick={handleStart}
-            disabled={isAnalyzing}
+            disabled={isUploading}
             className="group px-8 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-indigo-600 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isAnalyzing ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> {t('analyzing')}</>
-            ) : (
-              <><ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" /> {t('startInterview')}</>
-            )}
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" /> {t('startInterview')}
           </button>
         </div>
       </div>

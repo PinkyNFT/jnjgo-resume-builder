@@ -1,10 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { applyRateLimitDB, RATE_LIMITS } from '../../../../../lib/rate-limit';
+import { resumeForPrompt } from '../../../../../lib/ai-guards';
 import { routeErrorResponse } from '../../../../../lib/api-error';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../../lib/auth';
 import { connectToDatabase } from '../../../../../lib/mongodb';
 import { ProjectModel } from '../../../../../lib/models';
 import { generateProfileDraftWithGemini } from '../../../../../lib/gemini-server';
+
+// Explicit cap so a stuck AI call ends instead of running to the platform limit. Recruiter-profile draft.
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
     try {
@@ -15,6 +20,10 @@ export async function POST(req: Request) {
         }
 
         const userId = session.user.id;
+
+        // AI call: rate-limited per user like the other AI routes.
+        const limited = await applyRateLimitDB(req as NextRequest, 'profile-generate', RATE_LIMITS.ai, userId);
+        if (limited) return limited;
 
         // Ensure database connection
         await connectToDatabase();
@@ -34,8 +43,9 @@ export async function POST(req: Request) {
 
         // Prepare context for Gemini
         // We stringify the structured data to give Gemini all the clues it needs to infer intent/salary/orientation
+        // The resume goes in without its photo (a base64 data URL worth 38k–77k tokens).
         const candidateContext = JSON.stringify({
-            resumeData: latestProject.data,
+            resumeData: JSON.parse(resumeForPrompt(latestProject.data)),
             chatHistory: latestProject.history.slice(-10) // Last 10 messages for context
         });
 

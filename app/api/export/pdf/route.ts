@@ -15,10 +15,10 @@ export const maxDuration = 60;
  * text-layer PDF via headless Chromium, so the output is always selectable /
  * machine-readable — never a rasterized image (unlike "Microsoft Print to PDF").
  *
- * Body: { headHtml, bodyHtml, origin, fileName }
+ * Body: { headHtml, bodyHtml, fileName } (a client-sent `origin` is ignored)
  * - headHtml: document.head innerHTML (Next CSS + next/font @font-face)
  * - bodyHtml: the #resume-preview outerHTML (already rendered, incl. timeline)
- * - origin:   window.location.origin (used as <base href> so assets/fonts load)
+ * - <base href> and the asset allowlist use this server's own origin, so assets/fonts load
  * - fileName: suggested download name, e.g. "Resume Atsuro Banno"
  */
 export async function POST(request: NextRequest) {
@@ -30,9 +30,13 @@ export async function POST(request: NextRequest) {
     const limited = await applyRateLimitDB(request, 'export-pdf', RATE_LIMITS.write);
     if (limited) return limited;
 
-    const { headHtml, bodyHtml, origin, fileName } = await request.json();
+    const { headHtml, bodyHtml, fileName } = await request.json();
+    // Our own origin, never a client-supplied one: the renderer may only load
+    // assets from this host, so trusting the body would let a caller point the
+    // server's Chromium at any internal or external host (SSRF).
+    const origin = request.nextUrl.origin;
 
-    if (!bodyHtml || !origin) {
+    if (!bodyHtml) {
         return NextResponse.json({ error: 'Missing content' }, { status: 400 });
     }
 

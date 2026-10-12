@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { GoogleGenAI } from '@google/genai';
-import { GEMINI_MODEL } from '@/config/models';
+import { EXPORT_REWRITE_ENABLED } from '@/config/models';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
-import { auth } from '@/lib/auth';
 import { logAiUsage } from '@/lib/ai-usage';
+import { aiErrorPayload } from '@/lib/ai-errors';
+import { AI_LIMITS, requireAiUser, tooLarge } from '@/lib/ai-guards';
+import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
@@ -19,21 +21,29 @@ const API_KEY = process.env.GEMINI_API_KEY;
  * - standard: Pass-through (no AI call needed, handled client-side)
  */
 export async function POST(request: NextRequest) {
+    // Off for beta (no live UI uses it). Returns before any work or AI cost.
+    if (!EXPORT_REWRITE_ENABLED) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
     try {
-        if (!API_KEY) {
-            return NextResponse.json(
-                { error: 'Server configuration error: API key not configured' },
-                { status: 500 }
-            );
-        }
-
-        const body = await request.json();
-        const { sections, variant, platformId, locale } = body as {
+        const body = await request.json().catch(() => null);
+        const { sections, variant, platformId, locale } = (body ?? {}) as {
             sections: { key: string; heading: string; content: string }[];
             variant: 'short' | 'long';
             platformId: string;
             locale: 'ja' | 'en' | 'both';
         };
+
+        // Signed-in users only, rate-limited, size-capped (was open to anyone, unlimited).
+        const userId = await requireAiUser(locale);
+        if (userId instanceof NextResponse) return userId;
+        const limited = await applyRateLimitDB(request, 'export-rewrite', RATE_LIMITS.ai, userId);
+        if (limited) return limited;
+
+        if (!API_KEY) {
+            const { body: errBody, status } = aiErrorPayload(null, locale, 'config');
+            return NextResponse.json(errBody, { status });
+        }
 
         if (!sections?.length || !variant || !platformId) {
             return NextResponse.json(
@@ -41,6 +51,8 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
+        const totalChars = sections.reduce((n, s) => n + String(s?.content ?? '').length + String(s?.heading ?? '').length, 0);
+        if (sections.length > 40 || totalChars > AI_LIMITS.rewriteChars) return tooLarge(locale);
 
         // Standard variant doesn't need AI rewriting
         if (variant === 'standard' as string) {
@@ -50,11 +62,6 @@ export async function POST(request: NextRequest) {
         const ai = new GoogleGenAI({ apiKey: API_KEY });
         const aiConfig = await getAdminAIConfig();
         const model = aiConfig.model;
-
-        // Best-effort attribution for cost logging — this route has no auth gate,
-        // so userId is null (falls back to IP) for anonymous callers.
-        const session = await auth().catch(() => null);
-        const userId = session?.user?.id ?? null;
 
         const isJapanese = locale === 'ja' || locale === 'both';
 

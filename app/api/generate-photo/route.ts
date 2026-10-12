@@ -3,7 +3,7 @@ import { GoogleGenAI, Modality } from '@google/genai';
 import { auth } from '@/lib/auth';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 import { callWithRetry } from '@/lib/gemini-client';
-import { GEMINI_IMAGE_MODEL } from '@/config/models';
+import { GEMINI_IMAGE_MODEL, PHOTO_ENHANCE_ENABLED } from '@/config/models';
 import { getProfessionalHeadshotPrompt } from '@/lib/prompts';
 
 // The @google/genai SDK is native-friendly; keep this on the Node.js runtime.
@@ -34,6 +34,11 @@ export async function POST(request: NextRequest) {
     let locale: 'en' | 'ja' = 'en';
     const t = (key: keyof typeof ERRORS) => ERRORS[key][locale];
 
+    // The AI headshot feature is off for beta (see config/models.ts); refuse
+    // before any work so the image model can't be called while it's hidden.
+    if (!PHOTO_ENHANCE_ENABLED) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
     try {
         // Auth gate (same pattern as the PDF export route).
         const session = await auth();

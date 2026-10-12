@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from '@google/genai';
-import { Message, ResumeData, ImportData } from '@/types';
-import { GEMINI_MODEL } from '@/config/models';
+import { ResumeData, ImportData } from '@/types';
 import { getParseResumePrompt } from '@/lib/prompts';
 import { withCurrentEmployer } from '@/utils/headline';
-import { getAdminAIConfig } from '@/lib/admin-settings-reader';
+import { getAdminAIConfig, getAdminSetting } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 import { callWithRetry } from '@/lib/gemini-client';
-import { auth } from '@/lib/auth';
 import { aiErrorPayload } from '@/lib/ai-errors';
+import { AI_LIMITS, cleanHistory, requireAiUser, tooLarge, withinChars } from '@/lib/ai-guards';
+import { explainedGaps } from '@/utils/careerGaps';
+
+// Explicit cap so a stuck AI call ends instead of running to the platform limit. Generation: observed 28–108s on the preview model with full thinking.
+export const maxDuration = 120;
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -19,12 +22,20 @@ if (!API_KEY) {
 export async function POST(request: NextRequest) {
     let locale: string | undefined;
     try {
-        const limited = await applyRateLimitDB(request, 'parse', RATE_LIMITS.ai);
+        const body = await request.json().catch(() => null);
+        locale = body?.locale;
+
+        // Signed-in users only, then a per-user limit.
+        const userId = await requireAiUser(locale);
+        if (userId instanceof NextResponse) return userId;
+        const limited = await applyRateLimitDB(request, 'parse', RATE_LIMITS.ai, userId);
         if (limited) return limited;
 
-        const body = await request.json();
-        const { history, importData }: { history: Message[], importData?: ImportData } = body;
-        locale = body.locale;
+        const importData: ImportData | undefined = body?.importData || undefined;
+        const history = cleanHistory(body?.history);
+        if (!history || (importData && !withinChars(importData.sourceText, AI_LIMITS.importChars))) {
+            return tooLarge(locale);
+        }
 
         if (!API_KEY) {
             const { body: errBody, status } = aiErrorPayload(null, locale, 'config');
@@ -36,11 +47,6 @@ export async function POST(request: NextRequest) {
         // Read model from admin settings (cached)
         const aiConfig = await getAdminAIConfig();
         const model = aiConfig.model;
-
-        // Best-effort attribution for cost logging — this route has no auth gate,
-        // so userId is null (falls back to IP) for anonymous callers.
-        const session = await auth().catch(() => null);
-        const userId = session?.user?.id ?? null;
 
         const conversationText = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
         const importedText = importData ? `IMPORTED RESUME CONTENT:\n${importData.sourceText}\n\n` : '';
@@ -254,133 +260,9 @@ export async function POST(request: NextRequest) {
                     locale
                 );
 
-                // Additional gap detection from timeline with auto-generation of reasons
-                const workTimeline = data.timeline.filter(t => t.type === 'work').sort((a, b) => {
-                    // Sort by start date (reverse chronological)
-                    const aStart = parseDate(a.period.split('–')[0] || a.period.split('-')[0]);
-                    const bStart = parseDate(b.period.split('–')[0] || b.period.split('-')[0]);
-                    if (!aStart || !bStart) return 0;
-                    return bStart.getTime() - aStart.getTime();
-                });
-
-                // Get conversation text to search for gap explanations
-                const conversationText = history.map(h => h.text).join('\n').toLowerCase();
-
-                for (let i = 0; i < workTimeline.length - 1; i++) {
-                    const current = workTimeline[i];
-                    const next = workTimeline[i + 1];
-
-                    // Parse end date of next position and start date of current position
-                    const nextEnd = parseDate(current.period.split('–')[1]?.trim() || current.period.split('-')[1]?.trim() || '');
-                    const currentStart = parseDate(next.period.split('–')[0]?.trim() || next.period.split('-')[0]?.trim() || '');
-
-                    if (nextEnd && currentStart) {
-                        const daysDiff = Math.floor((currentStart.getTime() - nextEnd.getTime()) / (1000 * 60 * 60 * 24));
-
-                        // Check if gap is 90+ days (3+ months)
-                        if (daysDiff >= 90) {
-                            const gapStart = formatDate(nextEnd);
-                            const gapEnd = formatDate(currentStart);
-                            const gapPeriod = `${gapStart} – ${gapEnd}`;
-
-                            // Extract company names and years for better matching
-                            const prevCompany = current.organization.toLowerCase();
-                            const nextCompany = next.organization.toLowerCase();
-                            const gapYears = gapPeriod.match(/\d{4}/g) || [];
-
-                            // Check if this gap is already explained
-                            const existingGap = data.careerGaps.find(g => g.period === gapPeriod ||
-                                (g.period.includes(gapStart.split(' ')[0]) && g.period.includes(gapEnd.split(' ')[0])));
-
-                            if (!existingGap) {
-                                // Try to auto-generate gap reason from conversation
-                                let autoReason = '';
-                                let isExplained = false;
-
-                                // Check if gap overlaps with education
-                                const educationDuringGap = data.timeline.find(t => {
-                                    if (t.type !== 'education') return false;
-
-                                    // Check if education period overlaps with gap
-                                    const eduStart = parseDate(t.period.split('–')[0]?.trim() || t.period.split('-')[0]?.trim() || '');
-                                    const eduEnd = parseDate(t.period.split('–')[1]?.trim() || t.period.split('-')[1]?.trim() || '');
-
-                                    if (eduStart && eduEnd) {
-                                        // Gap is covered if education overlaps at all with the gap period
-                                        return (eduStart <= currentStart && eduEnd >= nextEnd) ||
-                                            (eduStart >= nextEnd && eduStart <= currentStart) ||
-                                            (eduEnd >= nextEnd && eduEnd <= currentStart);
-                                    }
-
-                                    return t.notes?.toLowerCase().includes('overlap') ||
-                                        t.period.toLowerCase().includes(gapStart.split(' ')[0].toLowerCase()) ||
-                                        t.period.toLowerCase().includes(gapEnd.split(' ')[0].toLowerCase());
-                                });
-
-                                if (educationDuringGap) {
-                                    autoReason = `Pursuing ${educationDuringGap.role} at ${educationDuringGap.organization}`;
-                                    isExplained = true;
-                                }
-                                // Check conversation for gap discussion
-                                else {
-                                    // Look for any discussion about gaps between these specific companies or years
-                                    const gapDiscussionPatterns = [
-                                        // Explicit gap mention with companies
-                                        new RegExp(`(gap|between|after|leaving).*${prevCompany}.*${nextCompany}`, 'i'),
-                                        new RegExp(`(gap|between|after|leaving).*${nextCompany}.*${prevCompany}`, 'i'),
-                                        // Year-based gap discussion
-                                        ...gapYears.map(year => new RegExp(`(gap|during|in).*${year}`, 'i')),
-                                        // General gap acknowledgment patterns
-                                        /(i was|i did|during (that|this) (time|period|gap))/i,
-                                        /(between jobs|career break|time off|break in|employment gap)/i
-                                    ];
-
-                                    // Check if ANY gap discussion pattern is found
-                                    const hasGapDiscussion = gapDiscussionPatterns.some(pattern => pattern.test(conversationText));
-
-                                    if (hasGapDiscussion) {
-                                        // Now look for the explanation keywords
-                                        const gapKeywords = [
-                                            { pattern: /(job search|looking for|finding|searching for work|search mode)/i, reason: 'Job search and career transition' },
-                                            { pattern: /(freelanc|contract|consulting|independent|own work|side project)/i, reason: 'Freelance/contract work' },
-                                            { pattern: /(personal|family|health|medical|care|sabbatical|personal time)/i, reason: 'Personal/family matters' },
-                                            { pattern: /(travel|abroad|overseas|explore|trip)/i, reason: 'Travel and personal development' },
-                                            { pattern: /(upskill|learn|stud|course|training|certif|educat|school|university|degree)/i, reason: 'Professional development and upskilling' },
-                                            { pattern: /(relocation|relocating|moving|moved|shift|new city)/i, reason: 'Relocation' },
-                                            { pattern: /(startup|own business|entrepreneur|venture|launch)/i, reason: 'Entrepreneurial venture' },
-                                            { pattern: /(pandemic|covid|lockdown)/i, reason: 'Career transition during pandemic' },
-                                            { pattern: /(taking (time|break)|needed (time|break)|took (time|break))/i, reason: 'Career break' }
-                                        ];
-
-                                        for (const { pattern, reason } of gapKeywords) {
-                                            if (pattern.test(conversationText)) {
-                                                autoReason = reason;
-                                                isExplained = true;
-                                                break;
-                                            }
-                                        }
-
-                                        // If gap was discussed but no specific reason found, mark as explained with generic reason
-                                        if (!isExplained) {
-                                            autoReason = 'Career transition (explained in interview)';
-                                            isExplained = true;
-                                        }
-                                    }
-                                }
-
-                                // Only add gap if it's truly unexplained or explicitly explained
-                                // Don't add vague/uncertain gaps
-                                if (isExplained) {
-                                    data.careerGaps.push({
-                                        period: gapPeriod,
-                                        reason: autoReason,
-                                        isExplained: true
-                                    });
-                                }
-                            }
-                        }
-                    }
-                }
+                // Gaps the interview already explains (deterministic, month-accurate, EN + JA).
+                const gapDays = await getAdminSetting<number>('gap_detection_threshold_days', 90);
+                data.careerGaps.push(...explainedGaps(data, history.map(h => h.text).join('\n'), gapDays, locale));
 
                 return NextResponse.json({ data });
             } catch (e) {
@@ -388,39 +270,6 @@ export async function POST(request: NextRequest) {
                 const { body: errBody, status } = aiErrorPayload(e, locale, 'unknown');
                 return NextResponse.json(errBody, { status });
             }
-        }
-
-        // Helper functions for date parsing
-        function parseDate(dateStr: string): Date | null {
-            if (!dateStr || dateStr.toLowerCase().includes('present') || dateStr.toLowerCase().includes('current')) {
-                return new Date();
-            }
-
-            // Try various date formats
-            const cleanStr = dateStr.trim();
-
-            // Format: "April 2015", "Apr 2015", "2015"
-            const monthYearMatch = cleanStr.match(/([A-Za-z]+)\s+(\d{4})/);
-            if (monthYearMatch) {
-                const month = monthYearMatch[1];
-                const year = parseInt(monthYearMatch[2]);
-                const monthNum = new Date(Date.parse(month + " 1, 2000")).getMonth();
-                return new Date(year, monthNum, 1);
-            }
-
-            // Format: "2015"
-            const yearMatch = cleanStr.match(/(\d{4})/);
-            if (yearMatch) {
-                return new Date(parseInt(yearMatch[1]), 0, 1);
-            }
-
-            return null;
-        }
-
-        function formatDate(date: Date): string {
-            const months = ['January', 'February', 'March', 'April', 'May', 'June',
-                'July', 'August', 'September', 'October', 'November', 'December'];
-            return `${months[date.getMonth()]} ${date.getFullYear()}`;
         }
 
         console.error('Parse API error: empty response from model');

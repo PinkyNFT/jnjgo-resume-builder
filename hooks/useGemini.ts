@@ -8,6 +8,9 @@ import { useMutation } from '@tanstack/react-query';
 import { Message, ResumeData, RoleType, ImportData, EvaluationResult } from '../types';
 import { readAiErrorMessage } from '../lib/ai-errors';
 
+// The chat route only reads the name and email from initialData; never ship the base64 photo on every turn.
+const withoutPhoto = (d?: ResumeData): ResumeData | undefined => (d ? { ...d, photo: undefined } : undefined);
+
 interface SendMessageParams {
     message: string;
     history: Message[];
@@ -43,7 +46,7 @@ export function useSendMessage() {
                     history: params.history,
                     roleType: params.roleType,
                     importData: params.importData,
-                    initialData: params.initialData,
+                    initialData: withoutPhoto(params.initialData),
                     locale: params.locale,
                 }),
                 signal: params.signal,
@@ -85,7 +88,7 @@ export function useGenerateHint() {
                     history: params.history,
                     roleType: params.roleType,
                     importData: params.importData,
-                    initialData: params.initialData,
+                    initialData: withoutPhoto(params.initialData),
                     locale: params.locale,
                 }),
                 signal: params.signal,
@@ -129,40 +132,6 @@ export function useParseResume() {
 
             const result = await response.json();
             return result.data as ResumeData;
-        },
-        retry: 1,
-        retryDelay: 2000,
-    });
-}
-
-/**
- * Hook for analyzing imported text
- */
-export function useAnalyzeImport() {
-    return useMutation({
-        mutationFn: async ({
-            text,
-            locale
-        }: {
-            text: string;
-            locale?: string;
-        }) => {
-            const response = await fetch('/api/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'analyzeImport',
-                    text,
-                    locale,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error(await readAiErrorMessage(response, locale));
-            }
-
-            const result = await response.json();
-            return result.data as ImportData;
         },
         retry: 1,
         retryDelay: 2000,

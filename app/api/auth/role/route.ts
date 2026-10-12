@@ -91,7 +91,8 @@ export async function POST(req: Request) {
         }
 
         // Check verification setting
-        const requireVerification = await getAdminSetting('require_recruiter_verification', false);
+        // Fail closed: if the setting is missing or the DB read fails, require approval.
+        const requireVerification = await getAdminSetting('require_recruiter_verification', true);
         const finalRole = (role === 'recruiter' && requireVerification) ? 'pending_recruiter' : role;
 
         // Set the role
