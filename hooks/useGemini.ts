@@ -106,6 +106,48 @@ export function useGenerateHint() {
     });
 }
 
+interface FollowUpParams {
+    question: string;
+    answer: string;
+    context?: string;
+    roleType: RoleType;
+    locale?: string;
+    signal?: AbortSignal;
+}
+
+/**
+ * Scripted interview: one AI follow-up question for a thin answer (config/interview.ts).
+ * Sends only that question and answer. Optional, so it never retries: the caller
+ * moves on with the script if it fails.
+ */
+export function useFollowUp() {
+    return useMutation({
+        mutationFn: async (params: FollowUpParams): Promise<string> => {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'followUp',
+                    question: params.question,
+                    answer: params.answer,
+                    context: params.context,
+                    roleType: params.roleType,
+                    locale: params.locale,
+                }),
+                signal: params.signal,
+            });
+
+            if (!response.ok) {
+                throw new Error(await readAiErrorMessage(response, params.locale));
+            }
+
+            const data = await response.json();
+            return typeof data.text === 'string' ? data.text : '';
+        },
+        retry: false,
+    });
+}
+
 /**
  * Hook for parsing resume from chat history
  */

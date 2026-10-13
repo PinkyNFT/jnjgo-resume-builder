@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import { getSystemInstruction } from '@/lib/prompts';
+import { getFollowUpInput, getFollowUpInstruction, getSystemInstruction } from '@/lib/prompts';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
-import { callWithRetry } from '@/lib/gemini-client';
+import { callWithRetry, lightThinking } from '@/lib/gemini-client';
 import { aiErrorPayload } from '@/lib/ai-errors';
 import { AI_LIMITS, cleanHistory, requireAiUser, tooLarge, withinChars } from '@/lib/ai-guards';
+import { FOLLOW_UP_MODEL, INTERVIEW_MODE, MAX_AI_FOLLOWUPS } from '@/config/interview';
 
 // Explicit cap so a stuck AI call ends instead of running to the platform limit. One interview turn.
 export const maxDuration = 60;
@@ -69,11 +70,22 @@ export async function POST(request: NextRequest) {
         const limited = await applyRateLimitDB(request, 'chat', RATE_LIMITS.ai, userId);
         if (limited) return limited;
 
-        const { action, message, roleType, importData, initialData } = body ?? {};
+        const { action, message, roleType, importData, initialData, question, answer, context } = body ?? {};
+
+        // Follow-ups exist only in the scripted interview; switched off, they cost nothing.
+        if (action === 'followUp' && (INTERVIEW_MODE !== 'scripted' || MAX_AI_FOLLOWUPS === 0)) {
+            return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        }
+
         const history = cleanHistory(body?.history);
         if (
             !history ||
             (action === 'sendMessage' && !withinChars(message, AI_LIMITS.messageChars)) ||
+            (action === 'followUp' && (
+                !withinChars(question, AI_LIMITS.followUpQuestionChars) ||
+                !withinChars(answer, AI_LIMITS.messageChars) ||
+                (context != null && !withinChars(context, AI_LIMITS.followUpContextChars))
+            )) ||
             (importData && !withinChars(importData.sourceText, AI_LIMITS.importChars))
         ) {
             return tooLarge(locale);
@@ -163,6 +175,28 @@ export async function POST(request: NextRequest) {
                     ? "例：「5人のエンジニアチームを率いた」や「収益を30%増加させた」"
                     : "For example: 'Led a team of 5 engineers' or 'Increased revenue by 30%'")
             });
+
+        } else if (action === 'followUp') {
+            // Scripted interview: one short question written from a single question and
+            // answer, not the whole conversation. Optional for the client, so fail fast.
+            if (!answer.trim()) {
+                return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+            }
+            const systemInstruction = await getFollowUpInstruction(roleType, locale || 'en');
+            const followUpModel = FOLLOW_UP_MODEL ?? model;
+            const response = await callWithRetry(
+                () => ai.models.generateContent({
+                    model: followUpModel,
+                    contents: getFollowUpInput(question, answer, context || undefined, locale || 'en'),
+                    config: { systemInstruction, temperature, maxOutputTokens: 256, ...lightThinking(followUpModel) },
+                }),
+                'chat/followUp',
+                { route: 'chat/followUp', model: followUpModel, userId, request },
+                { maxAttempts: 2 }
+            );
+            // Drop wrapping quotes the model sometimes adds.
+            const text = (response.text ?? '').trim().replace(/^["「“]+|["」”]+$/g, '').slice(0, 400);
+            return NextResponse.json({ text });
 
         } else {
             return NextResponse.json(

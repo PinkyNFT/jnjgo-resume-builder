@@ -115,6 +115,8 @@ export interface Message {
     text: string;
     isHint?: boolean;
     phase?: 'overview' | 'confirmation' | 'detail' | 'general';
+    /** Id of the scripted interview question this message asks (utils/interviewScript.ts). */
+    qid?: string;
 }
 
 export interface ImportData {

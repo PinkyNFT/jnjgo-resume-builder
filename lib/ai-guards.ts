@@ -16,6 +16,8 @@ export const AI_LIMITS = {
     importChars: 50_000,       // imported resume text (same cap as /api/extract-file)
     resumeJsonChars: 200_000,  // resume data sent for scoring, photo stripped
     rewriteChars: 40_000,      // export sections sent for rewriting
+    followUpQuestionChars: 2_000, // the scripted question a follow-up builds on
+    followUpContextChars: 500,    // "company, title" for that question
 } as const;
 
 /** The signed-in user's id, or a 401 response to return as-is. */

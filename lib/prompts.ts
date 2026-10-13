@@ -143,6 +143,33 @@ export const getSystemInstruction = async (roleType: RoleType, importData?: Impo
   });
 };
 
+// ===== INTERVIEW FOLLOW-UP (scripted mode) =====
+
+export const getFollowUpInstruction = async (roleType: RoleType, locale: string = 'en'): Promise<string> => {
+  const isJa = locale === 'ja';
+  const roleContext = roleType === 'consultant'
+    ? (isJa ? 'コンサルタント' : 'a consultant')
+    : roleType === 'senior_engineer'
+      ? (isJa ? 'エンジニア' : 'an engineer')
+      : (isJa ? 'あらゆる職種のプロフェッショナル' : 'a professional in any field');
+
+  const content = await getAdminPromptContent('interview_followup', locale);
+  if (!content) {
+    throw new Error('Prompt "interview_followup" not found in DB or defaults. Check prompt-defaults.ts.');
+  }
+  return substituteVars(content, { ROLE_CONTEXT: roleContext });
+};
+
+/** The single question and answer a follow-up is written from (never the whole conversation). */
+export const getFollowUpInput = (question: string, answer: string, context: string | undefined, locale: string = 'en'): string => {
+  const isJa = locale === 'ja';
+  return [
+    context ? `${isJa ? '職務' : 'Role'}: ${context}` : '',
+    `${isJa ? '質問' : 'Question'}: ${question}`,
+    `${isJa ? '回答' : 'Answer'}: ${answer}`,
+  ].filter(Boolean).join('\n');
+};
+
 // ===== ANALYZE IMPORT =====
 
 export const getAnalyzeImportPrompt = async (text: string, locale: string = 'en'): Promise<string> => {

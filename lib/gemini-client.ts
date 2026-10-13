@@ -6,6 +6,7 @@
 
 import * as Sentry from '@sentry/nextjs';
 import type { NextRequest } from 'next/server';
+import { ThinkingLevel } from '@google/genai';
 import { logAiUsage, type GeminiResponseLike } from './ai-usage';
 
 const MAX_RETRIES = 3;
@@ -43,11 +44,13 @@ export interface UsageTrackingContext {
 export async function callWithRetry<T extends GeminiResponseLike>(
     fn: () => Promise<T>,
     context = 'gemini',
-    tracking?: UsageTrackingContext
+    tracking?: UsageTrackingContext,
+    /** Fewer attempts for optional calls the caller can do without (e.g. an interview follow-up). */
+    { maxAttempts = MAX_RETRIES }: { maxAttempts?: number } = {}
 ): Promise<T> {
     let lastError: unknown;
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
         try {
             const result = await fn();
             if (tracking) {
@@ -60,13 +63,13 @@ export async function callWithRetry<T extends GeminiResponseLike>(
 
             // Non-retryable errors (e.g. 403 PERMISSION_DENIED) fail fast — retrying won't help.
             if (!isRetryable(error)) {
-                console.error(`[${context}] Non-retryable error on attempt ${attempt + 1}/${MAX_RETRIES}:`, message);
+                console.error(`[${context}] Non-retryable error on attempt ${attempt + 1}/${maxAttempts}:`, message);
                 break;
             }
 
             // Retryable, but out of attempts.
-            if (attempt === MAX_RETRIES - 1) {
-                console.error(`[${context}] Failed after ${MAX_RETRIES} attempt(s):`, message);
+            if (attempt === maxAttempts - 1) {
+                console.error(`[${context}] Failed after ${maxAttempts} attempt(s):`, message);
                 break;
             }
 
@@ -87,4 +90,15 @@ export async function callWithRetry<T extends GeminiResponseLike>(
     }
 
     throw lastError;
+}
+
+/**
+ * Least thinking the model allows, for short replies that need no reasoning
+ * (thinking tokens are billed as output). Gemini 3 takes a level, 2.5 Flash a
+ * budget; other models keep their default.
+ */
+export function lightThinking(model: string): { thinkingConfig?: { thinkingLevel?: ThinkingLevel; thinkingBudget?: number } } {
+    if (model.startsWith('gemini-3')) return { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } };
+    if (model.startsWith('gemini-2.5-flash')) return { thinkingConfig: { thinkingBudget: 0 } };
+    return {};
 }

@@ -56,6 +56,12 @@ function monthLabel(fraction: number, locale: Locale): string {
     return locale === 'ja' ? `${year}年${month}月` : `${MONTHS_EN[month - 1]} ${year}`;
 }
 
+/** First and last month of a gap, e.g. { from: 'August 2020', to: 'December 2020' } or 2020年8月 / 2020年12月. */
+export function gapMonths(gap: { start: number; end: number }, locale: string = 'en'): { from: string; to: string } {
+    const loc: Locale = locale === 'ja' ? 'ja' : 'en';
+    return { from: monthLabel(gap.start, loc), to: monthLabel(gap.end - 1 / 12, loc) };
+}
+
 export interface TimelineGap {
     /** Fractional year at the start of the first gap month. */
     start: number;
@@ -118,7 +124,8 @@ export function explainedGaps(data: ResumeData, conversation: string, minDays: n
 
     for (const gap of findTimelineGaps(work, minDays)) {
         if (existing.some(e => overlaps(e, gap))) continue;
-        const period = `${monthLabel(gap.start, loc)}${sep}${monthLabel(gap.end - 1 / 12, loc)}`;
+        const { from, to } = gapMonths(gap, loc);
+        const period = `${from}${sep}${to}`;
 
         const study = education.find(e => {
             const p = parsePeriod(e.period);

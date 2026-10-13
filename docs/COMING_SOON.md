@@ -8,6 +8,7 @@ Features that are built (or partly built) but switched off for beta, plus planne
 |---|---|---|---|
 | AI professional headshot ("Make Professional", Regenerate, Use original) | `PHOTO_ENHANCE_ENABLED = false` in `config/models.ts`; `/api/generate-photo` returns 404 | `components/ResumePhoto.tsx` (gated buttons), `services/photoService.ts`, `app/api/generate-photo/route.ts`, `getProfessionalHeadshotPrompt` in `lib/prompts.ts`, `GEMINI_IMAGE_MODEL` | Flip the flag; confirm the image model is enabled for the key |
 | AI short/long rewrite of export text (per platform) | `EXPORT_REWRITE_ENABLED = false` in `config/models.ts`; `/api/export/rewrite` returns 404 | `app/api/export/rewrite/route.ts`, dormant `components/ExportTemplates.tsx` | Flip the flag and mount the component in the export hub |
+| AI interviewer on every turn, with AI greeting and AI hints | `INTERVIEW_MODE = 'scripted'` in `config/interview.ts` (beta uses the scripted interview with up to 3 AI follow-ups) | `components/InterviewView.tsx` (AI path), `/api/chat` actions `sendMessage` and `generateHint`, `system_instruction` prompt | Set `INTERVIEW_MODE = 'ai'`. Drafts started under the AI interviewer still use it when resumed |
 
 ## Beta photo scope
 

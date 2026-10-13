@@ -484,7 +484,16 @@
 		"agentThinking": "Agent is thinking...",
 		"pressEnter": "Press Enter to send • Shift + Enter for new line",
 		"notProvided": "Not provided",
-		"generateShort": "Generate"
+		"generateShort": "Generate",
+		"coachRole": "Career coach",
+		"sections": {
+			"work": "Work History",
+			"details": "Experience Details",
+			"education": "Education",
+			"skills": "Skills",
+			"certifications": "Certifications",
+			"gaps": "Career Gaps"
+		}
 	},
 	"Errors": {
 		"somethingWrong": "Something went wrong",

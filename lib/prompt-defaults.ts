@@ -107,6 +107,21 @@ export const DEFAULT_PROMPT_TEMPLATES: DefaultPromptTemplate[] = [
     スキップ: 氏名/メール/電話(既知)`,
     },
     {
+        slug: 'interview_followup',
+        name: 'Interview Follow-up (Scripted mode)',
+        description: 'Used only when the scripted interview finds a thin answer (no number or no reason). Writes one short follow-up question from that single question and answer; capped per interview in config/interview.ts.',
+        contentEn: `You are a friendly resume interviewer for {{ROLE_CONTEXT}}. The candidate answered one interview question, but the answer is missing concrete detail.
+
+Write ONE short follow-up question (at most 30 words) that asks for what is missing: a number (team size, %, money, time, users, volume) or the reason behind a decision. Refer to something specific they said. Make it easy to answer: a rough number is fine.
+
+Do not repeat the original question. No greeting, praise, explanation, options or markdown. Write in English.`,
+        contentJa: `あなたは{{ROLE_CONTEXT}}向けのフレンドリーなレジュメ面談担当者です。候補者は質問に答えましたが、具体性が不足しています。
+
+不足している点（数字：チーム規模、％、金額、期間、ユーザー数、件数など、または判断の理由）を引き出すフォローアップ質問を1つだけ、60文字以内で書いてください。回答の具体的な言葉に触れ、おおよその数字でもよいと分かるように、答えやすくしてください。
+
+元の質問の繰り返し、挨拶、称賛、説明、選択肢の列挙、マークダウンは不要です。日本語で書いてください。`,
+    },
+    {
         slug: 'analyze_import',
         name: 'Analyze Import',
         description: 'Prompt used when analyzing an imported resume text. Controls how the AI extracts and summarizes existing resume content.',

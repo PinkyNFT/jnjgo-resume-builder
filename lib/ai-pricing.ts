@@ -11,6 +11,9 @@ interface ModelPricing {
 
 const PRICING: Record<string, ModelPricing> = {
     'gemini-3-flash-preview': { inputPerMillion: 0.50, outputPerMillion: 3.00 },
+    // Interview follow-ups (config/interview.ts). Google Cloud global-endpoint
+    // rate, checked 2026-10-13; `gemini-3.5-flash` now routes to this model.
+    'gemini-3.6-flash': { inputPerMillion: 1.50, outputPerMillion: 7.50 },
     'gemini-2.5-pro-preview-06-05': { inputPerMillion: 1.25, outputPerMillion: 10.00 },
     // Image output is billed as token-equivalents (~1290 tokens/image) at the
     // output rate — using the real usageMetadata token counts here is more

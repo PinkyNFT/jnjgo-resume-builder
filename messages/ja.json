@@ -484,7 +484,16 @@
 		"agentThinking": "エージェントが思考中...",
 		"pressEnter": "Enterで送信 • Shift + Enterで改行",
 		"notProvided": "未提供",
-		"generateShort": "生成"
+		"generateShort": "生成",
+		"coachRole": "キャリアコーチ",
+		"sections": {
+			"work": "職務経歴",
+			"details": "経験の詳細",
+			"education": "学歴",
+			"skills": "スキル",
+			"certifications": "資格",
+			"gaps": "キャリアギャップ"
+		}
 	},
 	"Errors": {
 		"somethingWrong": "エラーが発生しました",

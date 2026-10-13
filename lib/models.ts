@@ -120,7 +120,9 @@ const MessageSchema = new Schema<Message>({
     role: { type: String, enum: ['user', 'model'], required: true },
     text: { type: String, required: true },
     isHint: { type: Boolean, default: false },
-    phase: { type: String, enum: ['overview', 'confirmation', 'detail', 'general'] }
+    phase: { type: String, enum: ['overview', 'confirmation', 'detail', 'general'] },
+    // Scripted interview question id; without it a resumed draft can't tell which question was answered.
+    qid: { type: String, maxlength: 64 }
 }, { _id: false });
 
 const ImportDataSchema = new Schema<ImportData>({
