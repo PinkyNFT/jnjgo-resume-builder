@@ -493,7 +493,8 @@
 			"skills": "Skills",
 			"certifications": "Certifications",
 			"gaps": "Career Gaps"
-		}
+		},
+		"questionsLeft": "{count, plural, one {About # question left} other {About # questions left}}"
 	},
 	"Errors": {
 		"somethingWrong": "Something went wrong",

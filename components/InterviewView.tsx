@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FOLLOW_UP_TIMEOUT_MS, INTERVIEW_MODE, MAX_AI_FOLLOWUPS } from '../config/interview';
 import {
     ScriptContext, ScriptSection, followUpContext, followUpsUsed, isScriptedHistory, nextStep,
-    pendingQuestion, scriptHint, scriptProgress, wantsFollowUp,
+    pendingQuestion, questionsLeft, scriptChoices, scriptHint, scriptProgress, wantsFollowUp,
 } from '../utils/interviewScript';
 
 // ===== INTERVIEW PROGRESS TRACKING (Agent-driven + fallback heuristics) =====
@@ -251,9 +251,11 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     // Scripted interview (config/interview.ts): questions come from code, no AI per turn.
     // Drafts started with the AI interviewer keep it when resumed, so nothing is asked twice.
     const scriptCtx: ScriptContext = { roleType, locale, imported: !!importData, fullName: initialData?.fullName };
-    const scriptMessage = (history: Message[]): Message => {
+    // The next question, preceded by an example as a hint bubble when the user asked what we meant.
+    const scriptMessages = (history: Message[]): Message[] => {
         const step = nextStep(history, scriptCtx);
-        return { role: 'model', text: step.text, qid: step.qid };
+        const question: Message = { role: 'model', text: step.text, qid: step.qid };
+        return step.example ? [{ role: 'model', text: step.example, isHint: true }, question] : [question];
     };
     const [scripted] = useState(() =>
         INTERVIEW_MODE === 'scripted' && (!initialHistory?.length || isScriptedHistory(initialHistory))
@@ -263,7 +265,7 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
         const history = initialHistory || [];
         // Scripted: the opening (or the question after a last unanswered reply) is static text.
         if (scripted && (history.length === 0 || history[history.length - 1].role === 'user')) {
-            return [...history, scriptMessage(history)];
+            return [...history, ...scriptMessages(history)];
         }
         return history;
     });
@@ -297,6 +299,10 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     const progress = scripted
         ? scriptedInterviewProgress(messages, scriptCtx)
         : analyzeInterviewProgress(messages, agentReadyFlag, importData);
+
+    // Scripted: tap-to-answer suggestions for the open question, and roughly how many are left.
+    const choices = scripted ? scriptChoices(pendingQuestion(messages)?.qid, scriptCtx) : [];
+    const left = scripted ? questionsLeft(messages, scriptCtx) : 0;
     const { sections: completenessDetails, completedCount, totalCount, agentReady, readyToGenerate: isReadyToGenerate } = progress;
 
     // Scan existing history for agent readiness on mount
@@ -390,7 +396,6 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
         const asked = pendingQuestion(messages);
         const answered: Message[] = [...messages, { role: 'user', text }];
         setMessages(answered);
-        setInputValue('');
 
         let followUp: Message | null = null;
         if (asked && followUpsUsed(messages) < MAX_AI_FOLLOWUPS && wantsFollowUp(asked.qid, text)) {
@@ -417,16 +422,17 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
         }
 
         if (!mountedRef.current) return;
-        const updated = [...answered, followUp ?? scriptMessage(answered)];
+        const updated = [...answered, ...(followUp ? [followUp] : scriptMessages(answered))];
         setMessages(updated);
         autoSave(updated);
     };
 
-    // Handle sending messages
-    const handleSend = async () => {
-        if (!inputValue.trim() || isLoading) return;
+    // Handle sending messages. `choice` is a tapped suggestion; the typed draft is kept.
+    const handleSend = async (choice?: string) => {
+        const text = choice ?? inputValue;
+        if (!text.trim() || isLoading) return;
 
-        const userMsg: Message = { role: 'user', text: inputValue };
+        const userMsg: Message = { role: 'user', text };
         const newMessages = [...messages, userMsg];
 
         // Check if user is explicitly requesting to generate resume
@@ -445,12 +451,13 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
             // Show confirmation dialog instead of sending to AI. Scripted mode keeps it
             // out of the transcript so it isn't read as the answer to the open question.
             if (!scripted) setMessages(newMessages);
-            setInputValue('');
+            if (choice === undefined) setInputValue('');
             setShowGenerateConfirm(true);
             return;
         }
 
         if (scripted) {
+            if (choice === undefined) setInputValue('');
             await answerScripted(userMsg.text);
             return;
         }
@@ -1061,6 +1068,28 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
             </AnimatePresence>
 
             <div className="p-3 md:p-4 glass border-t border-slate-200/80 shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
+                {/* Scripted mode: tap a common answer instead of typing it */}
+                {choices.length > 0 && !isLoading && (
+                    <div className="flex gap-2 overflow-x-auto pb-2.5 max-w-4xl mx-auto">
+                        {choices.map(choice => (
+                            <button
+                                key={choice.label}
+                                type="button"
+                                onClick={() => {
+                                    if (choice.action === 'example') handleHint();
+                                    else if (choice.action === 'generate') setShowGenerateConfirm(true);
+                                    else handleSend(choice.label);
+                                }}
+                                className={`shrink-0 px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all duration-200 active:scale-95 ${choice.action === 'generate'
+                                    ? 'bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-700 hover:bg-indigo-50'
+                                    }`}
+                            >
+                                {choice.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
                 <div className="flex items-end gap-2 max-w-4xl mx-auto">
                     {/* Hint Button with improved styling */}
                     <div className="group relative">
@@ -1133,6 +1162,11 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                 <Loader2 className="w-3 h-3 animate-spin" />
                                 {t('agentThinking')}
                             </span>
+                        ) : left > 0 ? (
+                            <>
+                                <span className="font-semibold text-slate-500">{t('questionsLeft', { count: left })}</span>
+                                <span className="hidden md:inline"> · {t('pressEnter')}</span>
+                            </>
                         ) : t('pressEnter')}
                     </p>
                 </div>

@@ -32,7 +32,11 @@ export async function POST(request: NextRequest) {
         if (limited) return limited;
 
         const importData: ImportData | undefined = body?.importData || undefined;
-        const history = cleanHistory(body?.history);
+        // Hints are example answers, not the candidate's own words: keep them out of the resume.
+        const rawHistory = Array.isArray(body?.history)
+            ? body.history.filter((m: { isHint?: boolean } | null) => !m?.isHint)
+            : body?.history;
+        const history = cleanHistory(rawHistory);
         if (!history || (importData && !withinChars(importData.sourceText, AI_LIMITS.importChars))) {
             return tooLarge(locale);
         }
@@ -48,7 +52,11 @@ export async function POST(request: NextRequest) {
         const aiConfig = await getAdminAIConfig();
         const model = aiConfig.model;
 
-        const conversationText = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
+        // Questions quote examples ("e.g. 'Rakuten, Senior Engineer'"); only USER lines are facts.
+        const conversationText = [
+            '(Use only facts stated in USER lines. MODEL lines are the interviewer\'s questions and examples, never facts about the candidate.)',
+            ...history.map(m => `${m.role.toUpperCase()}: ${m.text}`),
+        ].join('\n');
         const importedText = importData ? `IMPORTED RESUME CONTENT:\n${importData.sourceText}\n\n` : '';
 
         const prompt = await getParseResumePrompt(conversationText, importedText, locale || 'en');

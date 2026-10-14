@@ -493,7 +493,8 @@
 			"skills": "スキル",
 			"certifications": "資格",
 			"gaps": "キャリアギャップ"
-		}
+		},
+		"questionsLeft": "残り約{count}問"
 	},
 	"Errors": {
 		"somethingWrong": "エラーが発生しました",
