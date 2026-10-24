@@ -32,6 +32,7 @@ import JobMatchingSection from '../../../components/JobMatchingSection';
 import { ResumePhoto } from '../../../components/ResumePhoto';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import AppNavbar from '../../../components/navigation/AppNavbar';
+import { AiCreditsBanner } from '../../../components/AiCredits';
 import { DashboardSkeleton } from '../../../components/navigation/Skeletons';
 import Dropzone from 'react-dropzone';
 
@@ -354,7 +355,13 @@ const SetupView = ({ onComplete, onCancel }: { onComplete: (role: RoleType, impo
           />
         </div>
 
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-slate-100">
+        {/* Beta: what happens to their answers (free-tier AI), before they type anything */}
+        <p className="mt-6 text-xs text-slate-500 leading-relaxed">
+          {t('aiDataNotice')}{' '}
+          <Link href="/privacy" className="underline hover:text-slate-700">{t('aiDataNoticeLink')}</Link>
+        </p>
+
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 mt-4 border-t border-slate-100">
           <button onClick={onCancel} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all duration-200">{tCommon('cancel')}</button>
           <button
             onClick={handleStart}
@@ -779,6 +786,7 @@ export default function Page() {
               <AppNavbar />
 
               <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-24 md:pb-20">
+                <AiCreditsBanner className="mt-6" />
                 {projects.length === 0 ? (
                   <EmptyState onStart={handleStartSetup} />
                 ) : (

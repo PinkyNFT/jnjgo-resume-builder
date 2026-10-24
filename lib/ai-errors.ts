@@ -4,9 +4,13 @@
  * client can use them without pulling the full message catalogs into its bundle.
  */
 
-export type AiErrorKind = 'quota' | 'rateLimit' | 'timeout' | 'unavailable' | 'config' | 'auth' | 'tooLarge' | 'unknown';
+export type AiErrorKind = 'betaLimit' | 'quota' | 'rateLimit' | 'timeout' | 'unavailable' | 'config' | 'auth' | 'tooLarge' | 'unknown';
 
 const MESSAGES: Record<AiErrorKind, { en: string; ja: string }> = {
+    betaLimit: {
+        en: "Today's beta AI credits are used up. Your work is saved, and AI features come back when the credits reset.",
+        ja: '本日のベータ版AIクレジットを使い切りました。作業内容は保存されています。クレジットがリセットされると、AI機能を再びご利用いただけます。',
+    },
     auth: {
         en: 'Please sign in again to continue.',
         ja: '続行するには、もう一度サインインしてください。',
@@ -44,6 +48,7 @@ const MESSAGES: Record<AiErrorKind, { en: string; ja: string }> = {
 // 503 is deliberately avoided: app/providers.tsx shows a generic "servers
 // unavailable" toast for every 503, which would duplicate these messages.
 const STATUS: Record<AiErrorKind, number> = {
+    betaLimit: 429,
     quota: 429,
     rateLimit: 429,
     timeout: 504,
@@ -67,6 +72,7 @@ export function classifyAiError(error: unknown): AiErrorKind {
     const status = typeof rawStatus === 'number' ? rawStatus : undefined;
     const msg = (error instanceof Error ? `${error.name} ${error.message}` : String(error ?? '')).toLowerCase();
 
+    if ((error as { name?: string } | null)?.name === 'BetaLimitError' || isDailyQuotaError(error)) return 'betaLimit';
     if (status === 429 || /resource_exhausted|quota|rate.?limit|too many requests/.test(msg)) return 'quota';
     // Invalid key = 400 API_KEY_INVALID; disabled billing / no access = 403 PERMISSION_DENIED.
     if (status === 401 || status === 403 || /api.?key|permission_denied|unauthenticated|billing/.test(msg)) return 'config';
@@ -75,10 +81,39 @@ export function classifyAiError(error: unknown): AiErrorKind {
     return 'unknown';
 }
 
+/**
+ * The beta's shared daily AI credits are used up (lib/ai-credits.ts), or
+ * Google reported the free tier's daily quota as exhausted. Retrying won't
+ * help until the reset.
+ */
+export class BetaLimitError extends Error {
+    constructor(public resetAt?: string) {
+        super('Beta AI credits used up for today');
+        this.name = 'BetaLimitError';
+    }
+}
+
+/**
+ * Gemini's daily free-tier cap (429 RESOURCE_EXHAUSTED with a quota id like
+ * GenerateRequestsPerDayPerProjectPerModel-FreeTier), as opposed to the
+ * per-minute limit, which clears on its own.
+ */
+export function isDailyQuotaError(error: unknown): boolean {
+    const rawStatus = (error as { status?: unknown } | null)?.status;
+    const msg = error instanceof Error ? error.message : String(error ?? '');
+    const exhausted = rawStatus === 429 || /RESOURCE_EXHAUSTED|\b429\b/i.test(msg);
+    return exhausted && /PerDay|per day|daily/i.test(msg);
+}
+
 /** JSON body + HTTP status for an AI route's error response. */
 export function aiErrorPayload(error: unknown, locale?: string, kind: AiErrorKind = classifyAiError(error)) {
+    const resetAt = kind === 'betaLimit' ? (error as BetaLimitError | null)?.resetAt : undefined;
     return {
-        body: { error: aiErrorMessage(kind, locale), code: `AI_${kind.toUpperCase()}` },
+        body: {
+            error: aiErrorMessage(kind, locale),
+            code: kind === 'betaLimit' ? 'AI_BETA_LIMIT' : `AI_${kind.toUpperCase()}`,
+            ...(resetAt ? { resetAt } : {}),
+        },
         status: STATUS[kind],
     };
 }

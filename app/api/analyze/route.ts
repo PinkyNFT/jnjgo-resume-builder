@@ -4,7 +4,7 @@ import { ResumeData, RoleType, EvaluationResult } from '@/types';
 import { getEvaluateResumePrompt } from '@/lib/prompts';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
-import { callWithRetry } from '@/lib/gemini-client';
+import { callWithRetry, isCompleteJson, structuredOutput } from '@/lib/gemini-client';
 import { aiErrorPayload } from '@/lib/ai-errors';
 import { AI_LIMITS, requireAiUser, resumeForPrompt, tooLarge } from '@/lib/ai-guards';
 
@@ -106,10 +106,11 @@ export async function POST(request: NextRequest) {
                 gapDetails
             }, locale || 'en');
 
-            const response = await callWithRetry(() => ai.models.generateContent({
+            const score = () => callWithRetry(() => ai.models.generateContent({
                 model,
                 contents: prompt,
                 config: {
+                    ...structuredOutput(model),
                     responseMimeType: "application/json",
                     responseSchema: {
                         type: Type.OBJECT,
@@ -162,6 +163,10 @@ export async function POST(request: NextRequest) {
                     }
                 }
             }), 'analyze/evaluateResume', { route: 'analyze/evaluateResume', model, userId, request });
+
+            // Same guard as generation: one more try if the JSON came back cut off.
+            let response = await score();
+            if (!isCompleteJson(response.text)) response = await score();
 
             const result = JSON.parse(response.text || "{}");
 

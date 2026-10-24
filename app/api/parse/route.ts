@@ -5,7 +5,7 @@ import { getParseResumePrompt } from '@/lib/prompts';
 import { withCurrentEmployer } from '@/utils/headline';
 import { getAdminAIConfig, getAdminSetting } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
-import { callWithRetry } from '@/lib/gemini-client';
+import { callWithRetry, isCompleteJson, structuredOutput } from '@/lib/gemini-client';
 import { aiErrorPayload } from '@/lib/ai-errors';
 import { AI_LIMITS, cleanHistory, requireAiUser, tooLarge, withinChars } from '@/lib/ai-guards';
 import { explainedGaps } from '@/utils/careerGaps';
@@ -61,10 +61,11 @@ export async function POST(request: NextRequest) {
 
         const prompt = await getParseResumePrompt(conversationText, importedText, locale || 'en');
 
-        const response = await callWithRetry(() => ai.models.generateContent({
+        const generate = () => callWithRetry(() => ai.models.generateContent({
             model,
             contents: prompt,
             config: {
+                ...structuredOutput(model),
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: Type.OBJECT,
@@ -197,6 +198,11 @@ export async function POST(request: NextRequest) {
                 }
             }
         }), 'parse', { route: 'parse', model, userId, request });
+
+        // A small model can still loop until the output cap now and then,
+        // leaving cut-off JSON: one more try (one more credit) before giving up.
+        let response = await generate();
+        if (!isCompleteJson(response.text)) response = await generate();
 
         if (response.text) {
             try {

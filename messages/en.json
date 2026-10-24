@@ -97,7 +97,8 @@
 		"recruiterCard3Title": "AI-Verified Data",
 		"recruiterCard3Desc": "Career history verified through AI interview",
 		"recruiterCard4Title": "Deal Breakers",
-		"recruiterCard4Desc": "Working conditions and non-negotiables"
+		"recruiterCard4Desc": "Working conditions and non-negotiables",
+		"footerBetaStatus": "Beta status"
 	},
 	"Dashboard": {
 		"subtitle": "Build Your Master Resume with AI",
@@ -199,7 +200,9 @@
 		"startInterview": "Start AI Interview",
 		"importAnalyzeError": "We couldn't analyze your resume right now. Please try again.",
 		"uploadTooLarge": "File too large. Maximum size is 5MB.",
-		"uploadUnsupported": "Unsupported file format. Please upload a PDF or DOCX file."
+		"uploadUnsupported": "Unsupported file format. Please upload a PDF or DOCX file.",
+		"aiDataNotice": "Your answers are processed by Google's Gemini AI. During the beta this uses Gemini's free tier, where Google may use the content to improve its services. Please don't include sensitive information such as your My Number or health details.",
+		"aiDataNoticeLink": "Privacy policy"
 	},
 	"PersonalInfo": {
 		"title": "Personal Information",
@@ -761,12 +764,13 @@
 	},
 	"BetaBanner": {
 		"text": "Beta — This is an early version. Some features are incomplete and data may be reset without notice.",
-		"dismiss": "Dismiss"
+		"dismiss": "Dismiss",
+		"details": "What's in the beta"
 	},
 	"Privacy": {
 		"backHome": "Back to home",
 		"title": "Privacy Policy",
-		"lastUpdated": "Last updated: April 2025",
+		"lastUpdated": "Last updated: October 2026",
 		"betaNotice": "Beta notice: JNJGO Resume is currently in beta. This privacy policy is a working draft and will be updated before general availability.",
 		"s1Title": "1. Information We Collect",
 		"s1Body": "We collect information you provide directly, including your name, email address (via Google OAuth), career history, salary expectations, and job preferences. We also collect usage data such as pages visited and features used.",
@@ -778,7 +782,7 @@
 		"s3Title": "3. Data Sharing",
 		"s3Body": "We do not sell your personal data. Your private profile information (salary expectations, deal-breakers, contact details) is only visible to approved recruiters when you explicitly publish your profile. Resume content shared via export links is your responsibility.",
 		"s4Title": "4. AI-Generated Content",
-		"s4Body": "Your interview conversations and career information are processed by Google's Gemini AI to generate resume content. Please review Google's privacy policy for how your data is handled during AI processing. We do not use your data to train our own AI models.",
+		"s4Body": "Your interview answers, imported resume text and career information are sent to Google's Gemini API to generate and score resume content. During the beta we use the Gemini API's free tier. Under Google's terms for the free tier, Google may use this content to improve its products, and human reviewers may read it. Please don't enter sensitive information (for example your My Number, health details, or other people's personal data). Data sent to Google may be processed outside Japan. We do not use your data to train our own AI models.",
 		"s5Title": "5. Data Retention & Deletion",
 		"s5Body": "You can delete your account and all associated data at any time from your profile settings (Settings → Danger Zone → Delete Account). This permanently removes your resumes, projects, candidate profile, and all conversation history. During the beta period, we may also reset or delete data as part of maintenance, with advance notice where possible.",
 		"s6Title": "6. Security",
@@ -1079,5 +1083,139 @@
 		"roleFullStackEngineer": "Full-Stack Engineer",
 		"roleTechnicalPm": "Technical Product Manager",
 		"roleSolutionsArchitect": "Solutions Architect"
+	},
+	"Credits": {
+		"label": "AI credits",
+		"left": "{remaining} / {limit} left",
+		"usedUp": "Used up for today",
+		"tooltip": "Beta AI credits, shared by everyone each day. Resets at {time} (in about {hours} h).",
+		"learnMore": "How beta credits work",
+		"bannerTitle": "Today's beta AI credits are used up",
+		"bannerBody": "During the beta, everyone shares a daily AI allowance on Google's free tier. Your work is saved. Resume generation, scoring and AI follow-up questions come back at {time} (in about {hours} h). The interview questions keep working.",
+		"lowTitle": "Beta AI credits are running low today",
+		"lowBody": "{remaining} AI credits left today, shared by all users. They reset at {time}.",
+		"generatePaused": "Generation is paused until {time}: today's beta AI credits are used up. Your interview is saved.",
+		"scorePaused": "Scoring is paused until {time}: today's beta AI credits are used up. Your resume is saved and can still be edited and exported."
+	},
+	"BetaStatus": {
+		"metaTitle": "Beta status",
+		"badge": "Beta",
+		"title": "What works, what's missing, and what's next",
+		"intro": "Thanks for trying the JNJGO beta. This page gives an honest picture of where things stand, and we update it as things change.",
+		"updated": "Updated 24 October 2026",
+		"backHome": "Back to home",
+		"creditsTitle": "How AI credits work",
+		"credits": [
+			"Everyone shares one daily pool of AI credits. Each AI action uses one credit: generating a resume (occasionally two, if the first answer comes back incomplete), a score analysis, an AI follow-up question in the interview, or an AI draft of your recruiter profile.",
+			"The interview questions themselves don't use credits, so you can always keep answering.",
+			"The pool refills every day at midnight Pacific time (4–5 PM in Japan). The meter at the top of the app shows what's left.",
+			"If it runs out, everything you've done stays saved. AI features pause until the next reset."
+		],
+		"worksTitle": "Works today",
+		"works": [
+			"Sign in with Google",
+			"Guided interview in English or Japanese, tailored to engineers, consultants and other roles, with up to 3 AI follow-up questions",
+			"Import an existing resume (text-based PDF, Word .docx, or pasted text)",
+			"AI-generated resume with a career timeline, fully editable",
+			"Profile photo upload with cropping",
+			"Score analysis with suggestions for improvement",
+			"PDF export and version history",
+			"A candidate profile page you can share with recruiters"
+		],
+		"limitsTitle": "Known limitations",
+		"limits": [
+			{
+				"title": "Daily AI limit",
+				"body": "AI features share a daily pool on Google's free tier (see above). Busy days can run out early."
+			},
+			{
+				"title": "How your data is processed",
+				"body": "During the beta we use Google Gemini's free tier, where Google may use the content to improve its services and human reviewers may read it. Please don't enter sensitive information such as your My Number or health details."
+			},
+			{
+				"title": "AI can make mistakes",
+				"body": "Always review the generated resume before you send it anywhere."
+			},
+			{
+				"title": "Data may be reset",
+				"body": "While we're in beta, we may need to reset data. Export a PDF of anything you want to keep."
+			},
+			{
+				"title": "One resume layout",
+				"body": "There is no 履歴書 (JIS) or 職務経歴書 template yet."
+			},
+			{
+				"title": "Import formats",
+				"body": "Scanned PDFs (images) and old Word .doc files can't be read yet. Use a text-based PDF, a .docx file, or paste the text."
+			},
+			{
+				"title": "Photos",
+				"body": "You can crop your photo. Other editing (rotate, brightness, background) isn't available yet."
+			},
+			{
+				"title": "Sign-in options",
+				"body": "Google sign-in only for now."
+			},
+			{
+				"title": "Scoring",
+				"body": "Score analysis uses an AI credit, and \"Save as Complete\" needs a passing score. You can still edit and export without one."
+			},
+			{
+				"title": "Job matching",
+				"body": "Shown as \"coming soon\": not available in the beta."
+			}
+		],
+		"nextTitle": "Coming next",
+		"nextNote": "Target dates are plans, not promises. We'll update them here.",
+		"next": [
+			{
+				"title": "No daily AI limit",
+				"body": "Paid AI capacity, which also means Google no longer uses the content to improve its services.",
+				"when": "After the first beta feedback round"
+			},
+			{
+				"title": "Instant score without credits",
+				"body": "A rule-based score that runs immediately, with AI suggestions only when you ask.",
+				"when": "November 2026"
+			},
+			{
+				"title": "Smarter import",
+				"body": "A draft from your existing resume first, then a few short questions to fill the gaps.",
+				"when": "November 2026"
+			},
+			{
+				"title": "履歴書 and 職務経歴書 templates",
+				"body": "Japanese-standard formats for export.",
+				"when": "December 2026"
+			},
+			{
+				"title": "GitHub and LinkedIn sign-in",
+				"body": "More ways to sign in.",
+				"when": "December 2026"
+			},
+			{
+				"title": "More photo editing",
+				"body": "Rotate, brightness and background clean-up.",
+				"when": "Early 2027"
+			},
+			{
+				"title": "New design",
+				"body": "A refreshed look across the app.",
+				"when": "Early 2027"
+			},
+			{
+				"title": "Job matching",
+				"body": "Recommendations based on your resume.",
+				"when": "2027"
+			},
+			{
+				"title": "Voice interview",
+				"body": "Answer the interview by speaking.",
+				"when": "2027"
+			}
+		],
+		"feedbackTitle": "Tell us what you think",
+		"feedbackBody": "Found a bug, or something confusing? Email us at",
+		"testingGuide": "How to test the beta"
 	}
 }

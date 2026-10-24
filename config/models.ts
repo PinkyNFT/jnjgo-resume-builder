@@ -1,8 +1,17 @@
 // Centralized Gemini model configuration
 // export const GEMINI_MODEL = "gemma-3-12b-it";
 
-// Alternative models (commented for reference)
-export const GEMINI_MODEL = "gemini-3-flash-preview";
+// Beta (free tier): gemini-3.1-flash-lite. Measured 24 Oct 2026 on the real
+// generation prompt with low thinking: 3–14 s, complete EN + JA resumes, and
+// about 500 free requests a day vs about 20 for gemini-3-flash-preview (which
+// took up to 104 s and dropped a job in the same test). Admins can override it
+// in Admin → Settings → AI Model.
+export const GEMINI_MODEL = "gemini-3.1-flash-lite";
+
+// Beta AI credits: AI requests per day shared by all users (lib/ai-credits.ts).
+// Match it to the model's free-tier requests-per-day in AI Studio → Rate limits;
+// Admin → Settings → "Beta AI credits per day" overrides it without a deploy.
+export const BETA_DAILY_AI_CREDITS = 500;
 
 // Image generation / editing model ("Nano Banana"). One-line switch to
 // "gemini-3-pro-image-preview" (Nano Banana Pro) for tighter identity fidelity.

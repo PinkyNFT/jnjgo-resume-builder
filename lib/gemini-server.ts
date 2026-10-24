@@ -1,15 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
-import * as Sentry from "@sentry/nextjs";
 import { CandidatePrivateProfile } from "../types";
 import { RECRUITER_PROFILE_GENERATION_PROMPT } from "./profile-prompts";
-import { GEMINI_MODEL } from "../config/models";
-import { logAiUsage } from "./ai-usage";
+import { getAdminAIConfig } from "./admin-settings-reader";
+import { BetaLimitError } from "./ai-errors";
+import { callWithRetry, isCompleteJson, structuredOutput } from "./gemini-client";
 
 const ROUTE = 'profile/private/generate';
 
 /**
  * Generate a CandidatePrivateProfile draft using Gemini based on provided text data.
- * Uses the same @google/genai SDK and model as the rest of the application.
+ * Goes through callWithRetry like every other AI call, so it uses the admin-set
+ * model, draws on the shared beta credits, and is logged for usage.
  */
 export async function generateProfileDraftWithGemini(candidateContext: string, userId: string): Promise<Partial<CandidatePrivateProfile>> {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -18,34 +19,28 @@ export async function generateProfileDraftWithGemini(candidateContext: string, u
     }
 
     const ai = new GoogleGenAI({ apiKey });
-
+    const { model } = await getAdminAIConfig();
     const prompt = RECRUITER_PROFILE_GENERATION_PROMPT.replace('{{CANDIDATE_DATA}}', candidateContext);
 
     try {
-        const response = await ai.models.generateContent({
-            model: GEMINI_MODEL,
+        const response = await callWithRetry(() => ai.models.generateContent({
+            model,
             contents: prompt,
             config: {
+                ...structuredOutput(model),
                 temperature: 0.2,
                 responseMimeType: "application/json",
             },
-        });
-        logAiUsage({ route: ROUTE, model: GEMINI_MODEL, userId, response, success: true });
+        }), ROUTE, { route: ROUTE, model, userId }, { maxAttempts: 2 });
 
-        const responseText = response.text;
-        if (!responseText) {
-            throw new Error("Empty response from Gemini");
+        if (!isCompleteJson(response.text)) {
+            throw new Error("Empty or incomplete response from Gemini");
         }
-
-        const parsedDraft = JSON.parse(responseText) as Partial<CandidatePrivateProfile>;
-        return parsedDraft;
+        return JSON.parse(response.text!) as Partial<CandidatePrivateProfile>;
     } catch (error) {
+        // Out of beta credits: let the route say so instead of a generic failure.
+        if (error instanceof BetaLimitError) throw error;
         console.error("Gemini profile generation failed:", error);
-        logAiUsage({
-            route: ROUTE, model: GEMINI_MODEL, userId, success: false,
-            errorMessage: error instanceof Error ? error.message : String(error),
-        });
-        Sentry.captureException(error, { tags: { aiRoute: ROUTE, aiModel: GEMINI_MODEL } });
         throw new Error("Failed to generate profile draft with AI.");
     }
 }

@@ -1,4 +1,5 @@
 import mongoose, { Schema, Model, Document, Types } from 'mongoose';
+import { BETA_DAILY_AI_CREDITS, GEMINI_MODEL } from '@/config/models';
 
 // ===== INTERFACES =====
 
@@ -293,12 +294,12 @@ export async function getPromptHistory(
 export const DEFAULT_SETTINGS = [
     {
         key: 'gemini_model',
-        value: 'gemini-3-flash-preview',
+        value: GEMINI_MODEL,
         label: 'AI Model',
         description: 'The Gemini model used for chat and resume generation',
         category: 'ai' as const,
         valueType: 'select' as const,
-        options: ['gemini-3-flash-preview', 'gemini-2.0-flash', 'gemini-2.5-pro-preview-06-05', 'gemma-3-12b-it']
+        options: ['gemini-3.1-flash-lite', 'gemini-3-flash-preview', 'gemini-3.6-flash', 'gemini-2.5-pro-preview-06-05', 'gemma-3-12b-it']
     },
     {
         key: 'ai_temperature',
@@ -379,6 +380,14 @@ export const DEFAULT_SETTINGS = [
         label: 'Passing Score Threshold',
         description: 'Minimum total score for a resume to be considered submission-ready',
         category: 'app' as const,
+        valueType: 'number' as const
+    },
+    {
+        key: 'ai_daily_credit_limit',
+        value: BETA_DAILY_AI_CREDITS,
+        label: 'Beta AI credits per day (shared)',
+        description: "AI requests all users share per day; resets at midnight Pacific like Gemini's free tier. Set it to the model's requests-per-day in AI Studio → Rate limits.",
+        category: 'limits' as const,
         valueType: 'number' as const
     },
     {

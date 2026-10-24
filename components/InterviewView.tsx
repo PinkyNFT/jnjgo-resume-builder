@@ -6,6 +6,7 @@ import { Message, RoleType, ImportData, ResumeData } from '../types';
 import { useSendMessage, useGenerateHint, useFollowUp } from '../hooks/useGemini';
 import { Send, Loader2, Sparkles, AlertCircle, ArrowUp, HelpCircle, Save, User, Bot, Home, CheckCircle2, ClipboardCheck, AlertTriangle, Square, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AiCreditsBanner, useAiCreditsPaused } from './AiCredits';
 import { FOLLOW_UP_TIMEOUT_MS, INTERVIEW_MODE, MAX_AI_FOLLOWUPS } from '../config/interview';
 import {
     ScriptContext, ScriptSection, followUpContext, followUpsUsed, isScriptedHistory, nextStep,
@@ -287,6 +288,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
     const sendMessageMutation = useSendMessage();
     const generateHintMutation = useGenerateHint();
     const followUpMutation = useFollowUp();
+    const tCredits = useTranslations('Credits');
+    const creditsPaused = useAiCreditsPaused();
 
     // Derived loading and error states from mutations. Follow-up errors are never shown:
     // a follow-up is optional and the script just moves on.
@@ -903,6 +906,13 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                 })()}
                             </div>
 
+                            {/* Out of beta credits: say when generation comes back instead of failing */}
+                            {creditsPaused.paused && (
+                                <div role="status" className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-xs font-medium text-red-900">
+                                    {tCredits('generatePaused', { time: creditsPaused.time })}
+                                </div>
+                            )}
+
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => {
@@ -917,7 +927,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                                         setShowGenerateConfirm(false);
                                         onFinish(messages);
                                     }}
-                                    className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-[0.98] ${isReadyToGenerate
+                                    disabled={creditsPaused.paused}
+                                    className={`flex-1 px-4 py-2.5 font-bold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none ${isReadyToGenerate
                                         ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200/50'
                                         : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200/50'
                                         }`}
@@ -954,6 +965,8 @@ export const InterviewView: React.FC<InterviewViewProps> = ({ initialHistory, on
                         </button>
                     </motion.div>
                 )}
+
+                <AiCreditsBanner />
 
                 {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
