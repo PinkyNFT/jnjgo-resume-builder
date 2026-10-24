@@ -1227,5 +1227,14 @@
 		"feedbackTitle": "ご意見をお聞かせください",
 		"feedbackBody": "不具合や分かりにくい点があれば、こちらまでメールでお知らせください：",
 		"testingGuide": "ベータ版のテスト方法"
+	},
+	"ResumeCard": {
+		"title": "レジュメ",
+		"subtitle": "候補者が選んだレジュメ",
+		"viewFull": "レジュメ全文を見る",
+		"collapse": "閉じる",
+		"moreSkills": "ほか{count}件",
+		"moreProjects": "ほか{count}件のプロジェクト",
+		"careerNotes": "キャリアに関する補足"
 	}
 }
