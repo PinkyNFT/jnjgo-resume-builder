@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
-import { ArrowLeft, CheckCircle2, Loader2, Sparkles, FileText, Briefcase, GraduationCap, Award, Brain, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
+import { ArrowLeft, CheckCircle2, Loader2, Sparkles, FileText, Briefcase, GraduationCap, Award, Brain, X, Clock, RefreshCcw } from 'lucide-react';
+import { formatCreditReset } from '../hooks/useAiCredits';
+import { GenerationError, waitText } from '../utils/generationError';
 
 interface GeneratingStep {
     id: string;
@@ -23,15 +26,34 @@ const STEPS: GeneratingStep[] = [
 // Fun tips shown while generating
 const TIP_KEYS = ['tip1', 'tip2', 'tip3', 'tip4', 'tip5'] as const;
 
+/** Seconds before "Try again" unlocks after the AI was busy (per-minute limits clear within a minute). */
+const BUSY_WAIT_SECONDS = 60;
+
 interface ResumeGeneratingViewProps {
     onCancel: () => void;
+    /** Run generation again from the saved interview. */
+    onRetry?: () => void;
     isGenerating: boolean; // true while the API call is in progress
-    error?: string | null;
+    error?: GenerationError | null;
 }
 
-export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGeneratingViewProps) {
+export function ResumeGeneratingView({ onCancel, onRetry, isGenerating, error }: ResumeGeneratingViewProps) {
     const t = useTranslations('Generating');
     const tCommon = useTranslations('Common');
+    const locale = useLocale();
+
+    // A clock that ticks while an error is shown: drives the "Try again in 42s"
+    // countdown after the AI was busy, and "in about 3 h 20 min" for credits.
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        if (!error) return;
+        const timer = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, [error]);
+    const retryIn = error?.kind === 'busy' ? Math.max(0, BUSY_WAIT_SECONDS - Math.floor((now - error.at) / 1000)) : 0;
+    const creditsReset = error?.kind === 'credits' && error.resetAt
+        ? { time: formatCreditReset(error.resetAt, locale).time, wait: waitText(error.resetAt, locale, now) }
+        : null;
 
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
@@ -71,14 +93,14 @@ export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGe
         return () => clearInterval(timer);
     }, [isGenerating, error]);
 
-    const handleCancelClick = useCallback(() => {
+    const handleCancelClick = () => {
         setShowCancelConfirm(true);
-    }, []);
+    };
 
-    const handleConfirmCancel = useCallback(() => {
+    const handleConfirmCancel = () => {
         setShowCancelConfirm(false);
         onCancel();
-    }, [onCancel]);
+    };
 
     const progressPercent = Math.min(
         ((completedSteps.size) / STEPS.length) * 100,
@@ -209,19 +231,42 @@ export function ResumeGeneratingView({ onCancel, isGenerating, error }: ResumeGe
                         })}
                     </div>
 
-                    {/* Error state */}
+                    {/* Error state: what happened, that the interview is safe, and when to try again */}
                     {error && (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-5 space-y-3">
+                        <div role="alert" className={`rounded-xl p-5 space-y-4 border ${error.kind === 'failed' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
                             <div className="flex items-start gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-                                    <X className="w-5 h-5 text-red-600" />
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${error.kind === 'failed' ? 'bg-red-100' : 'bg-amber-100'}`}>
+                                    {error.kind === 'failed' ? <X className="w-5 h-5 text-red-600" /> : <Clock className="w-5 h-5 text-amber-600" />}
                                 </div>
-                                <div className="flex-1">
-                                    <p className="font-semibold text-red-900">{t('errorTitle')}</p>
-                                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                                <div className="flex-1 min-w-0">
+                                    <p className={`font-semibold ${error.kind === 'failed' ? 'text-red-900' : 'text-amber-900'}`}>
+                                        {error.kind === 'credits' ? t('creditsTitle') : error.kind === 'busy' ? t('busyTitle') : t('errorTitle')}
+                                    </p>
+                                    <p className={`text-sm mt-1 leading-relaxed ${error.kind === 'failed' ? 'text-red-700' : 'text-amber-800'}`}>
+                                        {error.kind === 'credits'
+                                            ? (creditsReset ? t('creditsBody', creditsReset) : error.message)
+                                            : error.kind === 'busy' ? t('busyBody') : `${error.message} ${t('savedNote')}`}
+                                    </p>
+                                    {error.kind === 'credits' && (
+                                        <Link href="/beta#credits" className="inline-block mt-2 text-xs font-semibold text-amber-900 underline hover:no-underline">
+                                            {t('howCreditsWork')}
+                                        </Link>
+                                    )}
                                 </div>
                             </div>
-                            <div className="flex gap-3">
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                {onRetry && (
+                                    <button
+                                        onClick={onRetry}
+                                        disabled={error.kind === 'credits' || retryIn > 0}
+                                        className="flex-1 py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:text-slate-600 disabled:cursor-not-allowed disabled:active:scale-100"
+                                    >
+                                        <RefreshCcw className="w-4 h-4" />
+                                        {error.kind === 'credits' && creditsReset
+                                            ? t('retryAt', { time: creditsReset.time })
+                                            : retryIn > 0 ? t('retryIn', { seconds: retryIn }) : t('retry')}
+                                    </button>
+                                )}
                                 <button
                                     onClick={onCancel}
                                     className="flex-1 py-2.5 text-sm font-bold text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 active:scale-[0.98]"

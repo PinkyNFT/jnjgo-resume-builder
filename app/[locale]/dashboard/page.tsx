@@ -21,6 +21,7 @@ const ResumeGeneratingView = dynamic(
   { ssr: false, loading: () => <div className="flex items-center justify-center h-64"><DynLoader className="w-8 h-8 animate-spin text-indigo-400" /></div> }
 );
 import { Message, ResumeData, Project, RoleType, ImportData, UserProfile, EvaluationResult } from '../../../types';
+import { GenerationError, toGenerationError } from '../../../utils/generationError';
 import { useParseResume } from '../../../hooks/useGemini';
 import { getProjects, getProject, saveProject, deleteProject, createNewProject, getUserProfile, saveUserProfile, createVersion } from '../../../services/storageService';
 import { migrateFromLocalStorage, isMigrationCompleted } from '../../../utils/dataMigration';
@@ -659,7 +660,9 @@ export default function Page() {
   };
 
   // Track generating error state
-  const [generatingError, setGeneratingError] = useState<string | null>(null);
+  const [generatingError, setGeneratingError] = useState<GenerationError | null>(null);
+  // Remounts the generating screen on "Try again" so its progress starts over.
+  const [generationAttempt, setGenerationAttempt] = useState(0);
   // Track the history used for generation so we can retry/cancel
   const [generatingHistory, setGeneratingHistory] = useState<Message[] | null>(null);
 
@@ -667,38 +670,53 @@ export default function Page() {
     await handleSaveInterview(history);
     setGeneratingError(null);
     setGeneratingHistory(history);
+    setGenerationAttempt(n => n + 1);
     setStep('generating');
 
+    let data: ResumeData;
     try {
-      const data = await parseResumeMutation.mutateAsync({
+      data = await parseResumeMutation.mutateAsync({
         history,
         importData: currentProject?.importData,
         locale,
       });
+    } catch (error) {
+      // Out of credits, AI busy, or failed: the screen explains it and offers "Try again".
+      console.error(error);
+      setGeneratingError(toGenerationError(error, t('generateFailed')));
+      return;
+    }
 
-      // Merge known personal info back if somehow lost (though AI prompt should keep it, safety first)
-      if (currentProject?.data?.fullName) {
-        data.fullName = currentProject.data.fullName;
-        data.contactInfo = { ...data.contactInfo, ...currentProject.data.contactInfo };
-      }
+    // Merge known personal info back if somehow lost (though AI prompt should keep it, safety first)
+    if (currentProject?.data?.fullName) {
+      data.fullName = currentProject.data.fullName;
+      data.contactInfo = { ...data.contactInfo, ...currentProject.data.contactInfo };
+    }
 
-      // Preserve a photo added before generation — the parser doesn't produce one.
-      if (currentProject?.data?.photo) {
-        data.photo = currentProject.data.photo;
-      }
+    // Preserve a photo added before generation — the parser doesn't produce one.
+    if (currentProject?.data?.photo) {
+      data.photo = currentProject.data.photo;
+    }
 
-      if (currentProject) {
-        const updatedProject: Project = {
-          ...currentProject,
-          history: history,
-          data: data,
-          status: 'generated',
-          updatedAt: Date.now(),
-          title: (currentProject.title.includes('Untitled') || currentProject.title.includes('Imported')) && data.currentRole
-            ? `${data.currentRole} Resume`
-            : currentProject.title
-        };
-        await saveProject(updatedProject);
+    if (currentProject) {
+      const updatedProject: Project = {
+        ...currentProject,
+        history: history,
+        data: data,
+        status: 'generated',
+        updatedAt: Date.now(),
+        title: (currentProject.title.includes('Untitled') || currentProject.title.includes('Imported')) && data.currentRole
+          ? `${data.currentRole} Resume`
+          : currentProject.title
+      };
+      // The resume (and the AI credit it cost) is kept even if saving fails:
+      // open it in the editor, whose autosave saves it on the next edit.
+      setCurrentProject(updatedProject);
+      try {
+        await saveProject(updatedProject).catch(async () => {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return saveProject(updatedProject);
+        });
         // Auto-version on initial generation
         await createVersion(
           updatedProject.id,
@@ -707,13 +725,16 @@ export default function Page() {
           data
         );
         await refreshProjects();
-        setCurrentProject(updatedProject);
+      } catch (error) {
+        console.error('Saving the generated resume failed:', error);
+        toast.error(t('generatedSaveFailed'));
       }
-      setStep('editor');
-    } catch (error: any) {
-      console.error(error);
-      setGeneratingError(error?.message || t('generateFailed'));
     }
+    setStep('editor');
+  };
+
+  const handleRetryGeneration = () => {
+    if (generatingHistory) handleFinishInterview(generatingHistory);
   };
 
   const handleCancelGeneration = () => {
@@ -940,7 +961,9 @@ export default function Page() {
 
           {step === 'generating' && (
             <ResumeGeneratingView
+              key={generationAttempt}
               onCancel={handleCancelGeneration}
+              onRetry={handleRetryGeneration}
               isGenerating={parseResumeMutation.isPending}
               error={generatingError}
             />

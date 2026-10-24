@@ -147,7 +147,8 @@
 		"projectCount": "{n, plural, =1 {1 project} other {# projects}}",
 		"deleteTitle": "Delete this resume?",
 		"deleteMessage": "This action cannot be undone. All interview history and resume data will be permanently removed.",
-		"deleteKeep": "Keep it"
+		"deleteKeep": "Keep it",
+		"generatedSaveFailed": "Your resume is ready, but we couldn't save it yet. It will save automatically when you edit it; if this keeps happening, export a PDF to keep a copy."
 	},
 	"Generating": {
 		"title": "AI Resume Builder",
@@ -174,7 +175,16 @@
 		"cancelTitle": "Cancel Generation?",
 		"cancelDesc": "Your interview data is safely saved. You can return and generate again anytime.",
 		"keepWaiting": "Keep Waiting",
-		"confirmCancel": "Go Back"
+		"confirmCancel": "Go Back",
+		"retry": "Try again",
+		"retryIn": "Try again in {seconds}s",
+		"retryAt": "Available again at {time}",
+		"savedNote": "Your interview is saved, so you can try again.",
+		"creditsTitle": "Today's AI credits are used up",
+		"creditsBody": "During the beta, everyone shares a daily AI limit. Your interview is saved, so nothing is lost. Please try again at {time} (in about {wait}).",
+		"busyTitle": "The AI is busy right now",
+		"busyBody": "Too many requests at once. Your interview is saved. Please try again in about a minute.",
+		"howCreditsWork": "How beta credits work"
 	},
 	"Setup": {
 		"title": "Project Setup",

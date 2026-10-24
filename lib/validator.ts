@@ -508,63 +508,67 @@ export function sanitizeProject(project: Project): Project {
         // Deep sanitization of nested objects can be added as needed
     };
 
-    // Filter out invalid skillTimelines (missing required fields)
+    // AI-generated entries can come back with a field missing (e.g. no dates).
+    // Keep every entry that has real content and fill the missing text fields
+    // with '' so it saves and can be completed in the editor; drop only entries
+    // with no id or nothing worth keeping. (Dropping a job because its period
+    // was missing used to lose data silently.)
+    const text = (v: unknown) => (typeof v === 'string' ? v : '');
+    const hasId = (e: { id?: unknown } | null | undefined) => !!e && typeof e.id === 'string' && e.id.trim() !== '';
+
     if (sanitized.data?.skillTimelines) {
-        sanitized.data.skillTimelines = sanitized.data.skillTimelines.filter(st => {
-            return st &&
-                typeof st.id === 'string' &&
-                typeof st.skillName === 'string' &&
-                typeof st.period === 'string' &&
-                st.id.trim() !== '' &&
-                st.skillName.trim() !== '' &&
-                st.period.trim() !== '';
-        });
+        sanitized.data.skillTimelines = sanitized.data.skillTimelines
+            .filter(st => hasId(st) && text(st.skillName).trim() !== '')
+            .map(st => ({ ...st, period: text(st.period) }));
     }
 
-    // Filter out invalid work experience entries
     if (sanitized.data?.workExperience) {
-        sanitized.data.workExperience = sanitized.data.workExperience.filter(we => {
-            return we &&
-                typeof we.id === 'string' &&
-                typeof we.company === 'string' &&
-                typeof we.position === 'string' &&
-                typeof we.period === 'string' &&
-                we.id.trim() !== '' &&
-                we.company.trim() !== '' &&
-                we.position.trim() !== '' &&
-                we.period.trim() !== '';
-        });
+        sanitized.data.workExperience = sanitized.data.workExperience
+            .filter(we => hasId(we) && (text(we.company).trim() !== '' || text(we.position).trim() !== ''))
+            .map(we => ({
+                ...we,
+                company: text(we.company),
+                position: text(we.position),
+                period: text(we.period),
+                responsibilities: Array.isArray(we.responsibilities) ? we.responsibilities.filter(r => typeof r === 'string') : [],
+            }));
     }
 
-    // Filter out invalid education entries
     if (sanitized.data?.education) {
-        sanitized.data.education = sanitized.data.education.filter(edu => {
-            return edu &&
-                typeof edu.id === 'string' &&
-                typeof edu.degree === 'string' &&
-                typeof edu.institution === 'string' &&
-                typeof edu.period === 'string' &&
-                edu.id.trim() !== '' &&
-                edu.degree.trim() !== '' &&
-                edu.institution.trim() !== '' &&
-                edu.period.trim() !== '';
-        });
+        sanitized.data.education = sanitized.data.education
+            .filter(edu => hasId(edu) && (text(edu.degree).trim() !== '' || text(edu.institution).trim() !== ''))
+            .map(edu => ({ ...edu, degree: text(edu.degree), institution: text(edu.institution), period: text(edu.period) }));
     }
 
-    // Filter out invalid timeline items
     if (sanitized.data?.timeline) {
-        sanitized.data.timeline = sanitized.data.timeline.filter(t => {
-            return t &&
-                typeof t.id === 'string' &&
-                typeof t.period === 'string' &&
-                typeof t.organization === 'string' &&
-                typeof t.role === 'string' &&
-                (t.type === 'work' || t.type === 'education') &&
-                t.id.trim() !== '' &&
-                t.period.trim() !== '' &&
-                t.organization.trim() !== '' &&
-                t.role.trim() !== '';
-        });
+        sanitized.data.timeline = sanitized.data.timeline
+            .filter(t => hasId(t) && (text(t.organization).trim() !== '' || text(t.role).trim() !== ''))
+            .map(t => ({
+                ...t,
+                period: text(t.period),
+                organization: text(t.organization),
+                role: text(t.role),
+                type: t.type === 'education' ? 'education' : 'work',
+            }));
+    }
+
+    if (sanitized.data?.projectPortfolio?.representativeProjects) {
+        sanitized.data.projectPortfolio.representativeProjects = sanitized.data.projectPortfolio.representativeProjects
+            .filter(p => hasId(p))
+            .map(p => ({
+                ...p,
+                title: text(p.title),
+                period: text(p.period),
+                role: text(p.role),
+                context: text(p.context),
+                contribution: text(p.contribution),
+            }));
+    }
+
+    if (sanitized.data?.careerGaps) {
+        sanitized.data.careerGaps = sanitized.data.careerGaps
+            .filter(g => !!g && (text(g.period).trim() !== '' || text(g.reason).trim() !== ''))
+            .map(g => ({ ...g, period: text(g.period), reason: text(g.reason), isExplained: g.isExplained === true }));
     }
 
     // Drop an invalid or oversized photo — must be an inline data:image/* URL, capped at ~3MB
