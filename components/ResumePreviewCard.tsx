@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import { ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { TimelineChart, TimelineChartItem } from './TimelineChart';
 import { parsePeriod } from '../utils/dateParser';
@@ -96,6 +97,9 @@ const TIMELINE_COLORS = [
 
 export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePreviewCardProps) {
     const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+    const t = useTranslations('ResumeCard');
+    const tEditor = useTranslations('Editor');
+    const tInfo = useTranslations('PersonalInfo');
 
     /* ── Compute employer timeline data ── */
     const employerTimelineData = useMemo<TimelineChartItem[]>(() => {
@@ -184,7 +188,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                         ))}
                         {data.skills.length > 6 && (
                             <span className="text-xs font-medium text-slate-400 px-2 py-1">
-                                +{data.skills.length - 6} more
+                                {t('moreSkills', { count: data.skills.length - 6 })}
                             </span>
                         )}
                     </div>
@@ -199,7 +203,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                         ))}
                         {data.projectPortfolio.representativeProjects.length > 4 && (
                             <span className="text-xs font-medium text-slate-400 px-2 py-1">
-                                +{data.projectPortfolio.representativeProjects.length - 4} more projects
+                                {t('moreProjects', { count: data.projectPortfolio.representativeProjects.length - 4 })}
                             </span>
                         )}
                     </div>
@@ -235,8 +239,8 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                         {(() => {
                             // Render only the present fields, joined by separators (no trailing "|").
                             const parts: React.ReactNode[] = [];
-                            if (data.contactInfo?.email) parts.push(<span key="email">Email: {data.contactInfo.email}</span>);
-                            if (data.contactInfo?.phone) parts.push(<span key="phone">Phone: {data.contactInfo.phone}</span>);
+                            if (data.contactInfo?.email) parts.push(<span key="email">{tInfo('email')}: {data.contactInfo.email}</span>);
+                            if (data.contactInfo?.phone) parts.push(<span key="phone">{tInfo('phone')}: {data.contactInfo.phone}</span>);
                             if (data.contactInfo?.location) parts.push(<span key="location">{data.contactInfo.location}</span>);
                             if (data.contactInfo?.linkedin) parts.push(<span key="linkedin">LinkedIn: {data.contactInfo.linkedin}</span>);
                             return parts.map((node, i) => (
@@ -253,7 +257,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {data.careerSummary && (
                     <div className="mb-7">
                         <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-3 pb-1 tracking-wide uppercase">
-                            Professional Summary
+                            {tEditor('professionalSummary')}
                         </h2>
                         <div className="text-[9.5pt] text-slate-800 leading-relaxed whitespace-pre-line">
                             {data.careerSummary}
@@ -338,7 +342,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                         {/* Career Gaps */}
                         {data.careerGaps && data.careerGaps.some(g => g.isExplained) && (
                             <div className="mt-4 pt-3 border-t border-slate-200">
-                                <div className="text-[9pt] font-semibold text-slate-700 mb-2">Career Notes</div>
+                                <div className="text-[9pt] font-semibold text-slate-700 mb-2">{t('careerNotes')}</div>
                                 <div className="space-y-1.5">
                                     {data.careerGaps.filter(g => g.isExplained).map((gap, i) => (
                                         <div key={i} className="flex gap-2 text-[9pt] text-slate-700">
@@ -360,7 +364,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {data.workExperience && data.workExperience.length > 0 && (
                     <div className="mb-8">
                         <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-wide uppercase">
-                            Work Experience
+                            {tEditor('workExperience')}
                         </h2>
                         <div className="space-y-8">
                             {data.workExperience.map((work, i) => (
@@ -402,7 +406,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {data.education && data.education.length > 0 && (
                     <div className="mb-8">
                         <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-wide uppercase">
-                            Education
+                            {tEditor('education')}
                         </h2>
                         <div className="space-y-4">
                             {data.education.map((edu, i) => (
@@ -433,7 +437,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {(!data.education || data.education.length === 0) && data.timeline?.some(t => t.type === 'education') && (
                     <div className="mb-8">
                         <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-wide uppercase">
-                            Education
+                            {tEditor('education')}
                         </h2>
                         <div className="space-y-4">
                             {data.timeline.filter(t => t.type === 'education').map((edu, i) => (
@@ -544,7 +548,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {data.skills && data.skills.length > 0 && (
                     <div className="mb-8">
                         <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-wide uppercase">
-                            Skills
+                            {tEditor('skills')}
                         </h2>
                         <div className="flex flex-wrap gap-1.5">
                             {data.skills.map((skill, i) => (
@@ -560,7 +564,7 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                 {data.certifications && data.certifications.length > 0 && (
                     <div className="mb-4">
                         <h2 className="text-[11pt] font-bold border-b border-slate-900 mb-4 pb-1 tracking-wide uppercase">
-                            Certifications
+                            {tEditor('certifications')}
                         </h2>
                         <div className="space-y-2">
                             {data.certifications.map((cert, i) => (
@@ -585,9 +589,9 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                         <FileText className="w-4.5 h-4.5 text-indigo-600" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-slate-900 text-sm">Resume</h3>
+                        <h3 className="font-bold text-slate-900 text-sm">{t('title')}</h3>
                         <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                            Candidate-selected showcase
+                            {t('subtitle')}
                         </p>
                     </div>
                 </div>
@@ -601,12 +605,12 @@ export function ResumePreviewCard({ data, defaultExpanded = false }: ResumePrevi
                     {isExpanded ? (
                         <>
                             <ChevronUp className="w-3.5 h-3.5" />
-                            Collapse
+                            {t('collapse')}
                         </>
                     ) : (
                         <>
                             <ChevronDown className="w-3.5 h-3.5" />
-                            View full resume
+                            {t('viewFull')}
                         </>
                     )}
                 </motion.button>

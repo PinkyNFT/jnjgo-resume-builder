@@ -1227,5 +1227,14 @@
 		"feedbackTitle": "Tell us what you think",
 		"feedbackBody": "Found a bug, or something confusing? Email us at",
 		"testingGuide": "How to test the beta"
+	},
+	"ResumeCard": {
+		"title": "Resume",
+		"subtitle": "Candidate-selected showcase",
+		"viewFull": "View full resume",
+		"collapse": "Collapse",
+		"moreSkills": "+{count} more",
+		"moreProjects": "+{count} more projects",
+		"careerNotes": "Career Notes"
 	}
 }
