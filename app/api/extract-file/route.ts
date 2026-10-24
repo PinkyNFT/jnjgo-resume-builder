@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mammoth from 'mammoth';
 import { PDFParse } from 'pdf-parse';
+import { requireAiUser } from '@/lib/ai-guards';
+import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 
 // pdf-parse v2 wraps pdfjs-dist + @napi-rs/canvas (native), so this route must run
 // on the Node.js runtime (not edge) and the package must stay external (see next.config.ts).
@@ -25,6 +27,12 @@ export async function POST(request: NextRequest) {
     const t = (key: keyof typeof ERRORS) => ERRORS[key][locale];
 
     try {
+        // Parsing is CPU-heavy: signed-in users only, rate-limited per user.
+        const userId = await requireAiUser(request.nextUrl.searchParams.get('locale') ?? undefined);
+        if (userId instanceof NextResponse) return userId;
+        const limited = await applyRateLimitDB(request, 'extract-file', RATE_LIMITS.write, userId);
+        if (limited) return limited;
+
         const formData = await request.formData();
         const file = formData.get('file') as File;
         locale = formData.get('locale') === 'ja' ? 'ja' : 'en';

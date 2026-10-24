@@ -322,7 +322,14 @@
 		"evaluationFailed": "スコア分析に失敗しました。もう一度お試しください。",
 		"saveFailed": "レジュメの保存に失敗しました。もう一度お試しください。",
 		"pdfExportFailed": "PDFの出力に失敗しました。代わりに印刷ダイアログを開きます。",
-		"timelineGapLabel": "空白期間"
+		"timelineGapLabel": "空白期間",
+		"photoCrop": "写真をトリミング",
+		"photoCropTitle": "写真をトリミング",
+		"photoCropHint": "ドラッグして位置を調整し、スライダーまたはスクロールで拡大・縮小します。",
+		"photoCropApply": "適用",
+		"photoZoom": "拡大・縮小",
+		"photoZoomIn": "拡大",
+		"photoZoomOut": "縮小"
 	},
 	"Versions": {
 		"title": "バージョン履歴",
@@ -477,7 +484,17 @@
 		"agentThinking": "エージェントが思考中...",
 		"pressEnter": "Enterで送信 • Shift + Enterで改行",
 		"notProvided": "未提供",
-		"generateShort": "生成"
+		"generateShort": "生成",
+		"coachRole": "キャリアコーチ",
+		"sections": {
+			"work": "職務経歴",
+			"details": "経験の詳細",
+			"education": "学歴",
+			"skills": "スキル",
+			"certifications": "資格",
+			"gaps": "キャリアギャップ"
+		},
+		"questionsLeft": "残り約{count}問"
 	},
 	"Errors": {
 		"somethingWrong": "エラーが発生しました",

@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI, Type } from '@google/genai';
-import { ImportData, ResumeData, RoleType, EvaluationResult } from '@/types';
-import { GEMINI_MODEL } from '@/config/models';
-import { getAnalyzeImportPrompt, getEvaluateResumePrompt } from '@/lib/prompts';
+import { ResumeData, RoleType, EvaluationResult } from '@/types';
+import { getEvaluateResumePrompt } from '@/lib/prompts';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
 import { callWithRetry } from '@/lib/gemini-client';
-import { auth } from '@/lib/auth';
 import { aiErrorPayload } from '@/lib/ai-errors';
+import { AI_LIMITS, requireAiUser, resumeForPrompt, tooLarge } from '@/lib/ai-guards';
+
+// Explicit cap so a stuck AI call ends instead of running to the platform limit. Score analysis.
+export const maxDuration = 60;
 
 // Validate API key exists
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -18,12 +20,16 @@ if (!API_KEY) {
 export async function POST(request: NextRequest) {
     let locale: string | undefined;
     try {
-        const limited = await applyRateLimitDB(request, 'analyze', RATE_LIMITS.ai);
+        const body = await request.json().catch(() => null);
+        locale = body?.locale;
+
+        // Signed-in users only, then a per-user limit.
+        const userId = await requireAiUser(locale);
+        if (userId instanceof NextResponse) return userId;
+        const limited = await applyRateLimitDB(request, 'analyze', RATE_LIMITS.ai, userId);
         if (limited) return limited;
 
-        const body = await request.json();
-        const { action, text, data, roleType } = body;
-        locale = body.locale;
+        const { action, data, roleType } = body ?? {};
 
         if (!API_KEY) {
             const { body: errBody, status } = aiErrorPayload(null, locale, 'config');
@@ -36,48 +42,21 @@ export async function POST(request: NextRequest) {
         const aiConfig = await getAdminAIConfig();
         const model = aiConfig.model;
 
-        // Best-effort attribution for cost logging — this route has no auth gate,
-        // so userId is null (falls back to IP) for anonymous callers.
-        const session = await auth().catch(() => null);
-        const userId = session?.user?.id ?? null;
-
-        // Handle different analysis actions
-        if (action === 'analyzeImport') {
-            // Analyze imported resume text
-            const prompt = await getAnalyzeImportPrompt(text, locale || 'en');
-
-            const response = await callWithRetry(() => ai.models.generateContent({
-                model,
-                contents: prompt,
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: Type.OBJECT,
-                        properties: {
-                            summary: { type: Type.STRING },
-                        }
-                    }
-                }
-            }), 'analyze/analyzeImport', { route: 'analyze/analyzeImport', model, userId, request });
-
-            const parsed = JSON.parse(response.text || "{}");
-            const importData: ImportData = {
-                sourceText: text,
-                parsedSummary: parsed.summary || "Imported Resume",
-                extractionDate: Date.now()
-            };
-
-            return NextResponse.json({ data: importData });
-
-        } else if (action === 'evaluateResume') {
+        // Note: the former 'analyzeImport' action was removed. Its only output
+        // (a summary) was never read anywhere, so it cost a Gemini call and a
+        // 12–20s wait per import for nothing. Imports go straight to the interview.
+        if (action === 'evaluateResume') {
             // Evaluate resume quality
             const resumeData = data as ResumeData;
             const role = roleType as RoleType;
+            if (!resumeData || typeof resumeData !== 'object' || resumeForPrompt(resumeData).length > AI_LIMITS.resumeJsonChars) {
+                return tooLarge(locale);
+            }
 
             // === RULE-BASED PRE-VALIDATION ===
             const hasBasicProfile = !!(resumeData.fullName && resumeData.contactInfo?.email && resumeData.careerSummary);
             const hasWorkHistory = (resumeData.workExperience?.length || 0) > 0;
-            const hasQuantifiedAchievement = !!JSON.stringify(resumeData).match(/\d+%|\d+x|\$\d+|\d+\s*(users|customers|projects|team|members|days|months|years|hours|reduction|increase|improvement|growth)/i);
+            const hasQuantifiedAchievement = !!resumeForPrompt(resumeData).match(/\d+%|\d+x|\$\d+|\d+\s*(users|customers|projects|team|members|days|months|years|hours|reduction|increase|improvement|growth)/i);
 
             // Check for Education, Skills, Certifications
             const hasEducation = (resumeData.education?.length || 0) > 0;

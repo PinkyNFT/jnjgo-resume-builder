@@ -4,9 +4,17 @@
  * client can use them without pulling the full message catalogs into its bundle.
  */
 
-export type AiErrorKind = 'quota' | 'rateLimit' | 'timeout' | 'unavailable' | 'config' | 'unknown';
+export type AiErrorKind = 'quota' | 'rateLimit' | 'timeout' | 'unavailable' | 'config' | 'auth' | 'tooLarge' | 'unknown';
 
 const MESSAGES: Record<AiErrorKind, { en: string; ja: string }> = {
+    auth: {
+        en: 'Please sign in again to continue.',
+        ja: '続行するには、もう一度サインインしてください。',
+    },
+    tooLarge: {
+        en: 'This is too long to process. Please shorten it and try again.',
+        ja: '内容が長すぎるため処理できません。短くしてから、もう一度お試しください。',
+    },
     quota: {
         en: 'The AI service is busy right now (usage limit reached). Please wait a minute and try again.',
         ja: 'AIサービスが混み合っています（利用上限に達しました）。1分ほど待ってから、もう一度お試しください。',
@@ -41,6 +49,8 @@ const STATUS: Record<AiErrorKind, number> = {
     timeout: 504,
     unavailable: 502,
     config: 502,
+    auth: 401,
+    tooLarge: 413,
     unknown: 500,
 };
 
@@ -74,6 +84,8 @@ export function aiErrorPayload(error: unknown, locale?: string, kind: AiErrorKin
 }
 
 function kindFromStatus(status: number): AiErrorKind {
+    if (status === 401) return 'auth';
+    if (status === 413) return 'tooLarge';
     if (status === 429) return 'rateLimit';
     if (status === 408 || status === 504) return 'timeout';
     if (status === 502 || status === 503) return 'unavailable';

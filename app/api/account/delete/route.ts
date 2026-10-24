@@ -14,6 +14,7 @@ import {
     RecruiterActionModel,
     CandidateReplyModel,
     RecruiterPageViewModel,
+    AiUsageEventModel,
 } from '@/lib/models';
 import { getUserId } from '@/lib/auth-helpers';
 
@@ -38,10 +39,14 @@ export async function DELETE(request: NextRequest) {
             RecruiterActionModel.deleteMany({ $or: [{ recruiterId: userId }, { candidateUserId: userId }] }),
             CandidateReplyModel.deleteMany({ $or: [{ candidateUserId: userId }, { recruiterId: userId }] }),
             RecruiterPageViewModel.deleteMany({ $or: [{ userId }, { candidateUserId: userId }] }),
-            // NextAuth auth records — removes the ability to sign back in with the same account
+            // Keep cost statistics but drop who made the calls.
+            AiUsageEventModel.updateMany({ userId }, { $set: { userId: null, ip: null } }),
+            // NextAuth auth records. The MongoDB adapter stores `userId` as an ObjectId,
+            // so matching the string id here deleted nothing and left the Google
+            // OAuth tokens behind. Deleting them also lets the person sign up again.
             db.collection('users').deleteOne({ _id: new ObjectId(userId) }),
-            db.collection('accounts').deleteMany({ userId }),
-            db.collection('sessions').deleteMany({ userId }),
+            db.collection('accounts').deleteMany({ userId: new ObjectId(userId) }),
+            db.collection('sessions').deleteMany({ userId: new ObjectId(userId) }),
         ]);
 
         return NextResponse.json({ success: true }, { status: 200 });

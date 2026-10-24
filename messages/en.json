@@ -322,7 +322,14 @@
 		"evaluationFailed": "Evaluation failed. Please try again.",
 		"saveFailed": "Failed to save the resume. Please try again.",
 		"pdfExportFailed": "PDF export failed — opening the print dialog instead.",
-		"timelineGapLabel": "Gap"
+		"timelineGapLabel": "Gap",
+		"photoCrop": "Crop photo",
+		"photoCropTitle": "Crop photo",
+		"photoCropHint": "Drag to reposition. Use the slider or scroll to zoom.",
+		"photoCropApply": "Apply",
+		"photoZoom": "Zoom",
+		"photoZoomIn": "Zoom in",
+		"photoZoomOut": "Zoom out"
 	},
 	"Versions": {
 		"title": "Version History",
@@ -477,7 +484,17 @@
 		"agentThinking": "Agent is thinking...",
 		"pressEnter": "Press Enter to send • Shift + Enter for new line",
 		"notProvided": "Not provided",
-		"generateShort": "Generate"
+		"generateShort": "Generate",
+		"coachRole": "Career coach",
+		"sections": {
+			"work": "Work History",
+			"details": "Experience Details",
+			"education": "Education",
+			"skills": "Skills",
+			"certifications": "Certifications",
+			"gaps": "Career Gaps"
+		},
+		"questionsLeft": "{count, plural, one {About # question left} other {About # questions left}}"
 	},
 	"Errors": {
 		"somethingWrong": "Something went wrong",

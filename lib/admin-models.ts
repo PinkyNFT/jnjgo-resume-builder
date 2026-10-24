@@ -342,7 +342,8 @@ export const DEFAULT_SETTINGS = [
     },
     {
         key: 'require_recruiter_verification',
-        value: false,
+        // Secure by default: recruiters see candidates' salary and deal-breakers.
+        value: true,
         label: 'Require Recruiter Verification',
         description: 'When enabled, new recruiter accounts must be manually approved by an admin before they can access the platform.',
         category: 'security' as const,

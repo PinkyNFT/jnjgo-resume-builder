@@ -15,3 +15,9 @@ export const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
 // (app/api/generate-photo), client service, and prompt all stay in place, so no
 // other change is needed to re-enable it. Plain photo upload is unaffected.
 export const PHOTO_ENHANCE_ENABLED = false;
+
+// ── Feature flag: AI short/long rewrite of export text ──
+// OFF for beta (cut AI calls to what the core flow needs). The route
+// (app/api/export/rewrite) and the dormant ExportTemplates component stay in
+// place; flip to `true` to bring it back. See docs/COMING_SOON.md.
+export const EXPORT_REWRITE_ENABLED = false;

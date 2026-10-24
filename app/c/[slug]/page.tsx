@@ -61,7 +61,8 @@ export default async function CandidateLandingPage({ params }: { params: Promise
     if (privateProfile) {
         const [resumeResult, userProfileResult] = await Promise.all([
             privateProfile.highlightedProjectId
-                ? ProjectModel.findOne({ id: privateProfile.highlightedProjectId }, { 'data': 1 }).lean()
+                // Scoped to the profile's owner so a profile can't display someone else's resume.
+                ? ProjectModel.findOne({ id: privateProfile.highlightedProjectId, userId: publicPage.userId }, { 'data': 1 }).lean()
                 : Promise.resolve(null),
             UserProfileModel.findOne({ userId: publicPage.userId }).lean(),
         ]);

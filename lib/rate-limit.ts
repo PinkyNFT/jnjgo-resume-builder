@@ -116,7 +116,9 @@ export function applyRateLimit(
 export async function applyRateLimitDB(
     request: NextRequest,
     routeKey: string,
-    config: RateLimitConfig
+    config: RateLimitConfig,
+    /** Signed-in user id: limits per account instead of per IP (shared office IPs). */
+    userId?: string
 ): Promise<NextResponse | null> {
     try {
         await connectToDatabase();
@@ -125,7 +127,7 @@ export async function applyRateLimitDB(
         const limit = await getAdminSetting<number>('rate_limit_ai_requests', config.limit);
         const windowSeconds = await getAdminSetting<number>('rate_limit_ai_window_seconds', config.windowSeconds);
 
-        const key = getClientKey(request, routeKey);
+        const key = userId ? `${routeKey}:u:${userId}` : getClientKey(request, routeKey);
         const now = new Date();
         const resetAt = new Date(now.getTime() + windowSeconds * 1000);
 

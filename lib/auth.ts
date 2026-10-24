@@ -101,10 +101,13 @@ export const authOptions: NextAuthOptions = {
                     const userEmail = (token.email as string | undefined) ?? '';
                     const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) ?? [];
                     const isAdminEmail = userEmail ? adminEmails.includes(userEmail.toLowerCase()) : false;
-                    const adminCount = await AdminUserModel.countDocuments();
 
-                    if (adminCount === 0 || isAdminEmail) {
-                        // Bootstrap: promote this user to super_admin if not already one
+                    // Admins come only from ADMIN_EMAILS (or scripts/bootstrap-admin.ts).
+                    // Never "whoever signs in first while the admin table is empty":
+                    // on a fresh database that would hand super_admin to a stranger.
+                    if (isAdminEmail) {
+                        const adminCount = await AdminUserModel.countDocuments();
+                        // Promote this user to super_admin if not already one
                         const existingAdmin = await AdminUserModel.findOne({
                             $or: [{ userId: token.id }, { email: userEmail }],
                         });
@@ -170,7 +173,8 @@ export const authOptions: NextAuthOptions = {
             return session;
         },
     },
-    debug: process.env.NODE_ENV === 'development',
+    // Opt-in only: NextAuth debug output prints the Google client secret, state and tokens.
+    debug: process.env.NEXTAUTH_DEBUG === 'true',
 };
 
 const handler = NextAuth(authOptions);

@@ -1,5 +1,6 @@
 import { RoleType, ImportData, ResumeData, ValidationResult } from '@/types';
 import { getAdminPromptContent, getAdminSetting } from '@/lib/admin-settings-reader';
+import { resumeForPrompt } from '@/lib/ai-guards';
 
 const DEFAULT_GAP_THRESHOLD = 90;
 
@@ -142,6 +143,33 @@ export const getSystemInstruction = async (roleType: RoleType, importData?: Impo
   });
 };
 
+// ===== INTERVIEW FOLLOW-UP (scripted mode) =====
+
+export const getFollowUpInstruction = async (roleType: RoleType, locale: string = 'en'): Promise<string> => {
+  const isJa = locale === 'ja';
+  const roleContext = roleType === 'consultant'
+    ? (isJa ? 'コンサルタント' : 'a consultant')
+    : roleType === 'senior_engineer'
+      ? (isJa ? 'エンジニア' : 'an engineer')
+      : (isJa ? 'あらゆる職種のプロフェッショナル' : 'a professional in any field');
+
+  const content = await getAdminPromptContent('interview_followup', locale);
+  if (!content) {
+    throw new Error('Prompt "interview_followup" not found in DB or defaults. Check prompt-defaults.ts.');
+  }
+  return substituteVars(content, { ROLE_CONTEXT: roleContext });
+};
+
+/** The single question and answer a follow-up is written from (never the whole conversation). */
+export const getFollowUpInput = (question: string, answer: string, context: string | undefined, locale: string = 'en'): string => {
+  const isJa = locale === 'ja';
+  return [
+    context ? `${isJa ? '職務' : 'Role'}: ${context}` : '',
+    `${isJa ? '質問' : 'Question'}: ${question}`,
+    `${isJa ? '回答' : 'Answer'}: ${answer}`,
+  ].filter(Boolean).join('\n');
+};
+
 // ===== ANALYZE IMPORT =====
 
 export const getAnalyzeImportPrompt = async (text: string, locale: string = 'en'): Promise<string> => {
@@ -172,7 +200,8 @@ export const getEvaluateResumePrompt = async (resumeData: ResumeData, role: Role
   // Build variable map for template substitution
   const vars: Record<string, string> = {
     LOCALE_INSTRUCTION: isJa ? 'IMPORTANT: Provide "missingItems" and "suggestions" in Japanese.' : '',
-    RESUME_DATA: JSON.stringify(resumeData, null, 2),
+    // Compact JSON without the photo (a base64 data URL worth 38k–77k tokens).
+    RESUME_DATA: resumeForPrompt(resumeData),
     ROLE_NAME: roleName,
     HAS_BASIC_PROFILE: hasBasicProfile ? 'YES' : 'NO',
     HAS_WORK_HISTORY: hasWorkHistory ? 'YES' : 'NO',

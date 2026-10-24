@@ -8,6 +8,9 @@ import { useMutation } from '@tanstack/react-query';
 import { Message, ResumeData, RoleType, ImportData, EvaluationResult } from '../types';
 import { readAiErrorMessage } from '../lib/ai-errors';
 
+// The chat route only reads the name and email from initialData; never ship the base64 photo on every turn.
+const withoutPhoto = (d?: ResumeData): ResumeData | undefined => (d ? { ...d, photo: undefined } : undefined);
+
 interface SendMessageParams {
     message: string;
     history: Message[];
@@ -43,7 +46,7 @@ export function useSendMessage() {
                     history: params.history,
                     roleType: params.roleType,
                     importData: params.importData,
-                    initialData: params.initialData,
+                    initialData: withoutPhoto(params.initialData),
                     locale: params.locale,
                 }),
                 signal: params.signal,
@@ -85,7 +88,7 @@ export function useGenerateHint() {
                     history: params.history,
                     roleType: params.roleType,
                     importData: params.importData,
-                    initialData: params.initialData,
+                    initialData: withoutPhoto(params.initialData),
                     locale: params.locale,
                 }),
                 signal: params.signal,
@@ -100,6 +103,48 @@ export function useGenerateHint() {
         },
         retry: 1,
         retryDelay: 1000,
+    });
+}
+
+interface FollowUpParams {
+    question: string;
+    answer: string;
+    context?: string;
+    roleType: RoleType;
+    locale?: string;
+    signal?: AbortSignal;
+}
+
+/**
+ * Scripted interview: one AI follow-up question for a thin answer (config/interview.ts).
+ * Sends only that question and answer. Optional, so it never retries: the caller
+ * moves on with the script if it fails.
+ */
+export function useFollowUp() {
+    return useMutation({
+        mutationFn: async (params: FollowUpParams): Promise<string> => {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'followUp',
+                    question: params.question,
+                    answer: params.answer,
+                    context: params.context,
+                    roleType: params.roleType,
+                    locale: params.locale,
+                }),
+                signal: params.signal,
+            });
+
+            if (!response.ok) {
+                throw new Error(await readAiErrorMessage(response, params.locale));
+            }
+
+            const data = await response.json();
+            return typeof data.text === 'string' ? data.text : '';
+        },
+        retry: false,
     });
 }
 
@@ -129,40 +174,6 @@ export function useParseResume() {
 
             const result = await response.json();
             return result.data as ResumeData;
-        },
-        retry: 1,
-        retryDelay: 2000,
-    });
-}
-
-/**
- * Hook for analyzing imported text
- */
-export function useAnalyzeImport() {
-    return useMutation({
-        mutationFn: async ({
-            text,
-            locale
-        }: {
-            text: string;
-            locale?: string;
-        }) => {
-            const response = await fetch('/api/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'analyzeImport',
-                    text,
-                    locale,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error(await readAiErrorMessage(response, locale));
-            }
-
-            const result = await response.json();
-            return result.data as ImportData;
         },
         retry: 1,
         retryDelay: 2000,
