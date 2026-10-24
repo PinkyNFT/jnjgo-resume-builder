@@ -14,6 +14,9 @@ import { TimelineChart, TimelineChartItem } from './TimelineChart';
 import { parsePeriod } from '../utils/dateParser';
 import { insertGapsInTimeline } from '../utils/timelineGenerator';
 import { resumeFileName } from '../utils/fileName';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAiCreditsPaused } from './AiCredits';
+import { AI_CREDITS_KEY } from '../hooks/useAiCredits';
 
 interface ResumeEditorProps {
     project: Project;
@@ -49,6 +52,9 @@ const ScoreBar = ({ label, score, max, colorClass, description }: { label: strin
 
 export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, onBack, onResumeInterview }) => {
     const t = useTranslations('Editor');
+    const tCredits = useTranslations('Credits');
+    const creditsPaused = useAiCreditsPaused();
+    const queryClient = useQueryClient();
     const locale = useLocale();
     const [data, setData] = useState<ResumeData>(project.data!);
     const [evaluation, setEvaluation] = useState<EvaluationResult | undefined>(project.evaluation);
@@ -174,6 +180,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
             toast.error(e instanceof Error && e.message ? e.message : t('evaluationFailed'));
         } finally {
             setIsEvaluating(false);
+            // Scoring uses a beta AI credit: refresh the meter.
+            queryClient.invalidateQueries({ queryKey: AI_CREDITS_KEY });
         }
     };
 
@@ -425,10 +433,15 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({ project, onUpdate, o
                     </div>
 
                     <div className="space-y-3">
-                        <button onClick={handleRunEvaluation} disabled={isEvaluating} className="w-full py-3 bg-indigo-50 text-indigo-700 font-bold text-sm rounded-xl hover:bg-indigo-100 transition-all duration-200 flex items-center justify-center gap-2 group border border-indigo-100 shadow-sm hover:shadow-md active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed">
+                        <button onClick={handleRunEvaluation} disabled={isEvaluating || creditsPaused.paused} className="w-full py-3 bg-indigo-50 text-indigo-700 font-bold text-sm rounded-xl hover:bg-indigo-100 transition-all duration-200 flex items-center justify-center gap-2 group border border-indigo-100 shadow-sm hover:shadow-md active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed">
                             {isEvaluating ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4 group-hover:scale-110 transition-transform" />}
                             {t('runScoreAnalysis')}
                         </button>
+                        {creditsPaused.paused && (
+                            <p role="status" className="text-xs text-red-800 bg-red-50 border border-red-200 rounded-lg p-2.5 leading-relaxed">
+                                {tCredits('scorePaused', { time: creditsPaused.time })}
+                            </p>
+                        )}
 
                         {evaluation && (
                             <div className="mt-4 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm animate-in fade-in slide-in-from-top-2">

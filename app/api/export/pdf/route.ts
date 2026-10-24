@@ -104,6 +104,9 @@ export async function POST(request: NextRequest) {
         await page.setContent(html, { waitUntil: 'load', timeout: 30000 });
         // Let stylesheets, fonts and images finish loading before snapshotting.
         await page.waitForNetworkIdle({ idleTime: 500, timeout: 15000 }).catch(() => { });
+        // Serverless Chromium has no Japanese fonts: make sure Noto Sans JP is ready
+        // before printing, or Japanese text comes out as empty boxes.
+        await page.evaluate(() => document.fonts.ready).catch(() => { });
         // Use the on-screen look (not print-media hacks); backgrounds still print.
         await page.emulateMediaType('screen');
 

@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import LanguageSwitcher from '../LanguageSwitcher';
+import { AiCreditsMeter } from '../AiCredits';
 import {
     LayoutDashboard,
     UserCircle,
@@ -89,7 +90,10 @@ export default function AppNavbar({ minimal = false }: AppNavbarProps) {
             {!betaBannerDismissed && (
                 <div className="sticky top-0 z-50 bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-center gap-3 text-xs sm:text-sm text-amber-800">
                     <FlaskConical className="w-4 h-4 shrink-0 text-amber-500" />
-                    <span>{tBeta('text')}</span>
+                    <span>
+                        {tBeta('text')}{' '}
+                        <Link href="/beta" className="font-semibold underline hover:no-underline">{tBeta('details')}</Link>
+                    </span>
                     <button
                         onClick={dismissBetaBanner}
                         className="ml-2 p-0.5 rounded hover:bg-amber-200 transition-colors shrink-0"
@@ -190,6 +194,9 @@ export default function AppNavbar({ minimal = false }: AppNavbarProps) {
 
                         {/* Right: Language (desktop only) + user */}
                         <div className="flex items-center gap-2 sm:gap-3">
+                            {/* Today's shared beta AI credits */}
+                            {session?.user && <AiCreditsMeter />}
+
                             {/* Language switcher — desktop only, mobile is inside user dropdown */}
                             <div className="hidden md:flex">
                                 <LanguageSwitcher />

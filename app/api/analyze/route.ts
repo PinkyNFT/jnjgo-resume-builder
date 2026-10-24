@@ -4,7 +4,7 @@ import { ResumeData, RoleType, EvaluationResult } from '@/types';
 import { getEvaluateResumePrompt } from '@/lib/prompts';
 import { getAdminAIConfig } from '@/lib/admin-settings-reader';
 import { applyRateLimitDB, RATE_LIMITS } from '@/lib/rate-limit';
-import { callWithRetry } from '@/lib/gemini-client';
+import { callWithRetry, isCompleteJson, structuredOutput } from '@/lib/gemini-client';
 import { aiErrorPayload } from '@/lib/ai-errors';
 import { AI_LIMITS, requireAiUser, resumeForPrompt, tooLarge } from '@/lib/ai-guards';
 
@@ -106,10 +106,11 @@ export async function POST(request: NextRequest) {
                 gapDetails
             }, locale || 'en');
 
-            const response = await callWithRetry(() => ai.models.generateContent({
+            const score = () => callWithRetry(() => ai.models.generateContent({
                 model,
                 contents: prompt,
                 config: {
+                    ...structuredOutput(model),
                     responseMimeType: "application/json",
                     responseSchema: {
                         type: Type.OBJECT,
@@ -163,18 +164,31 @@ export async function POST(request: NextRequest) {
                 }
             }), 'analyze/evaluateResume', { route: 'analyze/evaluateResume', model, userId, request });
 
+            // Same guard as generation: one more try if the JSON came back cut off.
+            let response = await score();
+            if (!isCompleteJson(response.text)) response = await score();
+
             const result = JSON.parse(response.text || "{}");
 
-            // Extract flat breakdown for backward compatibility
+            // Extract flat breakdown for backward compatibility. Each section is capped
+            // at its rubric maximum (A 55, B 25, C 15, D 10): a smaller model's
+            // arithmetic isn't reliable (gemini-3.1-flash-lite gave structure 62/55).
+            const section = (value: unknown, max: number) => Math.max(0, Math.min(max, Number(value) || 0));
             const flatBreakdown = {
-                structure: result.breakdown?.structure?.total || 0,
-                reproducibility: result.breakdown?.reproducibility?.total || 0,
-                roleFit: result.breakdown?.roleFit?.total || 0,
-                riskHandling: result.breakdown?.riskHandling?.total || 0
+                structure: section(result.breakdown?.structure?.total, 55),
+                reproducibility: section(result.breakdown?.reproducibility?.total, 25),
+                roleFit: section(result.breakdown?.roleFit?.total, 15),
+                riskHandling: section(result.breakdown?.riskHandling?.total, 10)
             };
 
+            // Add the sections up ourselves and cap at 100: the rubric's sections
+            // total 105, and the model's own total reached 110/100 in testing.
+            const sectionSum = flatBreakdown.structure + flatBreakdown.reproducibility + flatBreakdown.roleFit + flatBreakdown.riskHandling;
+            const totalScore = Math.max(0, Math.min(100, Math.round(sectionSum > 0 ? sectionSum : Number(result.totalScore) || 0)));
+            result.totalScore = totalScore;
+
             // Validate passing criteria according to spec
-            const meetsScoreThreshold = (result.totalScore || 0) >= 80;
+            const meetsScoreThreshold = totalScore >= 80;
             const meetsStructureThreshold = flatBreakdown.structure >= 45; // Updated from 40 to 45 (out of 55)
             const hasQuantifiedMetrics = flatBreakdown.structure >= 5 &&
                 result.breakdown?.structure?.quantifiedAchievements > 0;
@@ -225,7 +239,7 @@ export async function POST(request: NextRequest) {
             }
 
             const evaluation: EvaluationResult = {
-                totalScore: result.totalScore || 0,
+                totalScore,
                 breakdown: flatBreakdown,
                 detailedBreakdown: result.breakdown,
                 missingItems: result.missingItems || [],

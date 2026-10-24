@@ -4,7 +4,8 @@
  * caching, and retry logic
  */
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { AI_CREDITS_KEY } from './useAiCredits';
 import { Message, ResumeData, RoleType, ImportData, EvaluationResult } from '../types';
 import { readAiErrorMessage } from '../lib/ai-errors';
 
@@ -35,7 +36,10 @@ interface GenerateHintParams {
  * Multiple calls with the same parameters will be deduplicated
  */
 export function useSendMessage() {
+    const queryClient = useQueryClient();
     return useMutation({
+        // Every AI call uses a beta credit: refresh the meter.
+        onSettled: () => queryClient.invalidateQueries({ queryKey: AI_CREDITS_KEY }),
         mutationFn: async (params: SendMessageParams) => {
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -78,7 +82,10 @@ export function useSendMessage() {
  * Hook for generating hints with deduplication
  */
 export function useGenerateHint() {
+    const queryClient = useQueryClient();
     return useMutation({
+        // Every AI call uses a beta credit: refresh the meter.
+        onSettled: () => queryClient.invalidateQueries({ queryKey: AI_CREDITS_KEY }),
         mutationFn: async (params: GenerateHintParams) => {
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -121,7 +128,10 @@ interface FollowUpParams {
  * moves on with the script if it fails.
  */
 export function useFollowUp() {
+    const queryClient = useQueryClient();
     return useMutation({
+        // Every AI call uses a beta credit: refresh the meter.
+        onSettled: () => queryClient.invalidateQueries({ queryKey: AI_CREDITS_KEY }),
         mutationFn: async (params: FollowUpParams): Promise<string> => {
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -152,7 +162,10 @@ export function useFollowUp() {
  * Hook for parsing resume from chat history
  */
 export function useParseResume() {
+    const queryClient = useQueryClient();
     return useMutation({
+        // Every AI call uses a beta credit: refresh the meter.
+        onSettled: () => queryClient.invalidateQueries({ queryKey: AI_CREDITS_KEY }),
         mutationFn: async ({
             history,
             importData,
@@ -175,8 +188,9 @@ export function useParseResume() {
             const result = await response.json();
             return result.data as ResumeData;
         },
-        retry: 1,
-        retryDelay: 2000,
+        // No client retry: the server already retries transient errors, and a
+        // retry after the beta credits run out would only fail again.
+        retry: false,
     });
 }
 
@@ -184,7 +198,10 @@ export function useParseResume() {
  * Hook for evaluating resume quality
  */
 export function useEvaluateResume() {
+    const queryClient = useQueryClient();
     return useMutation({
+        // Every AI call uses a beta credit: refresh the meter.
+        onSettled: () => queryClient.invalidateQueries({ queryKey: AI_CREDITS_KEY }),
         mutationFn: async ({
             data,
             roleType,
@@ -212,7 +229,8 @@ export function useEvaluateResume() {
             const result = await response.json();
             return result.data as EvaluationResult;
         },
-        retry: 1,
-        retryDelay: 2000,
+        // No client retry: the server already retries transient errors, and a
+        // retry after the beta credits run out would only fail again.
+        retry: false,
     });
 }

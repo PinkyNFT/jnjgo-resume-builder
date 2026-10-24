@@ -17,12 +17,13 @@ export const INTERVIEW_MODE: InterviewMode = 'scripted';
 export const MAX_AI_FOLLOWUPS: number = 3;
 
 /**
- * Model for follow-ups, where the user is waiting mid-chat. Measured 13 Oct 2026
- * on the real prompt (~160 tokens in, ~25 out, no thinking): gemini-3.6-flash
- * 1.2–1.9 s; gemini-3-flash-preview 13–17 s with 503s; gemini-3.5-flash-lite
- * timing out under load. About $0.0004 per follow-up. null = the admin-selected model.
+ * Model for follow-ups, where the user is waiting mid-chat. null = the
+ * admin-selected model, so follow-ups draw on the same free-tier quota as
+ * everything else (a separate model has its own small daily quota, and running
+ * it out would look like the whole beta pool ran out). gemini-3.1-flash-lite
+ * answered in 0.6–1.3 s on 24 Oct 2026; gemini-3.6-flash took 1.2–1.9 s.
  */
-export const FOLLOW_UP_MODEL: string | null = 'gemini-3.6-flash';
+export const FOLLOW_UP_MODEL: string | null = null;
 
 /** A follow-up that takes longer than this is skipped and the script moves on. */
 export const FOLLOW_UP_TIMEOUT_MS = 10_000;

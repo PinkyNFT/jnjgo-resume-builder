@@ -7,6 +7,7 @@ import { authOptions } from '../../../../../lib/auth';
 import { connectToDatabase } from '../../../../../lib/mongodb';
 import { ProjectModel } from '../../../../../lib/models';
 import { generateProfileDraftWithGemini } from '../../../../../lib/gemini-server';
+import { aiErrorPayload, BetaLimitError } from '../../../../../lib/ai-errors';
 
 // Explicit cap so a stuck AI call ends instead of running to the platform limit. Recruiter-profile draft.
 export const maxDuration = 60;
@@ -67,6 +68,10 @@ export async function POST(req: Request) {
         return NextResponse.json(responseData);
 
     } catch (error) {
+        if (error instanceof BetaLimitError) {
+            const { body, status } = aiErrorPayload(error, (req as NextRequest).cookies.get('NEXT_LOCALE')?.value);
+            return NextResponse.json(body, { status });
+        }
         return routeErrorResponse(error, 'POST /api/profile/private/generate');
     }
 }
