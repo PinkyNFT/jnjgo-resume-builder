@@ -46,16 +46,16 @@ describe('saving a partial AI-generated resume', () => {
     });
 
     it('keeps entries with content and fills missing fields with empty text', () => {
-        expect(saved.data!.workExperience.map(w => w.id)).toEqual(['work_0', 'work_1']);
-        expect(saved.data!.workExperience[1]).toMatchObject({ period: '', responsibilities: [] });
+        expect(saved.data!.workExperience!.map(w => w.id)).toEqual(['work_0', 'work_1']);
+        expect(saved.data!.workExperience![1]).toMatchObject({ period: '', responsibilities: [] });
         expect(saved.data!.projectPortfolio.representativeProjects[0]).toMatchObject({ title: '検索基盤の刷新', role: '', context: '', contribution: '', period: '' });
-        expect(saved.data!.education[0]).toMatchObject({ institution: '東京工業大学', degree: '', period: '' });
+        expect(saved.data!.education![0]).toMatchObject({ institution: '東京工業大学', degree: '', period: '' });
         expect(saved.data!.timeline[0].type).toBe('work');
         expect(saved.data!.careerGaps[0]).toMatchObject({ isExplained: false, reason: '語学留学' });
     });
 
     it('still drops entries with nothing in them', () => {
-        expect(saved.data!.workExperience.find(w => w.id === 'work_2')).toBeUndefined();
+        expect(saved.data!.workExperience!.find(w => w.id === 'work_2')).toBeUndefined();
         const junk = sanitizeProject(project({ ...partialAiResume, skillTimelines: [{ id: 's1', skillName: ' ' }] } as unknown as ResumeData));
         expect(junk.data!.skillTimelines).toEqual([]);
     });

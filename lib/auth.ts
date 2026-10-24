@@ -77,12 +77,19 @@ export const authOptions: NextAuthOptions = {
                 token.role = (user as any).role || null;
             }
 
-            // Re-read role from DB on explicit session update (e.g. after role selection)
-            if (trigger === 'update' && token.id) {
-                const client = await clientPromise;
-                const db = client.db();
-                const { ObjectId } = await import('mongodb');
+            // Re-read the role from the DB on an explicit update(), and on every
+            // session check while the role isn't final (none chosen yet, or waiting
+            // for approval). Relying on update() alone left users stuck: if that one
+            // call didn't land (NextAuth's client skips it while a session fetch is
+            // in flight), the session kept no role while the DB had one, looping
+            // dashboard → select-role → "role already set". It also lets an approved
+            // recruiter move on without signing in again.
+            const roleNotFinal = !token.role || token.role === 'pending_recruiter';
+            if ((trigger === 'update' || (!user && roleNotFinal)) && token.id) {
                 try {
+                    const client = await clientPromise;
+                    const db = client.db();
+                    const { ObjectId } = await import('mongodb');
                     const dbUser = await db.collection('users').findOne(
                         { _id: new ObjectId(token.id as string) },
                         { projection: { role: 1 } }
