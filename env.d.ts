@@ -29,6 +29,8 @@ declare global {
              */
             NEXTAUTH_URL: string;
             NEXTAUTH_SECRET: string;
+            /** 'true' turns on NextAuth debug logs (they include the client secret; local use only) */
+            NEXTAUTH_DEBUG?: string;
 
             /**
              * Google OAuth credentials

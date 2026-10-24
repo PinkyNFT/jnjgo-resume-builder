@@ -173,7 +173,8 @@ export const authOptions: NextAuthOptions = {
             return session;
         },
     },
-    debug: process.env.NODE_ENV === 'development',
+    // Opt-in only: NextAuth debug output prints the Google client secret, state and tokens.
+    debug: process.env.NEXTAUTH_DEBUG === 'true',
 };
 
 const handler = NextAuth(authOptions);
