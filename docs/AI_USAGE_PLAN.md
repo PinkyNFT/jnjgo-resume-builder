@@ -23,7 +23,7 @@ Use Gemini only for what code can't do: turning a person's own words into polish
 | Opening greeting | 1 per interview start (repeats if the user leaves) | Static text | **Done** |
 | Interview turns | 1 per answer (10–25), full history re-sent each turn | Scripted, role-specific questions (JA/EN) with deterministic checks; ≤ 3 AI follow-ups when an answer has no number or no reason, sent as one question + answer (~160 tokens) | **Done** (option 2) |
 | Hints | 1 per click | Static examples per question and role | **Done** |
-| Generation | 1, plus up to 5 retries | 1, minimal thinking, GA model, slimmer schema (no `timeline` / `careerOverview`); import path adds 1 refine | Proposed (day 2–3) |
+| Generation | 1, plus up to 5 retries | 1, minimal thinking, GA model, slimmer schema (no `timeline` / `careerOverview`); import path adds 1 refine | **Partly done (beta):** `gemini-3.1-flash-lite`, low thinking + 8k cap, one retry only for cut-off JSON, no client retry. Slimmer schema still proposed |
 | Score analysis | 1 per run, 1–5 runs (a passing score is required to save) | Deterministic rubric; improvement tips come from the generation call | Proposed |
 | Recruiter profile draft | 1 per click | Prefilled from the resume in code; the user sets intent and salary (AI can't know them) | Proposed |
 
@@ -70,3 +70,7 @@ One switch in `config/interview.ts`:
 - Chatbot vs online form study (2022): https://pmc.ncbi.nlm.nih.gov/articles/PMC9606606
 - Gemini pricing (3.5 Flash-Lite, 3.6 Flash): https://ai.google.dev/gemini-api/docs/pricing · https://cloud.google.com/gemini-enterprise-agent-platform/generative-ai/pricing
 - LLM cost levers: https://morphllm.com/llm-cost-optimization · https://www.kunalganglani.com/blog/reduce-llm-api-costs-production
+
+## Beta credits (24 Oct 2026)
+
+The beta runs on the Gemini free tier, so all AI calls draw on one shared daily pool (`lib/ai-credits.ts`): 1 credit = 1 request, reset at midnight Pacific, limit in Admin → Settings → "Beta AI credits per day (shared)" (default 500, the measured free-tier figure for `gemini-3.1-flash-lite`). Google's daily-quota error empties the pool until the reset. Users see a meter in the navbar, banners when credits run low or out, and `/beta` explains it. Measured on the real routes: follow-up 1.9–2.6 s, generation about 6 s, scoring about 4 s; one full interview with a follow-up, generation and a score used 3 credits.
