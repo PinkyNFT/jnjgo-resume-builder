@@ -140,12 +140,16 @@ const ContactInfoSchema = new Schema({
     department: { type: String }
 }, { _id: false });
 
+// Resume content comes from the AI, which can leave fields out (gemini-3.1-flash-lite
+// omitted project role/context on Japanese resumes, failing every save). Content
+// fields are optional with empty defaults so a partial resume saves and can be
+// completed in the editor; only ids (set by the app) are required.
 const TimelineItemSchema = new Schema({
     id: { type: String, required: true },
-    period: { type: String, required: true },
-    organization: { type: String, required: true },
-    role: { type: String, required: true },
-    type: { type: String, enum: ['work', 'education'], required: true },
+    period: { type: String, default: '' },
+    organization: { type: String, default: '' },
+    role: { type: String, default: '' },
+    type: { type: String, enum: ['work', 'education'], default: 'work' },
     notes: { type: String },
     duration: { type: String }
 }, { _id: false });
@@ -161,14 +165,14 @@ const CareerOverviewSchema = new Schema({
 
 const RepresentativeProjectSchema = new Schema({
     id: { type: String, required: true },
-    title: { type: String, required: true },
-    period: { type: String, required: true },
+    title: { type: String, default: '' },
+    period: { type: String, default: '' },
     clientType: { type: String },
     theme: { type: String },
     teamStructure: { type: String },
-    role: { type: String, required: true },
-    context: { type: String, required: true },
-    contribution: { type: String, required: true },
+    role: { type: String, default: '' },
+    context: { type: String, default: '' },
+    contribution: { type: String, default: '' },
     challenges: { type: String }
 }, { _id: false });
 
@@ -179,31 +183,31 @@ const ProjectPortfolioSchema = new Schema({
 }, { _id: false });
 
 const GapItemSchema = new Schema({
-    period: { type: String, required: true },
-    reason: { type: String, required: true },
-    isExplained: { type: Boolean, required: true }
+    period: { type: String, default: '' },
+    reason: { type: String, default: '' },
+    isExplained: { type: Boolean, default: false }
 }, { _id: false });
 
 const WorkExperienceSchema = new Schema({
     id: { type: String, required: true },
-    company: { type: String, required: true },
-    position: { type: String, required: true },
-    period: { type: String, required: true },
+    company: { type: String, default: '' },
+    position: { type: String, default: '' },
+    period: { type: String, default: '' },
     responsibilities: [{ type: String }]
 }, { _id: false });
 
 const EducationSchema = new Schema({
     id: { type: String, required: true },
-    degree: { type: String, required: true },
-    institution: { type: String, required: true },
-    period: { type: String, required: true },
+    degree: { type: String, default: '' },
+    institution: { type: String, default: '' },
+    period: { type: String, default: '' },
     notes: { type: String }
 }, { _id: false });
 
 const SkillTimelineSchema = new Schema({
     id: { type: String, required: true },
-    skillName: { type: String, required: true },
-    period: { type: String, required: true },
+    skillName: { type: String, default: '' },
+    period: { type: String, default: '' },
     context: { type: String }
 }, { _id: false });
 

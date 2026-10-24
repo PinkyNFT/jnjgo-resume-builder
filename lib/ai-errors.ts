@@ -134,9 +134,25 @@ function kindFromStatus(status: number): AiErrorKind {
  * timeout page, which would otherwise surface as a JSON SyntaxError.
  */
 export async function readAiErrorMessage(res: Response, locale?: string): Promise<string> {
-    const body = (await res.json().catch(() => null)) as { error?: unknown; code?: unknown } | null;
-    if (body && typeof body.error === 'string' && typeof body.code === 'string' && body.code.startsWith('AI_')) {
-        return body.error;
+    return (await readAiError(res, locale)).message;
+}
+
+/** A failed AI request, with what the UI needs to explain it (code, status, reset time). */
+export class AiRequestError extends Error {
+    constructor(message: string, public code: string | undefined, public status: number, public resetAt?: string) {
+        super(message);
+        this.name = 'AiRequestError';
     }
-    return aiErrorMessage(kindFromStatus(res.status), locale);
+}
+
+/** Like readAiErrorMessage, but keeps the error code and, for AI_BETA_LIMIT, when credits reset. */
+export async function readAiError(res: Response, locale?: string): Promise<AiRequestError> {
+    const body = (await res.json().catch(() => null)) as { error?: unknown; code?: unknown; resetAt?: unknown } | null;
+    const ours = !!body && typeof body.error === 'string' && typeof body.code === 'string' && body.code.startsWith('AI_');
+    return new AiRequestError(
+        ours ? (body!.error as string) : aiErrorMessage(kindFromStatus(res.status), locale),
+        ours ? (body!.code as string) : undefined,
+        res.status,
+        typeof body?.resetAt === 'string' ? body.resetAt : undefined
+    );
 }

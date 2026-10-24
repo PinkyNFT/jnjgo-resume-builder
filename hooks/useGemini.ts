@@ -7,7 +7,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AI_CREDITS_KEY } from './useAiCredits';
 import { Message, ResumeData, RoleType, ImportData, EvaluationResult } from '../types';
-import { readAiErrorMessage } from '../lib/ai-errors';
+import { readAiError, readAiErrorMessage } from '../lib/ai-errors';
 
 // The chat route only reads the name and email from initialData; never ship the base64 photo on every turn.
 const withoutPhoto = (d?: ResumeData): ResumeData | undefined => (d ? { ...d, photo: undefined } : undefined);
@@ -182,7 +182,8 @@ export function useParseResume() {
             });
 
             if (!response.ok) {
-                throw new Error(await readAiErrorMessage(response, locale));
+                // Keeps the code and reset time, so the screen can say "try again at 4:00 PM".
+                throw await readAiError(response, locale);
             }
 
             const result = await response.json();
